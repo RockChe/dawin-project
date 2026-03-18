@@ -52,9 +52,13 @@ export async function getSession() {
   try {
     result = await query();
   } catch (err) {
-    console.error('getSession first attempt failed:', err.message);
-    // Retry once for Neon cold start
-    result = await query();
+    console.error('[getSession] first attempt failed:', err.message);
+    try {
+      result = await query();
+    } catch (retryErr) {
+      console.error('[getSession] retry also failed:', retryErr.message);
+      return null;
+    }
   }
 
   return result[0] || null;
@@ -83,4 +87,17 @@ export async function requireAdmin() {
     throw new Error('FORBIDDEN');
   }
   return session;
+}
+
+export async function safeRequireAuth() {
+  const session = await getSession();
+  if (!session) return { session: null, error: 'UNAUTHORIZED' };
+  return { session, error: null };
+}
+
+export async function safeRequireAdmin() {
+  const { session, error } = await safeRequireAuth();
+  if (error) return { session: null, error };
+  if (session.role !== 'super_admin') return { session: null, error: 'FORBIDDEN' };
+  return { session, error: null };
 }

@@ -21,6 +21,14 @@ import {
   deleteProject as deleteProjectAction,
 } from '@/server/actions/projects';
 
+function checkAuthError(result) {
+  if (result?.error === 'UNAUTHORIZED' || result?.error === 'FORBIDDEN') {
+    window.location.href = '/login';
+    return true;
+  }
+  return false;
+}
+
 export default function useTaskManager() {
   const [projects, setProjects] = useState([]);
   const [allT, setAllT] = useState([]);
@@ -44,11 +52,12 @@ export default function useTaskManager() {
   const loadData = useCallback(async () => {
     try {
       const [dashData, projData] = await Promise.all([getDashboardData(), getProjects()]);
-      setAllT(dashData.tasks);
-      setAllS(dashData.subtasks);
-      setAllL(dashData.links);
-      setAllF(dashData.files);
-      setProjects(projData);
+      if (checkAuthError(dashData) || checkAuthError(projData)) return;
+      setAllT(dashData.tasks || []);
+      setAllS(dashData.subtasks || []);
+      setAllL(dashData.links || []);
+      setAllF(dashData.files || []);
+      setProjects(Array.isArray(projData) ? projData : []);
       setLoading(false);
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -68,11 +77,13 @@ export default function useTaskManager() {
     const dbField = fieldMap[field] || field;
     updateData[dbField] = value;
     const result = await updateTaskAction(id, updateData);
+    if (checkAuthError(result)) return;
     if (result?.error) showToast(result.error, 'error');
   }, [showToast]);
 
   const addTask = useCallback(async (projectId, data) => {
     const result = await createTaskAction({ projectId, ...data });
+    if (checkAuthError(result)) return;
     if (result?.success) {
       setAllT(p => [...p, result.task]);
       showToast('任務已建立', 'success');
@@ -85,23 +96,27 @@ export default function useTaskManager() {
     setAllS(p => p.filter(s => s.taskId !== id));
     setAllL(p => p.filter(l => l.taskId !== id));
     setAllF(p => p.filter(f => f.taskId !== id));
-    await deleteTaskAction(id);
+    const result = await deleteTaskAction(id);
+    if (checkAuthError(result)) return;
     showToast('任務已刪除', 'error');
   }, [showToast]);
 
   // ── Subtask CRUD ──
   const toggleSub = useCallback(async (id) => {
     setAllS(p => p.map(s => s.id === id ? { ...s, done: !s.done, doneDate: !s.done ? new Date().toISOString().split('T')[0] : null } : s));
-    await toggleSubtaskAction(id);
+    const result = await toggleSubtaskAction(id);
+    if (checkAuthError(result)) return;
   }, []);
 
   const updateSub = useCallback(async (id, field, value) => {
     setAllS(p => p.map(s => s.id === id ? { ...s, [field]: value } : s));
-    await updateSubtaskAction(id, { [field]: value });
+    const result = await updateSubtaskAction(id, { [field]: value });
+    if (checkAuthError(result)) return;
   }, []);
 
   const addSub = useCallback(async (taskId, data) => {
     const result = await createSubtaskAction({ taskId, ...data });
+    if (checkAuthError(result)) return;
     if (result?.success) {
       setAllS(p => [...p, result.subtask]);
       showToast('子任務已新增', 'success');
@@ -111,13 +126,15 @@ export default function useTaskManager() {
 
   const deleteSub = useCallback(async (id) => {
     setAllS(p => p.filter(s => s.id !== id));
-    await deleteSubtaskAction(id);
+    const result = await deleteSubtaskAction(id);
+    if (checkAuthError(result)) return;
     showToast('子任務已刪除', 'error');
   }, [showToast]);
 
   // ── Link CRUD ──
   const addLink = useCallback(async (taskId, data) => {
     const result = await createLinkAction({ taskId, ...data });
+    if (checkAuthError(result)) return;
     if (result?.success) {
       setAllL(p => [...p, result.link]);
       showToast('連結已新增', 'success');
@@ -127,7 +144,8 @@ export default function useTaskManager() {
 
   const deleteLink = useCallback(async (id) => {
     setAllL(p => p.filter(l => l.id !== id));
-    await deleteLinkAction(id);
+    const result = await deleteLinkAction(id);
+    if (checkAuthError(result)) return;
     showToast('連結已刪除', 'error');
   }, [showToast]);
 
@@ -139,7 +157,8 @@ export default function useTaskManager() {
 
   const deleteFileHandler = useCallback(async (id) => {
     setAllF(p => p.filter(f => f.id !== id));
-    await deleteFileAction(id);
+    const result = await deleteFileAction(id);
+    if (checkAuthError(result)) return;
     showToast('檔案已刪除', 'error');
   }, [showToast]);
 
@@ -147,7 +166,8 @@ export default function useTaskManager() {
   const renameProject = useCallback(async (id, newName) => {
     if (!newName.trim()) return;
     setProjects(p => p.map(proj => proj.id === id ? { ...proj, name: newName } : proj));
-    await updateProjectAction(id, { name: newName });
+    const result = await updateProjectAction(id, { name: newName });
+    if (checkAuthError(result)) return;
     showToast('專案已重新命名', 'success');
   }, [showToast]);
 
@@ -155,6 +175,7 @@ export default function useTaskManager() {
     const formData = new FormData();
     formData.set('name', name);
     const result = await createProjectAction(formData);
+    if (checkAuthError(result)) return;
     if (result?.success) {
       setProjects(p => [...p, result.project]);
       showToast('專案已建立', 'success');
@@ -165,7 +186,8 @@ export default function useTaskManager() {
   const deleteProjectHandler = useCallback(async (id) => {
     setProjects(p => p.filter(proj => proj.id !== id));
     setAllT(p => p.filter(t => t.projectId !== id));
-    await deleteProjectAction(id);
+    const result = await deleteProjectAction(id);
+    if (checkAuthError(result)) return;
     showToast('專案已刪除', 'error');
   }, [showToast]);
 

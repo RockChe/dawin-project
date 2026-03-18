@@ -1,7 +1,24 @@
 'use client';
 
+import { useState } from 'react';
+
 export default function Error({ error, reset }) {
+  const [debug, setDebug] = useState(null);
+  const [loading, setLoading] = useState(false);
+
   console.error('App Error:', error);
+
+  const runDiag = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/debug');
+      const data = await res.json();
+      setDebug(data);
+    } catch (e) {
+      setDebug({ fetchError: e.message });
+    }
+    setLoading(false);
+  };
 
   return (
     <div style={{
@@ -22,7 +39,7 @@ export default function Error({ error, reset }) {
             Error ID: {error.digest}
           </p>
         )}
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
           <button
             onClick={() => reset()}
             style={{
@@ -38,7 +55,7 @@ export default function Error({ error, reset }) {
             Try again
           </button>
           <a
-            href="/"
+            href="/login"
             style={{
               padding: '8px 20px',
               backgroundColor: 'transparent',
@@ -51,9 +68,39 @@ export default function Error({ error, reset }) {
               alignItems: 'center',
             }}
           >
-            Back to Home
+            Back to Login
           </a>
         </div>
+        <button
+          onClick={runDiag}
+          disabled={loading}
+          style={{
+            padding: '6px 16px',
+            backgroundColor: 'transparent',
+            color: '#666',
+            border: '1px solid #444',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: 12,
+          }}
+        >
+          {loading ? 'Diagnosing...' : 'Run Diagnostics'}
+        </button>
+        {debug && (
+          <pre style={{
+            textAlign: 'left',
+            fontSize: 11,
+            color: '#aaa',
+            background: '#1a1a1a',
+            padding: 12,
+            borderRadius: 8,
+            marginTop: 12,
+            overflow: 'auto',
+            maxHeight: 300,
+          }}>
+            {JSON.stringify(debug, null, 2)}
+          </pre>
+        )}
       </div>
     </div>
   );

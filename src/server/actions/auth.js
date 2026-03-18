@@ -15,11 +15,17 @@ export async function login(formData) {
     return { error: '請填寫所有欄位' };
   }
 
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  let result;
+  try {
+    result = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+  } catch (err) {
+    console.error('[login] DB error:', err.message);
+    return { error: '伺服器連線異常，請稍後再試' };
+  }
 
   const user = result[0];
   if (!user) {

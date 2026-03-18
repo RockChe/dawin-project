@@ -2,16 +2,18 @@
 
 import { db } from '@/server/db';
 import { projects, tasks, subtasks } from '@/server/db/schema';
-import { eq, asc, desc } from 'drizzle-orm';
-import { requireAuth } from '@/lib/auth';
+import { eq, asc } from 'drizzle-orm';
+import { safeRequireAuth } from '@/lib/auth';
 
 export async function getProjects() {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   return db.select().from(projects).orderBy(asc(projects.sortOrder), asc(projects.createdAt));
 }
 
 export async function createProject(formData) {
-  const session = await requireAuth();
+  const { session, error } = await safeRequireAuth();
+  if (error) return { error };
   const name = formData.get('name')?.toString().trim();
 
   if (!name) return { error: '請填寫專案名稱' };
@@ -29,19 +31,22 @@ export async function createProject(formData) {
 }
 
 export async function updateProject(id, data) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   await db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id));
   return { success: true };
 }
 
 export async function deleteProject(id) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   await db.delete(projects).where(eq(projects.id, id));
   return { success: true };
 }
 
 export async function getProjectWithTasks(projectId) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   const project = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
   if (!project[0]) return null;
 

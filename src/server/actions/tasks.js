@@ -3,18 +3,20 @@
 import { db } from '@/server/db';
 import { tasks, subtasks, links, files } from '@/server/db/schema';
 import { eq, asc, desc } from 'drizzle-orm';
-import { requireAuth } from '@/lib/auth';
+import { safeRequireAuth } from '@/lib/auth';
 import { deleteFromR2 } from '@/lib/r2';
 
 // ── Tasks ──
 
 export async function getAllTasks() {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   return db.select().from(tasks).orderBy(asc(tasks.sortOrder));
 }
 
 export async function createTask(data) {
-  const session = await requireAuth();
+  const { session, error } = await safeRequireAuth();
+  if (error) return { error };
 
   const result = await db.insert(tasks).values({
     projectId: data.projectId,
@@ -35,14 +37,16 @@ export async function createTask(data) {
 }
 
 export async function updateTask(id, data) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   const updateData = { ...data, updatedAt: new Date() };
   await db.update(tasks).set(updateData).where(eq(tasks.id, id));
   return { success: true };
 }
 
 export async function deleteTask(id) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
 
   // Delete associated R2 files first
   const taskFiles = await db.select().from(files).where(eq(files.taskId, id));
@@ -57,12 +61,14 @@ export async function deleteTask(id) {
 // ── Subtasks ──
 
 export async function getAllSubtasks() {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   return db.select().from(subtasks).orderBy(asc(subtasks.sortOrder));
 }
 
 export async function createSubtask(data) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
 
   const result = await db.insert(subtasks).values({
     taskId: data.taskId,
@@ -78,19 +84,22 @@ export async function createSubtask(data) {
 }
 
 export async function updateSubtask(id, data) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   await db.update(subtasks).set(data).where(eq(subtasks.id, id));
   return { success: true };
 }
 
 export async function deleteSubtask(id) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   await db.delete(subtasks).where(eq(subtasks.id, id));
   return { success: true };
 }
 
 export async function toggleSubtask(id) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   const result = await db.select().from(subtasks).where(eq(subtasks.id, id)).limit(1);
   if (!result[0]) return { error: 'Subtask not found' };
 
@@ -108,12 +117,14 @@ export async function toggleSubtask(id) {
 // ── Links ──
 
 export async function getAllLinks() {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   return db.select().from(links).orderBy(desc(links.createdAt));
 }
 
 export async function createLink(data) {
-  const session = await requireAuth();
+  const { session, error } = await safeRequireAuth();
+  if (error) return { error };
 
   const result = await db.insert(links).values({
     taskId: data.taskId,
@@ -126,7 +137,8 @@ export async function createLink(data) {
 }
 
 export async function deleteLink(id) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   await db.delete(links).where(eq(links.id, id));
   return { success: true };
 }
@@ -134,12 +146,14 @@ export async function deleteLink(id) {
 // ── Files ──
 
 export async function getAllFiles() {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   return db.select().from(files).orderBy(desc(files.createdAt));
 }
 
 export async function createFileRecord(data) {
-  const session = await requireAuth();
+  const { session, error } = await safeRequireAuth();
+  if (error) return { error };
 
   const result = await db.insert(files).values({
     taskId: data.taskId,
@@ -154,7 +168,8 @@ export async function createFileRecord(data) {
 }
 
 export async function deleteFile(id) {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   const result = await db.select().from(files).where(eq(files.id, id)).limit(1);
   if (result[0]) {
     try { await deleteFromR2(result[0].r2Key); } catch (e) { console.error('R2 delete error:', e); }
@@ -166,7 +181,8 @@ export async function deleteFile(id) {
 // ── Dashboard Data (aggregated) ──
 
 export async function getDashboardData() {
-  await requireAuth();
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
   const [allTasks, allSubtasks, allLinks, allFiles] = await Promise.all([
     db.select().from(tasks).orderBy(asc(tasks.sortOrder)),
     db.select().from(subtasks).orderBy(asc(subtasks.sortOrder)),

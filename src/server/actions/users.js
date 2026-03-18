@@ -4,10 +4,11 @@ import { db } from '@/server/db';
 import { users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { requireAdmin } from '@/lib/auth';
+import { safeRequireAdmin } from '@/lib/auth';
 
 export async function getUsers() {
-  await requireAdmin();
+  const { error } = await safeRequireAdmin();
+  if (error) return { error };
   const result = await db
     .select({
       id: users.id,
@@ -23,7 +24,8 @@ export async function getUsers() {
 }
 
 export async function createUser(formData) {
-  await requireAdmin();
+  const { error } = await safeRequireAdmin();
+  if (error) return { error };
 
   const email = formData.get('email')?.toString().trim().toLowerCase();
   const name = formData.get('name')?.toString().trim();
@@ -58,7 +60,8 @@ export async function createUser(formData) {
 }
 
 export async function resetUserPassword(userId, newPassword) {
-  await requireAdmin();
+  const { error } = await safeRequireAdmin();
+  if (error) return { error };
 
   if (!newPassword || newPassword.length < 8) {
     return { error: '密碼至少需要 8 個字元' };
@@ -79,7 +82,8 @@ export async function resetUserPassword(userId, newPassword) {
 }
 
 export async function deleteUser(userId) {
-  const session = await requireAdmin();
+  const { session, error } = await safeRequireAdmin();
+  if (error) return { error };
 
   // Prevent deleting yourself
   if (userId === session.userId) {
