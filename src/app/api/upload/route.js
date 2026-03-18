@@ -17,19 +17,27 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Missing file or taskId' }, { status: 400 });
   }
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  const key = `tasks/${taskId}/${Date.now()}-${file.name}`;
+  try {
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const key = `tasks/${taskId}/${Date.now()}-${file.name}`;
 
-  await uploadToR2(key, buffer, file.type);
+    await uploadToR2(key, buffer, file.type);
 
-  const result = await createFileRecord({
-    taskId,
-    name: file.name,
-    size: file.size,
-    mimeType: file.type,
-    r2Key: key,
-  });
+    const result = await createFileRecord({
+      taskId,
+      name: file.name,
+      size: file.size,
+      mimeType: file.type,
+      r2Key: key,
+    });
 
-  return NextResponse.json(result);
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error('Upload error:', err);
+    return NextResponse.json(
+      { error: 'Upload failed', message: err.message },
+      { status: 500 }
+    );
+  }
 }

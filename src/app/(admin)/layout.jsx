@@ -3,7 +3,13 @@ import { getSession } from '@/lib/auth';
 import Sidebar from '@/components/dashboard/Sidebar';
 
 export default async function AdminLayout({ children }) {
-  const session = await getSession();
+  let session;
+  try {
+    session = await getSession();
+  } catch (err) {
+    console.error('Session error:', err);
+    redirect('/login');
+  }
 
   if (!session) {
     redirect('/login');

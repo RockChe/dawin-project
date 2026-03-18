@@ -2,7 +2,13 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 
 export default async function Home() {
-  const session = await getSession();
+  let session;
+  try {
+    session = await getSession();
+  } catch (err) {
+    console.error('Session error:', err);
+    redirect('/login');
+  }
 
   if (!session) {
     redirect('/login');
