@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #C8C7C3; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9B9A97; }
+
+.dark ::-webkit-scrollbar-thumb { background: #545D68; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #768390; }
+
+/* Smooth transitions */
+* { transition: background-color 0.15s ease, border-color 0.15s ease; }
+input, textarea, select { transition: none; }
