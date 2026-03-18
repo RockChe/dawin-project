@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import Sidebar from '@/components/dashboard/Sidebar';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardLayout({ children }) {
   let session;
   try {

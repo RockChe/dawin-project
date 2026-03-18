@@ -33,19 +33,29 @@ export async function getSession() {
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const result = await db
-    .select({
-      sessionId: sessions.id,
-      userId: users.id,
-      email: users.email,
-      name: users.name,
-      role: users.role,
-      mustChangePassword: users.mustChangePassword,
-    })
-    .from(sessions)
-    .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.token, token), gt(sessions.expiresAt, new Date())))
-    .limit(1);
+  const query = () =>
+    db
+      .select({
+        sessionId: sessions.id,
+        userId: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        mustChangePassword: users.mustChangePassword,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(and(eq(sessions.token, token), gt(sessions.expiresAt, new Date())))
+      .limit(1);
+
+  let result;
+  try {
+    result = await query();
+  } catch (err) {
+    console.error('getSession first attempt failed:', err.message);
+    // Retry once for Neon cold start
+    result = await query();
+  }
 
   return result[0] || null;
 }

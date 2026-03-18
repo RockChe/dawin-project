@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth';
 import { uploadToR2 } from '@/lib/r2';
 import { createFileRecord } from '@/server/actions/tasks';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
   const session = await getSession();
   if (!session) {
