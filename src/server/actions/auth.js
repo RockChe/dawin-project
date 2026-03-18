@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { createSession, destroySession, getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
-export async function login(formData) {
+export async function login(prevState, formData) {
   const email = formData.get('email')?.toString().trim().toLowerCase();
   const password = formData.get('password')?.toString();
 
@@ -32,29 +32,45 @@ export async function login(formData) {
     return { error: '帳號或密碼錯誤' };
   }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  let valid;
+  try {
+    valid = await bcrypt.compare(password, user.passwordHash);
+  } catch (err) {
+    console.error('[login] bcrypt error:', err.message);
+    return { error: '伺服器錯誤，請稍後再試' };
+  }
+
   if (!valid) {
     return { error: '帳號或密碼錯誤' };
   }
 
-  await createSession(user.id);
-
-  if (user.mustChangePassword) {
-    redirect('/set-password');
+  try {
+    await createSession(user.id);
+  } catch (err) {
+    console.error('[login] createSession error:', err.message);
+    return { error: '登入過程發生錯誤，請稍後再試' };
   }
 
-  redirect('/');
+  if (user.mustChangePassword) {
+    return { success: true, redirectTo: '/set-password' };
+  }
+
+  return { success: true, redirectTo: '/' };
 }
 
 export async function logout() {
-  await destroySession();
+  try {
+    await destroySession();
+  } catch (err) {
+    console.error('[logout] destroySession error:', err.message);
+  }
   redirect('/login');
 }
 
-export async function setPassword(formData) {
+export async function setPassword(prevState, formData) {
   const session = await getSession();
   if (!session) {
-    redirect('/login');
+    return { success: true, redirectTo: '/login' };
   }
 
   const newPassword = formData.get('password')?.toString();
@@ -68,16 +84,21 @@ export async function setPassword(formData) {
     return { error: '兩次密碼輸入不一致' };
   }
 
-  const hash = await bcrypt.hash(newPassword, 12);
+  try {
+    const hash = await bcrypt.hash(newPassword, 12);
 
-  await db
-    .update(users)
-    .set({
-      passwordHash: hash,
-      mustChangePassword: false,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, session.userId));
+    await db
+      .update(users)
+      .set({
+        passwordHash: hash,
+        mustChangePassword: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, session.userId));
+  } catch (err) {
+    console.error('[setPassword] error:', err.message);
+    return { error: '設定密碼時發生錯誤，請稍後再試' };
+  }
 
-  redirect('/');
+  return { success: true, redirectTo: '/' };
 }

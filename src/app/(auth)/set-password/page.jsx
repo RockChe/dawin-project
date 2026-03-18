@@ -1,10 +1,16 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { setPassword } from '@/server/actions/auth';
 
 export default function SetPasswordPage() {
   const [state, formAction, isPending] = useActionState(setPassword, null);
+
+  useEffect(() => {
+    if (state?.success && state?.redirectTo) {
+      window.location.href = state.redirectTo;
+    }
+  }, [state]);
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F3EF' }}>
@@ -18,6 +24,12 @@ export default function SetPasswordPage() {
           {state?.error && (
             <div className="p-3 rounded-lg text-sm" style={{ background: '#EB575715', color: '#EB5757' }}>
               {state.error}
+            </div>
+          )}
+
+          {state?.success && (
+            <div className="p-3 rounded-lg text-sm" style={{ background: '#00B87C15', color: '#00B87C' }}>
+              密碼設定成功，正在跳轉...
             </div>
           )}
 
@@ -53,11 +65,11 @@ export default function SetPasswordPage() {
 
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || state?.success}
             className="w-full py-2.5 rounded-lg text-sm font-medium text-white"
-            style={{ background: '#2383E2', opacity: isPending ? 0.7 : 1 }}
+            style={{ background: '#2383E2', opacity: (isPending || state?.success) ? 0.7 : 1 }}
           >
-            {isPending ? '設定中...' : '設定密碼'}
+            {isPending ? '設定中...' : state?.success ? '跳轉中...' : '設定密碼'}
           </button>
         </form>
       </div>

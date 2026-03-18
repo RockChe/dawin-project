@@ -10,11 +10,20 @@ export async function createSession(userId) {
   const token = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE);
 
-  await db.insert(sessions).values({
-    userId,
-    token,
-    expiresAt,
-  });
+  const insert = () =>
+    db.insert(sessions).values({
+      userId,
+      token,
+      expiresAt,
+    });
+
+  try {
+    await insert();
+  } catch (err) {
+    console.error('[createSession] first attempt failed:', err.message);
+    // Retry once (handles Neon cold start)
+    await insert();
+  }
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
@@ -68,7 +77,12 @@ export async function destroySession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (token) {
-    await db.delete(sessions).where(eq(sessions.token, token));
+    try {
+      await db.delete(sessions).where(eq(sessions.token, token));
+    } catch (err) {
+      console.error('[destroySession] DB delete failed:', err.message);
+      // Continue to delete cookie even if DB delete fails
+    }
   }
   cookieStore.delete(SESSION_COOKIE);
 }
