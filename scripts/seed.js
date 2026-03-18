@@ -77,20 +77,25 @@ async function seed() {
 
   console.log('🌱 Seeding database...');
 
-  // 1. Create Super Admin
-  const adminEmail = process.argv[2] || 'admin@example.com';
-  const adminPassword = process.argv[3] || 'admin12345';
-  const adminName = process.argv[4] || 'Super Admin';
+  // 1. Create Super Admins
+  const accounts = [
+    { email: 'rock0923@gmail.com', password: '750921', name: 'Rock' },
+    { email: '950201@gmail.com', password: '770214', name: '姐姐' },
+  ];
 
-  const hash = await bcrypt.hash(adminPassword, 12);
-  const [superAdmin] = await db.insert(schema.users).values({
-    email: adminEmail,
-    passwordHash: hash,
-    role: 'super_admin',
-    name: adminName,
-    mustChangePassword: false,
-  }).returning();
-  console.log(`✅ Super Admin created: ${adminEmail}`);
+  let superAdmin;
+  for (const acc of accounts) {
+    const hash = await bcrypt.hash(acc.password, 12);
+    const [user] = await db.insert(schema.users).values({
+      email: acc.email,
+      passwordHash: hash,
+      role: 'super_admin',
+      name: acc.name,
+      mustChangePassword: false,
+    }).returning();
+    if (!superAdmin) superAdmin = user;
+    console.log(`✅ Super Admin created: ${acc.email} (${acc.name})`);
+  }
 
   // 2. Create Projects
   const projectNames = [...new Set(SEED_TASKS.map(t => t.project))];
@@ -147,8 +152,9 @@ async function seed() {
 
   console.log('\n🎉 Seed complete!');
   console.log(`\n📋 Login credentials:`);
-  console.log(`   Email: ${adminEmail}`);
-  console.log(`   Password: ${adminPassword}`);
+  for (const acc of accounts) {
+    console.log(`   ${acc.email} / ${acc.password} (${acc.name})`);
+  }
 }
 
 seed().catch(err => {
