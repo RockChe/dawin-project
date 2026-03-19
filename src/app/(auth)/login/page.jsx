@@ -13,8 +13,8 @@ export default function LoginPage() {
   }, [state]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F3EF' }}>
-      <div className="w-full max-w-md p-8 rounded-2xl shadow-lg" style={{ background: '#FFFFFF' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F3EF', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="w-full max-w-md p-8 rounded-2xl shadow-lg" style={{ background: '#FFFFFF', width: '100%', maxWidth: 448, padding: 32, borderRadius: 16, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold" style={{ color: '#37352F' }}>專案管理儀表板</h1>
           <p className="mt-2 text-sm" style={{ color: '#6B6B6B' }}>請登入以繼續</p>
