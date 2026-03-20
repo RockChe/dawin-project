@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { THEMES, THEME_ORDER, X, SC, PC, CC, PJC, F, FM, applyTheme, getIS2 } from "@/lib/theme";
-import { pD, fD, computeProgress, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
+import { pD, fD, toISO, computeProgress, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
 import useTaskManager from "@/hooks/useTaskManager";
 import EditableCell from "./EditableCell";
 import InlineNote from "./InlineNote";
@@ -696,7 +696,7 @@ export default function Dashboard() {
               </div>
             )}
             {showTblAdd && (() => {
-              const doAdd = () => { if (!draft.task.trim() || !draft.project.trim()) return; const proj = projects.find(p => p.name === draft.project); if (!proj) return; const dur = (draft.start && draft.end) ? Math.max(1, Math.ceil((pD(draft.end) - pD(draft.start)) / 864e5)) : null; addTask(proj.id, { task: draft.task, startDate: draft.start || null, endDate: draft.end || null, duration: dur, owner: draft.owner, category: draft.category, priority: draft.priority, notes: draft.notes }); setDraft({ task: "", project: "", start: "", end: "", owner: "—", category: "活動", priority: "中", notes: "" }); setShowTblAdd(false); };
+              const doAdd = async () => { if (!draft.task.trim() || !draft.project.trim()) return; const proj = projects.find(p => p.name === draft.project); if (!proj) return; const dur = (draft.start && draft.end) ? Math.max(1, Math.ceil((pD(draft.end) - pD(draft.start)) / 864e5)) : null; try { await addTask(proj.id, { task: draft.task, startDate: draft.start ? toISO(draft.start) : null, endDate: draft.end ? toISO(draft.end) : null, duration: dur, owner: draft.owner, category: draft.category, priority: draft.priority, notes: draft.notes }); setDraft({ task: "", project: "", start: "", end: "", owner: "—", category: "活動", priority: "中", notes: "" }); setShowTblAdd(false); } catch (err) { console.error("doAdd failed:", err); } };
               return (<div style={{ padding: "12px 16px", background: X.surfaceLight, borderBottom: `1px solid ${X.accent}30` }}>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.5fr 2fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
                   <div><div style={{ fontSize: 12, color: X.textDim, marginBottom: 3 }}>Project *</div><input value={draft.project} onChange={e => setDraft(p => ({ ...p, project: e.target.value }))} list="pl" style={iS2} /><datalist id="pl">{projects.map(p => <option key={p.id} value={p.name} />)}</datalist></div>

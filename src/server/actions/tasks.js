@@ -18,22 +18,27 @@ export async function createTask(data) {
   const { session, error } = await safeRequireAuth();
   if (error) return { error };
 
-  const result = await db.insert(tasks).values({
-    projectId: data.projectId,
-    task: data.task,
-    status: data.status || '待辦',
-    category: data.category || null,
-    startDate: data.startDate || null,
-    endDate: data.endDate || null,
-    duration: data.duration || null,
-    owner: data.owner || null,
-    priority: data.priority || '中',
-    notes: data.notes || null,
-    sortOrder: data.sortOrder || 0,
-    createdBy: session.userId,
-  }).returning();
+  try {
+    const result = await db.insert(tasks).values({
+      projectId: data.projectId,
+      task: data.task,
+      status: data.status || '待辦',
+      category: data.category || null,
+      startDate: data.startDate || null,
+      endDate: data.endDate || null,
+      duration: data.duration || null,
+      owner: data.owner || null,
+      priority: data.priority || '中',
+      notes: data.notes || null,
+      sortOrder: data.sortOrder || 0,
+      createdBy: session.userId,
+    }).returning();
 
-  return { success: true, task: result[0] };
+    return { success: true, task: result[0] };
+  } catch (err) {
+    console.error("createTask error:", err);
+    return { error: err.message || "建立任務失敗" };
+  }
 }
 
 export async function updateTask(id, data) {
