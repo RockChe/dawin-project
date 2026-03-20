@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { X, getIS2 } from "@/lib/theme";
-import { pD, fD, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
+import { pD, fD, toISO, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 import CalendarPicker from "./CalendarPicker";
 import TagInput from "./TagInput";
 import EditableCell from "./EditableCell";
@@ -35,6 +35,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
   );
   const [subDraft, setSubDraft] = useState({ name: "", owner: "" });
   const [showSubInput, setShowSubInput] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkDraft, setLinkDraft] = useState({ url: "", title: "" });
   const fileInputRef = useRef(null);
@@ -46,34 +47,41 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
   useEffect(() => { const h = e => { if (e.key === "Escape") onClose(); }; document.addEventListener("keydown", h); return () => document.removeEventListener("keydown", h); }, [onClose]);
 
   const handleConfirm = async () => {
-    if (!form.task.trim()) return;
-    if (isNew) {
-      const dur = (form.start && form.end) ? Math.max(1, Math.ceil((pD(form.end) - pD(form.start)) / 864e5)) : null;
-      await addTask(projectId, {
-        task: form.task,
-        startDate: form.start || null,
-        endDate: form.end || null,
-        duration: dur,
-        owner: form.owner,
-        category: form.category,
-        priority: form.priority,
-        notes: form.notes,
-      });
-    } else {
-      const fieldMap = { task: "task", start: "startDate", end: "endDate", category: "category", priority: "priority", owner: "owner", status: "status", notes: "notes" };
-      for (const [formField, dbField] of Object.entries(fieldMap)) {
-        const orig = (formField === "start" || formField === "end") ? (task.startDate || task.endDate || "") : (task[formField] || "");
-        const cur = form[formField] || "";
-        if (orig !== cur) {
-          await updateTask(task.id, formField, (formField === "start" || formField === "end") ? (cur || null) : cur);
+    if (!form.task.trim() || loading) return;
+    setLoading(true);
+    try {
+      if (isNew) {
+        const dur = (form.start && form.end) ? Math.max(1, Math.ceil((pD(form.end) - pD(form.start)) / 864e5)) : null;
+        await addTask(projectId, {
+          task: form.task,
+          startDate: form.start ? toISO(form.start) : null,
+          endDate: form.end ? toISO(form.end) : null,
+          duration: dur,
+          owner: form.owner,
+          category: form.category,
+          priority: form.priority,
+          notes: form.notes,
+        });
+      } else {
+        const fieldMap = { task: "task", start: "startDate", end: "endDate", category: "category", priority: "priority", owner: "owner", status: "status", notes: "notes" };
+        for (const [formField, dbField] of Object.entries(fieldMap)) {
+          const orig = (formField === "start" || formField === "end") ? (task.startDate || task.endDate || "") : (task[formField] || "");
+          const cur = form[formField] || "";
+          if (orig !== cur) {
+            const val = (formField === "start" || formField === "end") ? (cur ? toISO(cur) : null) : cur;
+            await updateTask(task.id, formField, val);
+          }
+        }
+        if (form.start && form.end) {
+          const dur = Math.max(1, Math.ceil((pD(form.end) - pD(form.start)) / 864e5));
+          await updateTask(task.id, "duration", dur);
         }
       }
-      if (form.start && form.end) {
-        const dur = Math.max(1, Math.ceil((pD(form.end) - pD(form.start)) / 864e5));
-        await updateTask(task.id, "duration", dur);
-      }
+      onClose();
+    } catch (err) {
+      console.error("Task save failed:", err);
+      setLoading(false);
     }
-    onClose();
   };
 
   const handleDragEnd = (event) => {
@@ -207,7 +215,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
         </div>
         <div style={{ padding: "12px 20px", borderTop: `1px solid ${X.border}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button onClick={onClose} style={{ background: X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "8px 20px", fontSize: 14, cursor: "pointer" }}>取消</button>
-          <button onClick={handleConfirm} disabled={!form.task.trim()} style={{ background: form.task.trim() ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "8px 20px", fontSize: 14, fontWeight: 700, cursor: form.task.trim() ? "pointer" : "not-allowed" }}>確認</button>
+          <button onClick={handleConfirm} disabled={!form.task.trim() || loading} style={{ background: (form.task.trim() && !loading) ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "8px 20px", fontSize: 14, fontWeight: 700, cursor: (form.task.trim() && !loading) ? "pointer" : "not-allowed", opacity: loading ? 0.7 : 1 }}>{loading ? "儲存中..." : "確認"}</button>
         </div>
       </div>
     </div>
