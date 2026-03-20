@@ -77,6 +77,14 @@ export const links = pgTable('links', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// ── Config (key-value) ──
+export const config = pgTable('config', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  key: varchar('key', { length: 255 }).unique().notNull(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // ── Files ──
 export const files = pgTable('files', {
   id: uuid('id').defaultRandom().primaryKey(),

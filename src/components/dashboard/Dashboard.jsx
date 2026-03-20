@@ -113,8 +113,8 @@ export default function Dashboard() {
   const toggle = id => setExpanded(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const archiveProj = useCallback(p => { setArchived(prev => { const n = new Set(prev); n.add(p); return n; }); setSelProj(null); showToast("Project archived", "warn"); }, [showToast]);
   const unarchiveProj = useCallback(p => { setArchived(prev => { const n = new Set(prev); n.delete(p); return n; }); showToast("Project unarchived", "success"); }, [showToast]);
-  const deleteProj = useCallback(p => { const ids = allT.filter(t => t.project === p).map(t => t.id); setAllT(prev => prev.filter(t => t.project !== p)); setAllS(prev => prev.filter(s => !ids.includes(s.taskId))); setAllL(prev => prev.filter(l => !ids.includes(l.taskId))); setAllF(prev => prev.filter(f => !ids.includes(f.taskId))); setCustomProjects(prev => { const n = new Set(prev); n.delete(p); return n; }); setSelProj(null); showToast("Project deleted", "error"); }, [allT, showToast, setAllT, setAllS, setAllL, setAllF]);
-  const createProj = useCallback(name => { if (!name.trim()) return; setCustomProjects(p => { const n = new Set(p); n.add(name.trim()); return n; }); setShowCreateProj(false); setNewProjName(""); setSelProj(name.trim()); showToast("Project created", "success"); }, [showToast]);
+  const deleteProj = useCallback(async (p) => { const proj = projects.find(pr => pr.name === p); if (proj) { await deleteProjectAction(proj.id); } setCustomProjects(prev => { const n = new Set(prev); n.delete(p); return n; }); setSelProj(null); }, [projects, deleteProjectAction]);
+  const createProj = useCallback(async (name) => { if (!name.trim()) return; const result = await addProject(name.trim()); if (result?.success) { setShowCreateProj(false); setNewProjName(""); setSelProj(name.trim()); } }, [addProject]);
   const handleIconUpload = (e, proj) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { setProjIcons(p => ({ ...p, [proj]: ev.target.result })); }; reader.readAsDataURL(file); };
 
   // Computed
