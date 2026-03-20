@@ -52,7 +52,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
     try {
       if (isNew) {
         const dur = (form.start && form.end) ? Math.max(1, Math.ceil((pD(form.end) - pD(form.start)) / 864e5)) : null;
-        await addTask(projectId, {
+        const result = await addTask(projectId, {
           task: form.task,
           startDate: form.start ? toISO(form.start) : null,
           endDate: form.end ? toISO(form.end) : null,
@@ -62,6 +62,10 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           priority: form.priority,
           notes: form.notes,
         });
+        if (!result?.success) {
+          setLoading(false);
+          return;
+        }
       } else {
         const fieldMap = { task: "task", start: "startDate", end: "endDate", category: "category", priority: "priority", owner: "owner", status: "status", notes: "notes" };
         for (const [formField, dbField] of Object.entries(fieldMap)) {

@@ -21,6 +21,9 @@ import {
   updateProject as updateProjectAction,
   deleteProject as deleteProjectAction,
 } from '@/server/actions/projects';
+import { getConfig, saveConfig } from '@/server/actions/config';
+
+const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
 
 function checkAuthError(result) {
   if (result?.error === 'UNAUTHORIZED' || result?.error === 'FORBIDDEN') {
@@ -51,13 +54,35 @@ export default function useTaskManager() {
   // Load data from server
   const loadData = useCallback(async () => {
     try {
-      const [dashData, projData] = await Promise.all([getDashboardData(), getProjects()]);
+      const [dashData, projData, ownersRes, catsRes] = await Promise.all([
+        getDashboardData(),
+        getProjects(),
+        getConfig('owners'),
+        getConfig('categories'),
+      ]);
       if (checkAuthError(dashData) || checkAuthError(projData)) return;
       setAllT(dashData.tasks || []);
       setAllS(dashData.subtasks || []);
       setAllL(dashData.links || []);
       setAllF(dashData.files || []);
       setProjects(Array.isArray(projData) ? projData : []);
+
+      // Owners: merge configured + unique owners from tasks/subtasks
+      const tasksList = dashData.tasks || [];
+      const subsList = dashData.subtasks || [];
+      const taskOwners = tasksList.flatMap(t => (t.owner || '').split(',').map(o => o.trim()).filter(Boolean));
+      const subOwners = subsList.map(s => s.owner).filter(Boolean);
+      const dbOwners = Array.isArray(ownersRes?.value) ? ownersRes.value : [];
+      const mergedOwners = [...new Set([...dbOwners, ...taskOwners, ...subOwners])];
+      setConfigOwners(mergedOwners);
+
+      // Categories: seed default if DB has no data
+      if (Array.isArray(catsRes?.value) && catsRes.value.length > 0) {
+        setConfigCats(catsRes.value);
+      } else {
+        setConfigCats(DEFAULT_CATS);
+        saveConfig('categories', DEFAULT_CATS);
+      }
     } catch (err) {
       console.error('Failed to load data:', err);
     }
@@ -85,6 +110,8 @@ export default function useTaskManager() {
     if (result?.success) {
       setAllT(p => [...p, result.task]);
       showToast('任務已建立', 'success');
+    } else if (result?.error) {
+      showToast(result.error, 'error');
     }
     return result;
   }, [showToast]);

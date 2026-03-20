@@ -12,7 +12,7 @@ export function pD(s) {
 }
 
 export function fD(s) { return s ? s.replace(/\//g, ".").replace(/-/g, ".") : "\u2014"; }
-export function toISO(s) { if (!s) return ""; const p = s.split(" "); return p[0].replace(/\//g, "-"); }
+export function toISO(s) { if (!s) return ""; const p = s.split(" "); return p[0].replace(/[\/\.]/g, "-"); }
 export function fromISO(s) { if (!s) return ""; const p = s.split(" "); return p[0].replace(/-/g, "/"); }
 
 export function computeProgress(tid, subs) {
