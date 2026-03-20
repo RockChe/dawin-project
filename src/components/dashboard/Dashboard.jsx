@@ -51,7 +51,7 @@ export default function Dashboard() {
     renameProject, addProject, deleteProject: deleteProjectAction,
     reorderSubs, importTasks,
     configCats, setConfigCats, configOwners, setConfigOwners,
-    loading: sheetLoading, reload: reloadSheet,
+    reload: reloadSheet,
   } = useTaskManager();
   const [expanded, setExpanded] = useState(new Set());
   const [fpSet, setFPSet] = useState(new Set());
@@ -104,7 +104,7 @@ export default function Dashboard() {
   const [themeKey, setThemeKey] = useState(() => { try { return localStorage.getItem("dash-theme") || "warm"; } catch { return "warm"; } });
   applyTheme(themeKey);
   const cycleTheme = useCallback(() => { setThemeKey(p => { const i = THEME_ORDER.indexOf(p); return THEME_ORDER[(i + 1) % THEME_ORDER.length]; }); }, []);
-  useEffect(() => { try { localStorage.setItem("dash-theme", themeKey); } catch {} document.body.style.background = X.bg; }, [themeKey]);
+  useEffect(() => { try { localStorage.setItem("dash-theme", themeKey); } catch {} document.body.style.background = X.bg; window.dispatchEvent(new Event('theme-change')); }, [themeKey]);
   useEffect(() => { const h = () => setScrolled(window.scrollY > 10); window.addEventListener("scroll", h, { passive: true }); return () => window.removeEventListener("scroll", h); }, []);
   const [isMobile, setIsMobile] = useState(() => { try { return window.innerWidth <= 768; } catch { return false; } });
   useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
@@ -216,14 +216,6 @@ export default function Dashboard() {
     <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s" }}>
       <style>{`::selection{background:${X.selectionBg}} *{box-sizing:border-box} ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:${X.scrollThumb};border-radius:5px} ::-webkit-scrollbar-track{background:transparent} input,select,button{font-family:'Noto Sans TC',-apple-system,sans-serif}`}</style>
       <input type="file" accept="image/*" ref={fileRef} style={{ display: "none" }} onChange={e => { if (uploadTarget) handleIconUpload(e, uploadTarget); setUploadTarget(null); }} />
-
-      {sheetLoading && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: X.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <div style={{ width: 40, height: 40, border: `3px solid ${X.border}`, borderTop: `3px solid ${X.accent}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-          <div style={{ color: X.textSec, fontSize: 14 }}>載入中...</div>
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        </div>
-      )}
 
       {/* Header */}
       <div className="dash-header" style={{ borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 50, background: X.surface, boxShadow: scrolled ? `0 2px 8px ${X.shadow}` : "none", transition: "box-shadow 0.2s" }}>

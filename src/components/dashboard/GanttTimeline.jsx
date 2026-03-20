@@ -105,7 +105,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
             {rows.map((r, i) => {
               if (r.type === "h") { const c = pcMap[r.proj] || X.accent; return (<div key={i} style={{ height: 32, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }} />); }
               const bc = pcMap[r.proj], hv = hI === i, dn = r.task.status === "已完成", pp = r.task.status === "提案中" || r.task.status === "待確認";
-              return (<div key={i} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ position: "relative", height: 40, background: hv ? X.surfaceHover : "transparent", zIndex: 1, borderBottom: `1px solid ${X.border}22` }}>
+              return (<div key={i} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ position: "relative", height: 40, background: hv ? X.surfaceHover : "transparent", zIndex: hv ? 10 : 1, borderBottom: `1px solid ${X.border}22` }}>
                 <div style={{ position: "absolute", left: `${r.l}%`, width: `${r.w}%`, top: 10, height: 20, borderRadius: 10, background: pp ? `repeating-linear-gradient(135deg,${bc}28,${bc}28 4px,${bc}15 4px,${bc}15 8px)` : `${bc}30`, border: `1px solid ${bc}40`, minWidth: 6 }} />
                 {r.task.progress > 0 && <div style={{ position: "absolute", left: `${r.l}%`, width: `${r.w * r.task.progress / 100}%`, top: 10, height: 20, borderRadius: 10, background: bc, opacity: dn ? 0.55 : 0.85, minWidth: 4 }} />}
                 {r.task.progress > 0 && r.task.progress < 100 && r.w > 3 && <div style={{ position: "absolute", left: `${r.l + r.w * r.task.progress / 100 + 0.4}%`, top: 13, fontSize: 14, fontFamily: FM, color: bc, fontWeight: 600 }}>{r.task.progress}%</div>}

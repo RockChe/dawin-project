@@ -37,7 +37,6 @@ export default function useTaskManager() {
   const [allL, setAllL] = useState([]);
   const [allF, setAllF] = useState([]);
   const [toast, setToast] = useState(null);
-  const [loading, setLoading] = useState(true);
   const toastTimer = useRef(null);
 
   const showToast = useCallback((msg, type = 'success') => {
@@ -59,10 +58,8 @@ export default function useTaskManager() {
       setAllL(dashData.links || []);
       setAllF(dashData.files || []);
       setProjects(Array.isArray(projData) ? projData : []);
-      setLoading(false);
     } catch (err) {
       console.error('Failed to load data:', err);
-      setLoading(false);
     }
   }, []);
 
@@ -252,6 +249,6 @@ export default function useTaskManager() {
     renameProject, addProject, deleteProject: deleteProjectHandler,
     reorderSubs, importTasks,
     configCats, setConfigCats, configOwners, setConfigOwners,
-    loading, reload: loadData,
+    reload: loadData,
   };
 }
