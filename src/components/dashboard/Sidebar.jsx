@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { logout } from '@/server/actions/auth';
 
 export default function Sidebar({ user }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <aside
