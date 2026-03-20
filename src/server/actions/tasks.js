@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/server/db';
-import { tasks, subtasks, links, files } from '@/server/db/schema';
-import { eq, asc, desc } from 'drizzle-orm';
+import { tasks, subtasks, links, files, projects } from '@/server/db/schema';
+import { eq, and, asc, desc } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 import { deleteFromR2 } from '@/lib/r2';
 
@@ -176,6 +176,73 @@ export async function deleteFile(id) {
   }
   await db.delete(files).where(eq(files.id, id));
   return { success: true };
+}
+
+// ── Upsert (import) ──
+
+export async function upsertTasks(importedTasks) {
+  const { session, error } = await safeRequireAuth();
+  if (error) return { error };
+
+  let updated = 0, inserted = 0;
+
+  // Cache project name → id mapping
+  const allProjects = await db.select().from(projects);
+  const projMap = {};
+  allProjects.forEach(p => { projMap[p.name] = p.id; });
+
+  for (const t of importedTasks) {
+    const projName = (t.project || '').trim();
+    if (!projName || !t.task) continue;
+
+    // Find or create project
+    let projectId = projMap[projName];
+    if (!projectId) {
+      const maxOrder = allProjects.length > 0
+        ? Math.max(...allProjects.map(p => p.sortOrder || 0)) + 1
+        : 1;
+      const newProj = await db.insert(projects).values({
+        name: projName,
+        sortOrder: maxOrder,
+        createdBy: session.userId,
+      }).returning();
+      projectId = newProj[0].id;
+      projMap[projName] = projectId;
+      allProjects.push(newProj[0]);
+    }
+
+    // Check if task with same projectId + task name exists
+    const existing = await db.select().from(tasks)
+      .where(and(eq(tasks.projectId, projectId), eq(tasks.task, t.task)))
+      .limit(1);
+
+    const data = {
+      status: t.status || '待辦',
+      category: t.category || null,
+      startDate: t.start || null,
+      endDate: t.end || null,
+      duration: t.duration || null,
+      owner: t.owner || null,
+      priority: t.priority || '中',
+      notes: t.notes || null,
+      sortOrder: t.sort_order || 0,
+    };
+
+    if (existing.length > 0) {
+      await db.update(tasks).set({ ...data, updatedAt: new Date() }).where(eq(tasks.id, existing[0].id));
+      updated++;
+    } else {
+      await db.insert(tasks).values({
+        projectId,
+        task: t.task,
+        ...data,
+        createdBy: session.userId,
+      });
+      inserted++;
+    }
+  }
+
+  return { success: true, updated, inserted };
 }
 
 // ── Dashboard Data (aggregated) ──

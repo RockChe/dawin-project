@@ -28,10 +28,30 @@ export function tasksToCSV(tasks) {
   return rows.join("\n");
 }
 
+const HEADER_MAP = {
+  "id": "id", "編號": "id", "ID": "id",
+  "project": "project", "專案": "project", "專案名稱": "project", "項目": "project",
+  "task": "task", "任務": "task", "任務名稱": "task", "工作": "task",
+  "status": "status", "狀態": "status",
+  "category": "category", "分類": "category", "類別": "category",
+  "start": "start", "開始": "start", "開始日期": "start", "start_date": "start",
+  "end": "end", "結束": "end", "結束日期": "end", "end_date": "end",
+  "duration": "duration", "天數": "duration", "工期": "duration",
+  "owner": "owner", "負責人": "owner", "擁有者": "owner",
+  "priority": "priority", "優先": "priority", "優先級": "priority",
+  "notes": "notes", "備註": "notes", "筆記": "notes",
+};
+
+function normalizeHeader(h) {
+  const key = h.toLowerCase().trim();
+  return HEADER_MAP[key] || HEADER_MAP[h.trim()] || key;
+}
+
 export function parseCSV(text) {
   const lines = text.split("\n").filter(l => l.trim());
   if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
+  const rawHeaders = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
+  const headers = rawHeaders.map(normalizeHeader);
   return lines.slice(1).map(line => {
     const vals = [];
     let cur = "", inQ = false;

@@ -13,6 +13,7 @@ import {
   createLink as createLinkAction,
   deleteLink as deleteLinkAction,
   deleteFile as deleteFileAction,
+  upsertTasks as upsertTasksAction,
 } from '@/server/actions/tasks';
 import {
   getProjects,
@@ -191,6 +192,19 @@ export default function useTaskManager() {
     showToast('專案已刪除', 'error');
   }, [showToast]);
 
+  // ── Import (upsert) ──
+  const importTasks = useCallback(async (csvTasks) => {
+    const result = await upsertTasksAction(csvTasks);
+    if (checkAuthError(result)) return result;
+    if (result?.error) {
+      showToast(result.error, 'error');
+      return result;
+    }
+    showToast(`匯入完成：${result.updated} 筆更新、${result.inserted} 筆新增`, 'success');
+    await loadData();
+    return result;
+  }, [showToast, loadData]);
+
   // ── Reorder subtasks ──
   const reorderSubs = useCallback((taskId, activeId, overId) => {
     setAllS(prev => {
@@ -236,7 +250,7 @@ export default function useTaskManager() {
     addLink, deleteLink,
     addFile, deleteFile: deleteFileHandler,
     renameProject, addProject, deleteProject: deleteProjectHandler,
-    reorderSubs,
+    reorderSubs, importTasks,
     configCats, setConfigCats, configOwners, setConfigOwners,
     loading, reload: loadData,
   };

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { THEMES, THEME_ORDER, X, SC, PC, CC, PJC, F, FM, applyTheme, getIS2 } from "@/lib/theme";
-import { pD, fD, computeProgress, tasksToCSV, downloadCSV } from "@/lib/utils";
+import { pD, fD, computeProgress, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
 import useTaskManager from "@/hooks/useTaskManager";
 import EditableCell from "./EditableCell";
 import InlineNote from "./InlineNote";
@@ -81,6 +81,9 @@ export default function Dashboard() {
   const fileRef = useRef(null);
   const [uploadTarget, setUploadTarget] = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
@@ -128,6 +131,32 @@ export default function Dashboard() {
   const allProjNames = useMemo(() => [...new Set([...twp.map(d => d.project), ...customProjects])], [twp, customProjects]);
   const pcMap = {}; allProjNames.forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
   const iS2 = getIS2();
+
+  const processImport = useCallback(async (csvText) => {
+    const imported = parseCSV(csvText);
+    if (!imported.length) { showToast("CSV 中沒有有效資料", "error"); return; }
+    await importTasks(imported);
+  }, [showToast, importTasks]);
+
+  const handleImport = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { processImport(ev.target.result); };
+    reader.readAsText(file); e.target.value = "";
+  };
+
+  const handleUrlImport = useCallback(async () => {
+    if (!urlValue.trim()) return;
+    setUrlLoading(true);
+    try {
+      const res = await fetch("/api/fetch-csv", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: urlValue.trim() }) });
+      const data = await res.json();
+      if (!res.ok || data.error) { showToast(data.error || "取得 CSV 失敗", "error"); return; }
+      await processImport(data.csv);
+      setShowUrlInput(false); setUrlValue("");
+    } catch (err) { showToast("取得 CSV 失敗: " + err.message, "error"); }
+    finally { setUrlLoading(false); }
+  }, [urlValue, processImport, showToast]);
 
   const navigate = useCallback((dir) => {
     if (!activeCell) return;
@@ -652,17 +681,28 @@ export default function Dashboard() {
                   <>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>Export</button>
+                      <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>
+                      <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>URL</button>
                     </div>
                     <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
                   </>
                 ) : (
                   <>
                     <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Export CSV</button>
+                    <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import CSV<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>
+                    <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Import URL</button>
                     <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
                   </>
                 )}
               </div>
             </div>
+            {showUrlInput && (
+              <div style={{ padding: "8px 16px", background: X.surfaceLight, borderBottom: `1px solid ${X.border}`, display: "flex", gap: 8, alignItems: "center" }}>
+                <input value={urlValue} onChange={e => setUrlValue(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleUrlImport(); }} placeholder="https://..." style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: `1px solid ${X.border}`, background: X.surface, color: X.text, fontSize: 13, outline: "none" }} />
+                <button onClick={handleUrlImport} disabled={urlLoading} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 16px", fontSize: 13, fontWeight: 700, cursor: urlLoading ? "not-allowed" : "pointer", opacity: urlLoading ? 0.6 : 1 }}>{urlLoading ? "載入中..." : "匯入"}</button>
+                <button onClick={() => { setShowUrlInput(false); setUrlValue(""); }} style={{ background: "transparent", border: "none", color: X.textDim, fontSize: 18, cursor: "pointer", padding: "2px 6px" }}>×</button>
+              </div>
+            )}
             {showTblAdd && (() => {
               const doAdd = () => { if (!draft.task.trim() || !draft.project.trim()) return; const dur = (draft.start && draft.end) ? Math.max(1, Math.ceil((pD(draft.end) - pD(draft.start)) / 864e5)) : null; addTask(draft.project, { task: draft.task, start: draft.start || null, end: draft.end || null, duration: dur, owner: draft.owner, category: draft.category, priority: draft.priority, notes: draft.notes }); setDraft({ task: "", project: "", start: "", end: "", owner: "—", category: "活動", priority: "中", notes: "" }); setShowTblAdd(false); };
               return (<div style={{ padding: "12px 16px", background: X.surfaceLight, borderBottom: `1px solid ${X.accent}30` }}>
