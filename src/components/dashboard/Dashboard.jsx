@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { THEMES, THEME_ORDER, X, SC, PC, CC, PJC, F, FM, applyTheme, getIS2 } from "@/lib/theme";
-import { pD, fD, computeProgress, tasksToCSV, parseCSV, downloadCSV, getTemplate } from "@/lib/utils";
+import { pD, fD, computeProgress, tasksToCSV, downloadCSV } from "@/lib/utils";
 import useTaskManager from "@/hooks/useTaskManager";
 import EditableCell from "./EditableCell";
 import InlineNote from "./InlineNote";
@@ -49,12 +49,10 @@ export default function Dashboard() {
     addTask, deleteTask, addSub, deleteSub,
     addLink, deleteLink, addFile, deleteFile,
     renameProject, addProject, deleteProject: deleteProjectAction,
-    reorderSubs,
+    reorderSubs, importTasks,
     configCats, setConfigCats, configOwners, setConfigOwners,
     loading: sheetLoading, reload: reloadSheet,
   } = useTaskManager();
-  const sheetError = null;
-
   const [expanded, setExpanded] = useState(new Set());
   const [fpSet, setFPSet] = useState(new Set());
   const toggleFP = p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; });
@@ -129,7 +127,6 @@ export default function Dashboard() {
   const SI = ({ col }) => sortCol !== col ? <span style={{ opacity: 0.3, marginLeft: 3 }}>↕</span> : <span style={{ marginLeft: 3, color: X.accent }}>{sortDir === "asc" ? "↑" : "↓"}</span>;
   const allProjNames = useMemo(() => [...new Set([...twp.map(d => d.project), ...customProjects])], [twp, customProjects]);
   const pcMap = {}; allProjNames.forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
-  const handleImport = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => { const imported = parseCSV(ev.target.result); if (imported.length) { const mx = allT.reduce((m, t) => { const n = parseInt(t.id.replace("T", "")); return n > m ? n : m; }, 0); const ms = allT.reduce((m, t) => t.sortOrder > m ? t.sortOrder : m, 0); const withIds = imported.map((t, i) => ({ ...t, id: t.id || `T${String(mx + 1 + i).padStart(2, "0")}`, sortOrder: ms + 1 + i })); setAllT(p => [...p, ...withIds]); showToast(`${imported.length} tasks imported`, "success"); } }; reader.readAsText(file); e.target.value = ""; };
   const iS2 = getIS2();
 
   const navigate = useCallback((dir) => {
@@ -188,13 +185,13 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s" }}>
-      <style>{`::selection{background:${X.selectionBg}} *{box-sizing:border-box} ::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-thumb{background:${X.scrollThumb};border-radius:3px} ::-webkit-scrollbar-track{background:transparent} input,select,button{font-family:'Noto Sans TC',-apple-system,sans-serif}`}</style>
+      <style>{`::selection{background:${X.selectionBg}} *{box-sizing:border-box} ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:${X.scrollThumb};border-radius:5px} ::-webkit-scrollbar-track{background:transparent} input,select,button{font-family:'Noto Sans TC',-apple-system,sans-serif}`}</style>
       <input type="file" accept="image/*" ref={fileRef} style={{ display: "none" }} onChange={e => { if (uploadTarget) handleIconUpload(e, uploadTarget); setUploadTarget(null); }} />
 
       {sheetLoading && (
         <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: X.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
           <div style={{ width: 40, height: 40, border: `3px solid ${X.border}`, borderTop: `3px solid ${X.accent}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-          <div style={{ color: X.textSec, fontSize: 14 }}>Loading from Google Sheets...</div>
+          <div style={{ color: X.textSec, fontSize: 14 }}>載入中...</div>
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       )}
@@ -655,19 +652,12 @@ export default function Dashboard() {
                   <>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>Export</button>
-                      <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.accent, cursor: "pointer", fontWeight: 600 }}>
-                        Import<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} />
-                      </label>
                     </div>
                     <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
                   </>
                 ) : (
                   <>
                     <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Export CSV</button>
-                    <button onClick={() => downloadCSV(getTemplate(), "task_template.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Template</button>
-                    <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.accent, cursor: "pointer", fontWeight: 600 }}>
-                      Import CSV<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} />
-                    </label>
                     <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
                   </>
                 )}
@@ -834,11 +824,6 @@ export default function Dashboard() {
                 <input value={newOwner} onChange={e => setNewOwner(e.target.value)} placeholder="New owner" onKeyDown={e => { if (e.key === "Enter" && newOwner.trim()) { setConfigOwners(p => [...p, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px" }} />
                 <button onClick={() => { if (newOwner.trim()) { setConfigOwners(p => [...p, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+</button>
               </div>
-            </div>
-            <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.green, borderRadius: 2 }} />Data Source</h3>
-              <div style={{ fontSize: 13, color: X.textSec, marginBottom: 10 }}>Google Sheets CSV{sheetError ? <span style={{ color: X.red, marginLeft: 8 }}>({sheetError})</span> : <span style={{ color: X.green, marginLeft: 8 }}>(connected)</span>}</div>
-              <button onClick={reloadSheet} disabled={sheetLoading} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "7px 20px", fontSize: 13, fontWeight: 600, cursor: sheetLoading ? "not-allowed" : "pointer", opacity: sheetLoading ? 0.6 : 1 }}>{sheetLoading ? "Loading..." : "Reload Sheet"}</button>
             </div>
             <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}`, gridColumn: "1" }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.amber, borderRadius: 2 }} />Timeline Width (px per unit)</h3>

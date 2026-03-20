@@ -77,17 +77,17 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
   const ss = (s, t) => { if (sy.current) return; sy.current = true; if (t.current) t.current.scrollTop = s.current.scrollTop; requestAnimationFrame(() => { sy.current = false; }); };
   return (
     <div style={{ border: `1px solid ${X.border}`, borderRadius: 12, overflow: "hidden", background: X.surface }}>
-      <div style={{ display: "flex", maxHeight: "calc(100vh - 160px)", overflow: "hidden" }}>
+      <div style={{ display: "flex", overflow: "hidden" }}>
         <div ref={lR} onScroll={() => ss(lR, rR)} className={`dash-gantt-left dash-gantt-left-collapsible${leftHidden ? " dash-gantt-left-hidden" : ""}`} style={{ overflowY: "auto", borderRight: leftHidden ? "none" : `1px solid ${X.border}`, background: X.surfaceLight }}>
           <div style={{ position: "sticky", top: 0, zIndex: 5, height: 48, display: "flex", alignItems: "flex-end", padding: "0 16px 10px", background: X.surfaceLight, borderBottom: `1px solid ${X.border}`, fontSize: 14, color: X.textDim }}>Project / Task</div>
           <div>{rows.map((r, i) => {
-            if (r.type === "h") { const c = pcMap[r.proj] || X.accent; return (<div key={i} style={{ height: 44, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }}>
+            if (r.type === "h") { const c = pcMap[r.proj] || X.accent; return (<div key={i} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }}>
               <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
               <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.proj}</span>
               <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
             </div>); }
             const sc = SC[r.task.status] || {}, pc = PC[r.task.priority] || {};
-            return (<div key={i} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ height: 56, display: "flex", alignItems: "center", padding: "0 10px 0 26px", gap: 6, background: hI === i ? X.surfaceHover : "transparent", borderBottom: `1px solid ${X.border}22` }}>
+            return (<div key={i} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ height: 40, display: "flex", alignItems: "center", padding: "0 10px 0 26px", gap: 6, background: hI === i ? X.surfaceHover : "transparent", borderBottom: `1px solid ${X.border}22` }}>
               <span style={{ width: 4, height: 4, borderRadius: "50%", background: pc.color, flexShrink: 0 }} />
               <div style={{ flex: 1, overflow: "hidden" }}><div style={{ fontSize: 14, color: X.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.task.task}</div></div>
               <span style={{ fontSize: 14, padding: "1px 6px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{r.task.status}</span>
@@ -103,14 +103,14 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
               {todayPct >= 0 && todayPct <= 100 && <div style={{ position: "absolute", left: `${todayPct}%`, top: 0, bottom: 0, borderLeft: `2px dashed ${X.accent}`, zIndex: 2, opacity: 0.7 }}><div style={{ background: X.accent, color: "#fff", fontSize: 10, padding: "2px 5px", borderRadius: 10, fontWeight: 700, marginLeft: 3, display: "inline-block", position: "sticky", top: 2 }}>TODAY</div></div>}
             </div>
             {rows.map((r, i) => {
-              if (r.type === "h") { const c = pcMap[r.proj] || X.accent; return (<div key={i} style={{ height: 44, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }} />); }
+              if (r.type === "h") { const c = pcMap[r.proj] || X.accent; return (<div key={i} style={{ height: 32, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }} />); }
               const bc = pcMap[r.proj], hv = hI === i, dn = r.task.status === "已完成", pp = r.task.status === "提案中" || r.task.status === "待確認";
-              return (<div key={i} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ position: "relative", height: 56, background: hv ? X.surfaceHover : "transparent", zIndex: 1, borderBottom: `1px solid ${X.border}22` }}>
-                <div style={{ position: "absolute", left: `${r.l}%`, width: `${r.w}%`, top: 18, height: 20, borderRadius: 10, background: pp ? `repeating-linear-gradient(135deg,${bc}28,${bc}28 4px,${bc}15 4px,${bc}15 8px)` : `${bc}30`, border: `1px solid ${bc}40`, minWidth: 6 }} />
-                {r.task.progress > 0 && <div style={{ position: "absolute", left: `${r.l}%`, width: `${r.w * r.task.progress / 100}%`, top: 18, height: 20, borderRadius: 10, background: bc, opacity: dn ? 0.55 : 0.85, minWidth: 4 }} />}
-                {r.task.progress > 0 && r.task.progress < 100 && r.w > 3 && <div style={{ position: "absolute", left: `${r.l + r.w * r.task.progress / 100 + 0.4}%`, top: 21, fontSize: 14, fontFamily: FM, color: bc, fontWeight: 600 }}>{r.task.progress}%</div>}
-                {dn && r.w > 3 && <div style={{ position: "absolute", left: `${r.l + r.w / 2}%`, top: 21, fontSize: 14, fontFamily: FM, color: X.green, fontWeight: 700, transform: "translateX(-50%)" }}>100%</div>}
-                {hv && <div style={{ position: "absolute", left: `${Math.min(Math.max(r.l, 2), 65)}%`, bottom: 40, background: X.surfaceLight, color: X.text, fontSize: 14, padding: "6px 12px", borderRadius: 8, whiteSpace: "nowrap", maxWidth: "90vw", overflow: "hidden", textOverflow: "ellipsis", zIndex: 30, boxShadow: `0 4px 16px ${X.shadowHeavy}`, border: `1px solid ${X.border}` }}>{fD(r.task.start)} → {fD(r.task.end)}　{r.task.duration}d　{r.task.progress}%</div>}
+              return (<div key={i} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ position: "relative", height: 40, background: hv ? X.surfaceHover : "transparent", zIndex: 1, borderBottom: `1px solid ${X.border}22` }}>
+                <div style={{ position: "absolute", left: `${r.l}%`, width: `${r.w}%`, top: 10, height: 20, borderRadius: 10, background: pp ? `repeating-linear-gradient(135deg,${bc}28,${bc}28 4px,${bc}15 4px,${bc}15 8px)` : `${bc}30`, border: `1px solid ${bc}40`, minWidth: 6 }} />
+                {r.task.progress > 0 && <div style={{ position: "absolute", left: `${r.l}%`, width: `${r.w * r.task.progress / 100}%`, top: 10, height: 20, borderRadius: 10, background: bc, opacity: dn ? 0.55 : 0.85, minWidth: 4 }} />}
+                {r.task.progress > 0 && r.task.progress < 100 && r.w > 3 && <div style={{ position: "absolute", left: `${r.l + r.w * r.task.progress / 100 + 0.4}%`, top: 13, fontSize: 14, fontFamily: FM, color: bc, fontWeight: 600 }}>{r.task.progress}%</div>}
+                {dn && r.w > 3 && <div style={{ position: "absolute", left: `${r.l + r.w / 2}%`, top: 13, fontSize: 14, fontFamily: FM, color: X.green, fontWeight: 700, transform: "translateX(-50%)" }}>100%</div>}
+                {hv && <div style={{ position: "absolute", left: `${Math.min(Math.max(r.l, 2), 65)}%`, bottom: 28, background: X.surfaceLight, color: X.text, fontSize: 14, padding: "6px 12px", borderRadius: 8, whiteSpace: "nowrap", maxWidth: "90vw", overflow: "hidden", textOverflow: "ellipsis", zIndex: 30, boxShadow: `0 4px 16px ${X.shadowHeavy}`, border: `1px solid ${X.border}` }}>{fD(r.task.start)} → {fD(r.task.end)}　{r.task.duration}d　{r.task.progress}%</div>}
               </div>);
             })}
           </div>
