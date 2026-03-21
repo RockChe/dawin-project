@@ -44,13 +44,15 @@ export default function Dashboard() {
     projects, allT, setAllT, allS, setAllS,
     allL, setAllL, allF, setAllF,
     twp,
+    loading, userRole,
     toast, showToast,
     toggleSub, updateTask, updateSub,
     addTask, deleteTask, addSub, deleteSub,
     addLink, deleteLink, addFile, deleteFile,
     renameProject, addProject, deleteProject: deleteProjectAction,
     reorderSubs, importTasks,
-    configCats, setConfigCats, configOwners, setConfigOwners,
+    deleteManyTasks, deleteAllTasks,
+    configCats, saveConfigCats, configOwners, saveConfigOwners,
     reload: reloadSheet,
   } = useTaskManager();
   const [expanded, setExpanded] = useState(new Set());
@@ -98,6 +100,9 @@ export default function Dashboard() {
   const [activeCell, setActiveCell] = useState(null);
   const [editingCell, setEditingCell] = useState(false);
   const [initialTypedChar, setInitialTypedChar] = useState(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [showCleanAllModal, setShowCleanAllModal] = useState(false);
+  const [cleanAllInput, setCleanAllInput] = useState("");
   const tableRef = useRef(null);
 
   // Theme
@@ -211,6 +216,22 @@ export default function Dashboard() {
   useEffect(() => {
     if (activeCell && !editingCell) tableRef.current?.focus();
   }, [activeCell, editingCell]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.accent, animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <div style={{ fontSize: 15, color: X.textDim, fontWeight: 500 }}>載入資料中...</div>
+        <div style={{ width: "90%", maxWidth: 600, display: "flex", flexDirection: "column", gap: 12, marginTop: 20 }}>
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} style={{ height: 48, borderRadius: 12, background: `linear-gradient(90deg, ${X.surfaceLight} 25%, ${X.surface} 50%, ${X.surfaceLight} 75%)`, backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s" }}>
@@ -671,10 +692,12 @@ export default function Dashboard() {
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", ...(isMobile ? { width: "100%", justifyContent: "space-between" } : {}) }}>
                 {isMobile ? (
                   <>
-                    <div style={{ display: "flex", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>Export</button>
                       <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>
                       <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>URL</button>
+                      {selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>刪除 ({selectedRows.size})</button>}
+                      {userRole === "super_admin" && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.red, cursor: "pointer" }}>Clean All</button>}
                     </div>
                     <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
                   </>
@@ -683,6 +706,8 @@ export default function Dashboard() {
                     <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Export CSV</button>
                     <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import CSV<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>
                     <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Import URL</button>
+                    {selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>刪除已選 ({selectedRows.size})</button>}
+                    {userRole === "super_admin" && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.red, cursor: "pointer" }}>Clean All</button>}
                     <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
                   </>
                 )}
@@ -717,9 +742,10 @@ export default function Dashboard() {
                 {sorted.length === 0 && <div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></div>}
                 {sorted.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
                   return (
-                    <div key={d.id} style={{ background: X.surface, borderRadius: 12, border: `1px solid ${X.border}`, overflow: "hidden", marginBottom: 8 }}>
+                    <div key={d.id} style={{ background: selectedRows.has(d.id) ? `${X.accent}10` : X.surface, borderRadius: 12, border: `1px solid ${selectedRows.has(d.id) ? X.accent + "40" : X.border}`, overflow: "hidden", marginBottom: 8 }}>
                       <div onClick={() => toggle(d.id)} style={{ padding: "12px 14px", cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { e.stopPropagation(); setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} onClick={e => e.stopPropagation()} style={{ cursor: "pointer", accentColor: X.accent, flexShrink: 0 }} />
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], flexShrink: 0 }} />
                           <span style={{ flex: 1, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.task}</span>
                           <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{d.status}</span>
@@ -771,16 +797,20 @@ export default function Dashboard() {
               <div ref={tableRef} tabIndex={-1} onKeyDown={handleTableKeyDown} style={{ overflowX: "auto", outline: "none" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
                   <thead><tr style={{ background: X.surfaceLight }}>
+                    <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}`, textAlign: "center" }}>
+                      <input type="checkbox" checked={sorted.length > 0 && sorted.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(sorted.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />
+                    </th>
                     {[{ k: "project", l: "Project" }, { k: "task", l: "Task" }, { k: "owner", l: "Owner" }, { k: "status", l: "Status" }, { k: "priority", l: "Pri" }, { k: "progress", l: "Progress" }, { k: "category", l: "Category" }, { k: "start", l: "Start" }, { k: "end", l: "End" }, { k: "notes", l: "Notes" }].map(col => (
                       <th key={col.k} onClick={() => handleSort(col.k)} style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: X.textDim, fontSize: 13, borderBottom: `1px solid ${X.border}`, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>{col.l}<SI col={col.k} /></th>
                     ))}
                     <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}` }} />
                   </tr></thead>
                   <tbody>
-                    {sorted.length === 0 && <tr><td colSpan={11} style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></td></tr>}
+                    {sorted.length === 0 && <tr><td colSpan={12} style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></td></tr>}
                     {sorted.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
                       return [
-                        <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}` }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}`, background: selectedRows.has(d.id) ? `${X.accent}10` : "transparent" }} onMouseEnter={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = X.surfaceHover; }} onMouseLeave={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = "transparent"; }}>
+                          <td style={{ padding: "9px 6px", textAlign: "center" }}><input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} /></td>
                           <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.project} onSave={v => updateTask(d.id, "project", v)} {...cellP(d.id, "project")} /></div></div></td>
                           <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /></div></div></td>
                           <td style={{ padding: "9px 8px", fontSize: 14 }}><EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} style={{ color: X.textSec }} /></td>
@@ -796,6 +826,7 @@ export default function Dashboard() {
                         ...(isE ? [...tSubs.map(sub => (
                           <tr key={sub.id} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
                             <td />
+                            <td />
                             <td style={{ padding: "7px 8px 7px 30px", fontSize: 14 }}>
                               <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={e => { e.stopPropagation(); toggleSub(sub.id); }}>
                                 <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff" }}>{sub.done ? "✓" : ""}</span>
@@ -809,6 +840,7 @@ export default function Dashboard() {
                             <td style={{ padding: "4px", textAlign: "center" }}><button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button></td>
                           </tr>)),
                           <tr key={d.id + "_addsub"} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
+                            <td />
                             <td />
                             <td colSpan={10} style={{ padding: "6px 8px 6px 30px" }}>
                               {showSubAdd === d.id
@@ -838,11 +870,11 @@ export default function Dashboard() {
               {configCats.map((cat, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: CC[cat] || X.accent, flexShrink: 0 }} />
                 <span style={{ fontSize: 14, color: X.text, flex: 1 }}>{cat}</span>
-                <button onClick={() => setConfigCats(p => p.filter((_, j) => j !== i))} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
+                <button onClick={() => { saveConfigCats(configCats.filter((_, j) => j !== i)); showToast("Category removed", "error"); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
               </div>))}
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category" onKeyDown={e => { if (e.key === "Enter" && newCat.trim()) { setConfigCats(p => [...p, newCat.trim()]); setNewCat(""); showToast("Category added", "success"); } }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px" }} />
-                <button onClick={() => { if (newCat.trim()) { setConfigCats(p => [...p, newCat.trim()]); setNewCat(""); showToast("Category added", "success"); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+</button>
+                <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category" onKeyDown={e => { if (e.key === "Enter" && newCat.trim()) { saveConfigCats([...configCats, newCat.trim()]); setNewCat(""); showToast("Category added", "success"); } }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px" }} />
+                <button onClick={() => { if (newCat.trim()) { saveConfigCats([...configCats, newCat.trim()]); setNewCat(""); showToast("Category added", "success"); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+</button>
               </div>
             </div>
             <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
@@ -850,11 +882,11 @@ export default function Dashboard() {
               {configOwners.map((ow, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: X.accent, flexShrink: 0 }} />
                 <span style={{ fontSize: 14, color: X.text, flex: 1 }}>{ow}</span>
-                <button onClick={() => setConfigOwners(p => p.filter((_, j) => j !== i))} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
+                <button onClick={() => { saveConfigOwners(configOwners.filter((_, j) => j !== i)); showToast("Owner removed", "error"); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
               </div>))}
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                <input value={newOwner} onChange={e => setNewOwner(e.target.value)} placeholder="New owner" onKeyDown={e => { if (e.key === "Enter" && newOwner.trim()) { setConfigOwners(p => [...p, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px" }} />
-                <button onClick={() => { if (newOwner.trim()) { setConfigOwners(p => [...p, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+</button>
+                <input value={newOwner} onChange={e => setNewOwner(e.target.value)} placeholder="New owner" onKeyDown={e => { if (e.key === "Enter" && newOwner.trim()) { saveConfigOwners([...configOwners, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px" }} />
+                <button onClick={() => { if (newOwner.trim()) { saveConfigOwners([...configOwners, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+</button>
               </div>
             </div>
             <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}`, gridColumn: "1" }}>
@@ -881,6 +913,20 @@ export default function Dashboard() {
       </div>
       {modalTask && <TaskModal task={modalTask} projectId={modalTask !== "new" ? modalTask.projectId : (projects.find(p => p.name === selProj)?.id)} projectName={selProj} onClose={() => setModalTask(null)} addTask={addTask} updateTask={updateTask} allS={allS} addSub={addSub} deleteSub={deleteSub} toggleSub={toggleSub} updateSub={updateSub} configCats={configCats} configOwners={configOwners} reorderSubs={reorderSubs} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} />}
       {showFileManager && selProj && <FileManagerModal project={selProj} tasks={twp} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} onClose={() => setShowFileManager(false)} />}
+      {showCleanAllModal && (
+        <div onClick={() => setShowCleanAllModal(false)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: X.surface, borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: `0 16px 48px ${X.shadowHeavy}`, border: `1px solid ${X.border}`, padding: 24 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: X.red }}>Clean All</div>
+            <div style={{ fontSize: 14, color: X.textSec, marginBottom: 16 }}>此操作將刪除所有任務、子任務、連結及檔案，且無法復原。</div>
+            <div style={{ fontSize: 13, color: X.textDim, marginBottom: 8 }}>請輸入 <span style={{ fontWeight: 700, color: X.text }}>clean all</span> 以確認刪除：</div>
+            <input value={cleanAllInput} onChange={e => setCleanAllInput(e.target.value)} placeholder="clean all" autoFocus style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: `1px solid ${X.border}`, background: X.surfaceLight, color: X.text, fontSize: 15, outline: "none", marginBottom: 16 }} onKeyDown={e => { if (e.key === "Enter" && cleanAllInput === "clean all") { deleteAllTasks(); setShowCleanAllModal(false); } }} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setShowCleanAllModal(false)} style={{ background: X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "8px 20px", fontSize: 14, cursor: "pointer" }}>取消</button>
+              <button onClick={() => { if (cleanAllInput === "clean all") { deleteAllTasks(); setShowCleanAllModal(false); } }} disabled={cleanAllInput !== "clean all"} style={{ background: cleanAllInput === "clean all" ? X.red : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "8px 20px", fontSize: 14, fontWeight: 700, cursor: cleanAllInput === "clean all" ? "pointer" : "not-allowed" }}>確認刪除</button>
+            </div>
+          </div>
+        </div>
+      )}
       {toast && <div style={{ position: "fixed", bottom: 32, left: "50%", transform: "translateX(-50%)", zIndex: 100, animation: toast.fading ? "toastOut 0.3s ease forwards" : "toastIn 0.3s ease", display: "flex", alignItems: "center", gap: 10, background: X.surface, borderRadius: 12, padding: "12px 20px", boxShadow: `0 4px 20px ${X.shadowHeavy}`, border: `1px solid ${X.border}`, maxWidth: "90vw" }}>
         <div style={{ width: 4, height: 24, borderRadius: 2, background: toast.type === "error" ? X.red : toast.type === "warn" ? X.amber : X.green }} />
         <span style={{ fontSize: 14, fontWeight: 500, color: X.text, whiteSpace: "nowrap" }}>{toast.msg}</span>

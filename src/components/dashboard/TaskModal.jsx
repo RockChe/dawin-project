@@ -210,6 +210,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
                   <span style={{ fontSize: 14, flexShrink: 0 }}>{cat.emoji}</span>
                   <span style={{ flex: 1, fontSize: 13, color: X.textSec, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
                   <span style={{ fontSize: 12, color: X.textDim, flexShrink: 0 }}>{formatFileSize(f.size)}</span>
+                  <button onClick={async () => { try { const res = await fetch(`/api/download?key=${encodeURIComponent(f.r2Key)}`); const data = await res.json(); if (data.url) { const a = document.createElement("a"); a.href = data.url; a.download = f.name; a.target = "_blank"; a.rel = "noopener noreferrer"; a.click(); } } catch (err) { console.error("Download failed:", err); } }} style={{ background: "transparent", border: "none", color: X.accent, fontSize: 13, cursor: "pointer", padding: "2px 6px", opacity: 0.7 }} title="下載">↓</button>
                   <button onClick={() => deleteFile(f.id)} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>
                 </div>
               );

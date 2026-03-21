@@ -3,7 +3,7 @@
 import { db } from '@/server/db';
 import { tasks, subtasks, links, files, projects } from '@/server/db/schema';
 import { eq, and, asc, desc } from 'drizzle-orm';
-import { safeRequireAuth } from '@/lib/auth';
+import { safeRequireAuth, safeRequireAdmin } from '@/lib/auth';
 import { deleteFromR2 } from '@/lib/r2';
 
 // ── Tasks ──
@@ -248,6 +248,44 @@ export async function upsertTasks(importedTasks) {
   }
 
   return { success: true, updated, inserted };
+}
+
+// ── Batch Delete ──
+
+export async function deleteManyTasks(ids) {
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
+  if (!Array.isArray(ids) || ids.length === 0) return { error: 'No task IDs provided' };
+
+  let deleted = 0;
+  for (const id of ids) {
+    const taskFiles = await db.select().from(files).where(eq(files.taskId, id));
+    for (const f of taskFiles) {
+      try { await deleteFromR2(f.r2Key); } catch (e) { console.error('R2 delete error:', e); }
+    }
+    await db.delete(tasks).where(eq(tasks.id, id));
+    deleted++;
+  }
+
+  return { success: true, deleted };
+}
+
+// ── Clean All (super_admin only) ──
+
+export async function deleteAllTasks() {
+  const { error } = await safeRequireAdmin();
+  if (error) return { error };
+
+  // Delete all R2 files
+  const allFiles = await db.select().from(files);
+  for (const f of allFiles) {
+    try { await deleteFromR2(f.r2Key); } catch (e) { console.error('R2 delete error:', e); }
+  }
+
+  // Delete all tasks (cascade deletes subtasks, links, files)
+  await db.delete(tasks);
+
+  return { success: true };
 }
 
 // ── Dashboard Data (aggregated) ──

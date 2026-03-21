@@ -14,7 +14,10 @@ import {
   deleteLink as deleteLinkAction,
   deleteFile as deleteFileAction,
   upsertTasks as upsertTasksAction,
+  deleteManyTasks as deleteManyTasksAction,
+  deleteAllTasks as deleteAllTasksAction,
 } from '@/server/actions/tasks';
+import { getSessionInfo } from '@/server/actions/auth';
 import {
   getProjects,
   createProject as createProjectAction,
@@ -39,6 +42,8 @@ export default function useTaskManager() {
   const [allS, setAllS] = useState([]);
   const [allL, setAllL] = useState([]);
   const [allF, setAllF] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
@@ -53,14 +58,17 @@ export default function useTaskManager() {
 
   // Load data from server
   const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const [dashData, projData, ownersRes, catsRes] = await Promise.all([
+      const [dashData, projData, ownersRes, catsRes, sessionInfo] = await Promise.all([
         getDashboardData(),
         getProjects(),
         getConfig('owners'),
         getConfig('categories'),
+        getSessionInfo(),
       ]);
       if (checkAuthError(dashData) || checkAuthError(projData)) return;
+      if (sessionInfo?.role) setUserRole(sessionInfo.role);
       setAllT(dashData.tasks || []);
       setAllS(dashData.subtasks || []);
       setAllL(dashData.links || []);
@@ -85,6 +93,8 @@ export default function useTaskManager() {
       }
     } catch (err) {
       console.error('Failed to load data:', err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -216,6 +226,32 @@ export default function useTaskManager() {
     showToast('專案已刪除', 'error');
   }, [showToast]);
 
+  // ── Batch Delete ──
+  const deleteManyTasks = useCallback(async (ids) => {
+    setAllT(p => p.filter(t => !ids.includes(t.id)));
+    setAllS(p => p.filter(s => !ids.includes(s.taskId)));
+    setAllL(p => p.filter(l => !ids.includes(l.taskId)));
+    setAllF(p => p.filter(f => !ids.includes(f.taskId)));
+    const result = await deleteManyTasksAction(ids);
+    if (checkAuthError(result)) return;
+    showToast(`已刪除 ${result.deleted} 筆任務`, 'error');
+    return result;
+  }, [showToast]);
+
+  // ── Clean All ──
+  const deleteAllTasks = useCallback(async () => {
+    const result = await deleteAllTasksAction();
+    if (checkAuthError(result)) return result;
+    if (result?.success) {
+      setAllT([]);
+      setAllS([]);
+      setAllL([]);
+      setAllF([]);
+      showToast('所有任務已清除', 'error');
+    }
+    return result;
+  }, [showToast]);
+
   // ── Import (upsert) ──
   const importTasks = useCallback(async (csvTasks) => {
     const result = await upsertTasksAction(csvTasks);
@@ -260,14 +296,29 @@ export default function useTaskManager() {
     };
   }), [allT, allS, projects]);
 
-  const [configCats, setConfigCats] = useState(['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展']);
+  const [configCats, setConfigCats] = useState(DEFAULT_CATS);
   const [configOwners, setConfigOwners] = useState([]);
+
+  const saveConfigOwners = useCallback(async (newOwners) => {
+    setConfigOwners(newOwners);
+    const result = await saveConfig('owners', newOwners);
+    if (checkAuthError(result)) return;
+    if (result?.error) showToast(result.error, 'error');
+  }, [showToast]);
+
+  const saveConfigCats = useCallback(async (newCats) => {
+    setConfigCats(newCats);
+    const result = await saveConfig('categories', newCats);
+    if (checkAuthError(result)) return;
+    if (result?.error) showToast(result.error, 'error');
+  }, [showToast]);
 
   return {
     projects, setProjects,
     allT, setAllT, allS, setAllS,
     allL, setAllL, allF, setAllF,
     twp,
+    loading, userRole,
     toast, showToast,
     toggleSub, updateTask, updateSub,
     addTask, deleteTask, addSub, deleteSub,
@@ -275,7 +326,8 @@ export default function useTaskManager() {
     addFile, deleteFile: deleteFileHandler,
     renameProject, addProject, deleteProject: deleteProjectHandler,
     reorderSubs, importTasks,
-    configCats, setConfigCats, configOwners, setConfigOwners,
+    deleteManyTasks, deleteAllTasks,
+    configCats, saveConfigCats, configOwners, saveConfigOwners,
     reload: loadData,
   };
 }

@@ -67,6 +67,12 @@ export async function logout() {
   redirect('/login');
 }
 
+export async function getSessionInfo() {
+  const session = await getSession();
+  if (!session) return { error: 'UNAUTHORIZED' };
+  return { role: session.role, name: session.name, email: session.email };
+}
+
 export async function setPassword(prevState, formData) {
   const session = await getSession();
   if (!session) {

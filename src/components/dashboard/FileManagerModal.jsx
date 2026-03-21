@@ -34,11 +34,21 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
     linkGroups[d].push(l);
   });
 
-  const downloadFile = (f) => {
-    const a = document.createElement("a");
-    a.href = f.dataUrl;
-    a.download = f.name;
-    a.click();
+  const downloadFile = async (f) => {
+    try {
+      const res = await fetch(`/api/download?key=${encodeURIComponent(f.r2Key)}`);
+      const data = await res.json();
+      if (data.url) {
+        const a = document.createElement("a");
+        a.href = data.url;
+        a.download = f.name;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.click();
+      }
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
   };
 
   const handleAddLink = () => {
