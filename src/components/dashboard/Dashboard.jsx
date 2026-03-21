@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [showArch, setShowArch] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showTblAdd, setShowTblAdd] = useState(false);
+  const [tblAddLoading, setTblAddLoading] = useState(false);
   const [customProjects, setCustomProjects] = useState(new Set());
   const [modalTask, setModalTask] = useState(null);
   const [showFileManager, setShowFileManager] = useState(false);
@@ -721,7 +722,7 @@ export default function Dashboard() {
               </div>
             )}
             {showTblAdd && (() => {
-              const doAdd = async () => { if (!draft.task.trim() || !draft.project.trim()) return; const proj = projects.find(p => p.name === draft.project); if (!proj) return; const dur = (draft.start && draft.end) ? Math.max(1, Math.ceil((pD(draft.end) - pD(draft.start)) / 864e5)) : null; try { await addTask(proj.id, { task: draft.task, startDate: draft.start ? toISO(draft.start) : null, endDate: draft.end ? toISO(draft.end) : null, duration: dur, owner: draft.owner, category: draft.category, priority: draft.priority, notes: draft.notes }); setDraft({ task: "", project: "", start: "", end: "", owner: "—", category: "活動", priority: "中", notes: "" }); setShowTblAdd(false); } catch (err) { console.error("doAdd failed:", err); } };
+              const doAdd = async () => { if (tblAddLoading || !draft.task.trim() || !draft.project.trim()) return; const proj = projects.find(p => p.name === draft.project); if (!proj) { showToast('找不到專案，請從列表中選擇', 'error'); return; } const dur = (draft.start && draft.end) ? Math.max(1, Math.ceil((pD(draft.end) - pD(draft.start)) / 864e5)) : null; setTblAddLoading(true); try { const result = await addTask(proj.id, { task: draft.task, startDate: draft.start ? toISO(draft.start) : null, endDate: draft.end ? toISO(draft.end) : null, duration: dur, owner: draft.owner, category: draft.category, priority: draft.priority, notes: draft.notes }); if (result?.success) { setDraft({ task: "", project: "", start: "", end: "", owner: "—", category: "活動", priority: "中", notes: "" }); setShowTblAdd(false); } } catch (err) { console.error("doAdd failed:", err); showToast('新增失敗，請稍後再試', 'error'); } finally { setTblAddLoading(false); } };
               return (<div style={{ padding: "12px 16px", background: X.surfaceLight, borderBottom: `1px solid ${X.accent}30` }}>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.5fr 2fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
                   <div><div style={{ fontSize: 12, color: X.textDim, marginBottom: 3 }}>Project *</div><input value={draft.project} onChange={e => setDraft(p => ({ ...p, project: e.target.value }))} list="pl" style={iS2} /><datalist id="pl">{projects.map(p => <option key={p.id} value={p.name} />)}</datalist></div>
@@ -733,7 +734,7 @@ export default function Dashboard() {
                   <div style={{ flex: 1, minWidth: isMobile ? 120 : undefined }}><TagInput value={draft.owner} onChange={v => setDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} placeholder="Add owner..." /></div>
                   <select value={draft.category} onChange={e => setDraft(p => ({ ...p, category: e.target.value }))} style={{ ...iS2, flex: 1, cursor: "pointer" }}>{configCats.map(o => <option key={o}>{o}</option>)}</select>
                   <select value={draft.priority} onChange={e => setDraft(p => ({ ...p, priority: e.target.value }))} style={{ ...iS2, flex: isMobile ? 1 : 0.6, cursor: "pointer" }}><option>高</option><option>中</option><option>低</option></select>
-                  <button onClick={doAdd} disabled={!draft.task.trim() || !draft.project.trim()} style={{ background: (draft.task.trim() && draft.project.trim()) ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "6px 20px", fontSize: 14, fontWeight: 700, cursor: (draft.task.trim() && draft.project.trim()) ? "pointer" : "not-allowed", whiteSpace: "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>Confirm</button>
+                  <button onClick={doAdd} disabled={tblAddLoading || !draft.task.trim() || !draft.project.trim()} style={{ background: (!tblAddLoading && draft.task.trim() && draft.project.trim()) ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "6px 20px", fontSize: 14, fontWeight: 700, cursor: (!tblAddLoading && draft.task.trim() && draft.project.trim()) ? "pointer" : "not-allowed", whiteSpace: "nowrap", opacity: tblAddLoading ? 0.6 : 1, ...(isMobile ? { width: "100%" } : {}) }}>{tblAddLoading ? "新增中..." : "Confirm"}</button>
                 </div>
               </div>);
             })()}

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, integer, date, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer, date, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role', ['super_admin', 'admin']);
 export const statusEnum = pgEnum('task_status', ['已完成', '進行中', '待辦', '提案中', '待確認']);
@@ -52,7 +52,9 @@ export const tasks = pgTable('tasks', {
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => [
+  index('tasks_project_id_idx').on(table.projectId),
+]);
 
 // ── Subtasks ──
 export const subtasks = pgTable('subtasks', {
@@ -65,7 +67,9 @@ export const subtasks = pgTable('subtasks', {
   notes: text('notes'),
   sortOrder: integer('sort_order').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  index('subtasks_task_id_idx').on(table.taskId),
+]);
 
 // ── Links ──
 export const links = pgTable('links', {
@@ -75,7 +79,9 @@ export const links = pgTable('links', {
   title: varchar('title', { length: 500 }),
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  index('links_task_id_idx').on(table.taskId),
+]);
 
 // ── Config (key-value) ──
 export const configTable = pgTable('config', {
@@ -95,5 +101,7 @@ export const files = pgTable('files', {
   r2Key: varchar('r2_key', { length: 1000 }).notNull(),
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  index('files_task_id_idx').on(table.taskId),
+]);
 

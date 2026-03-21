@@ -1,6 +1,6 @@
 'use client';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { computeProgress } from '@/lib/utils';
+import { computeAllProgress } from '@/lib/utils';
 import {
   getDashboardData,
   createTask as createTaskAction,
@@ -24,7 +24,7 @@ import {
   updateProject as updateProjectAction,
   deleteProject as deleteProjectAction,
 } from '@/server/actions/projects';
-import { getConfig, saveConfig } from '@/server/actions/config';
+import { getConfigs, saveConfig } from '@/server/actions/config';
 
 const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
 
@@ -56,46 +56,72 @@ export default function useTaskManager() {
     }, 2200);
   }, []);
 
-  // Load data from server
+  const CACHE_KEY = 'dash_cache';
+
+  const applyData = useCallback((dashData, projData, configsRes, sessionInfo) => {
+    if (checkAuthError(dashData) || checkAuthError(projData)) return;
+    if (sessionInfo?.role) setUserRole(sessionInfo.role);
+    const tasksList = dashData.tasks || [];
+    const subsList = dashData.subtasks || [];
+    setAllT(tasksList);
+    setAllS(subsList);
+    setAllL(dashData.links || []);
+    setAllF(dashData.files || []);
+    setProjects(Array.isArray(projData) ? projData : []);
+
+    // Owners: merge configured + unique owners from tasks/subtasks
+    const taskOwners = tasksList.flatMap(t => (t.owner || '').split(',').map(o => o.trim()).filter(Boolean));
+    const subOwners = subsList.map(s => s.owner).filter(Boolean);
+    const dbOwners = Array.isArray(configsRes?.owners) ? configsRes.owners : [];
+    const mergedOwners = [...new Set([...dbOwners, ...taskOwners, ...subOwners])];
+    setConfigOwners(mergedOwners);
+
+    // Categories: seed default if DB has no data
+    const cats = configsRes?.categories;
+    if (Array.isArray(cats) && cats.length > 0) {
+      setConfigCats(cats);
+    } else {
+      setConfigCats(DEFAULT_CATS);
+      saveConfig('categories', DEFAULT_CATS);
+    }
+  }, []);
+
+  // Load data from server with SWR cache
   const loadData = useCallback(async () => {
-    setLoading(true);
+    // Try to restore from sessionStorage cache first
     try {
-      const [dashData, projData, ownersRes, catsRes, sessionInfo] = await Promise.all([
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { dashData, projData, configsRes, sessionInfo } = JSON.parse(cached);
+        applyData(dashData, projData, configsRes, sessionInfo);
+        setLoading(false);
+      }
+    } catch {}
+
+    // Always fetch fresh data from server
+    try {
+      const [dashData, projData, configsRes, sessionInfo] = await Promise.all([
         getDashboardData(),
         getProjects(),
-        getConfig('owners'),
-        getConfig('categories'),
+        getConfigs(['owners', 'categories']),
         getSessionInfo(),
       ]);
-      if (checkAuthError(dashData) || checkAuthError(projData)) return;
-      if (sessionInfo?.role) setUserRole(sessionInfo.role);
-      setAllT(dashData.tasks || []);
-      setAllS(dashData.subtasks || []);
-      setAllL(dashData.links || []);
-      setAllF(dashData.files || []);
-      setProjects(Array.isArray(projData) ? projData : []);
+      if (checkAuthError(dashData) || checkAuthError(projData) || checkAuthError(configsRes)) return;
+      applyData(dashData, projData, configsRes, sessionInfo);
 
-      // Owners: merge configured + unique owners from tasks/subtasks
-      const tasksList = dashData.tasks || [];
-      const subsList = dashData.subtasks || [];
-      const taskOwners = tasksList.flatMap(t => (t.owner || '').split(',').map(o => o.trim()).filter(Boolean));
-      const subOwners = subsList.map(s => s.owner).filter(Boolean);
-      const dbOwners = Array.isArray(ownersRes?.value) ? ownersRes.value : [];
-      const mergedOwners = [...new Set([...dbOwners, ...taskOwners, ...subOwners])];
-      setConfigOwners(mergedOwners);
-
-      // Categories: seed default if DB has no data
-      if (Array.isArray(catsRes?.value) && catsRes.value.length > 0) {
-        setConfigCats(catsRes.value);
-      } else {
-        setConfigCats(DEFAULT_CATS);
-        saveConfig('categories', DEFAULT_CATS);
-      }
+      // Update cache
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ dashData, projData, configsRes, sessionInfo }));
+      } catch {}
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
       setLoading(false);
     }
+  }, [applyData]);
+
+  const invalidateCache = useCallback(() => {
+    try { sessionStorage.removeItem(CACHE_KEY); } catch {}
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -104,6 +130,7 @@ export default function useTaskManager() {
   const updateTask = useCallback(async (id, field, value) => {
     // Optimistic update
     setAllT(p => p.map(t => t.id === id ? { ...t, [field]: value } : t));
+    invalidateCache();
     const updateData = {};
     // Map field names for the DB
     const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
@@ -112,36 +139,39 @@ export default function useTaskManager() {
     const result = await updateTaskAction(id, updateData);
     if (checkAuthError(result)) return;
     if (result?.error) showToast(result.error, 'error');
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const addTask = useCallback(async (projectId, data) => {
     const result = await createTaskAction({ projectId, ...data });
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllT(p => [...p, result.task]);
+      invalidateCache();
       showToast('任務已建立', 'success');
     } else if (result?.error) {
       showToast(result.error, 'error');
     }
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const deleteTask = useCallback(async (id) => {
     setAllT(p => p.filter(t => t.id !== id));
     setAllS(p => p.filter(s => s.taskId !== id));
     setAllL(p => p.filter(l => l.taskId !== id));
     setAllF(p => p.filter(f => f.taskId !== id));
+    invalidateCache();
     const result = await deleteTaskAction(id);
     if (checkAuthError(result)) return;
     showToast('任務已刪除', 'error');
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   // ── Subtask CRUD ──
   const toggleSub = useCallback(async (id) => {
     setAllS(p => p.map(s => s.id === id ? { ...s, done: !s.done, doneDate: !s.done ? new Date().toISOString().split('T')[0] : null } : s));
+    invalidateCache();
     const result = await toggleSubtaskAction(id);
     if (checkAuthError(result)) return;
-  }, []);
+  }, [invalidateCache]);
 
   const updateSub = useCallback(async (id, field, value) => {
     setAllS(p => p.map(s => s.id === id ? { ...s, [field]: value } : s));
@@ -154,17 +184,19 @@ export default function useTaskManager() {
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllS(p => [...p, result.subtask]);
+      invalidateCache();
       showToast('子任務已新增', 'success');
     }
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const deleteSub = useCallback(async (id) => {
     setAllS(p => p.filter(s => s.id !== id));
+    invalidateCache();
     const result = await deleteSubtaskAction(id);
     if (checkAuthError(result)) return;
     showToast('子任務已刪除', 'error');
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   // ── Link CRUD ──
   const addLink = useCallback(async (taskId, data) => {
@@ -232,11 +264,12 @@ export default function useTaskManager() {
     setAllS(p => p.filter(s => !ids.includes(s.taskId)));
     setAllL(p => p.filter(l => !ids.includes(l.taskId)));
     setAllF(p => p.filter(f => !ids.includes(f.taskId)));
+    invalidateCache();
     const result = await deleteManyTasksAction(ids);
     if (checkAuthError(result)) return;
     showToast(`已刪除 ${result.deleted} 筆任務`, 'error');
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   // ── Clean All ──
   const deleteAllTasks = useCallback(async () => {
@@ -247,10 +280,11 @@ export default function useTaskManager() {
       setAllS([]);
       setAllL([]);
       setAllF([]);
+      invalidateCache();
       showToast('所有任務已清除', 'error');
     }
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   // ── Import (upsert) ──
   const importTasks = useCallback(async (csvTasks) => {
@@ -281,20 +315,22 @@ export default function useTaskManager() {
   }, []);
 
   // ── Computed: tasks with progress ──
-  const twp = useMemo(() => allT.map(t => {
-    const p = computeProgress(t.id, allS);
-    const proj = projects.find(pr => pr.id === t.projectId);
-    return {
-      ...t,
-      project: proj?.name || '',
-      progress: t.status === '已完成' ? 100 : p.pct,
-      sDone: p.done,
-      sTotal: p.total,
-      // Map DB fields to display fields
-      start: t.startDate,
-      end: t.endDate,
-    };
-  }), [allT, allS, projects]);
+  const twp = useMemo(() => {
+    const progressMap = computeAllProgress(allS);
+    const projMap = new Map(projects.map(pr => [pr.id, pr.name]));
+    return allT.map(t => {
+      const p = progressMap.get(t.id) || { total: 0, done: 0, pct: 0 };
+      return {
+        ...t,
+        project: projMap.get(t.projectId) || '',
+        progress: t.status === '已完成' ? 100 : p.pct,
+        sDone: p.done,
+        sTotal: p.total,
+        start: t.startDate,
+        end: t.endDate,
+      };
+    });
+  }, [allT, allS, projects]);
 
   const [configCats, setConfigCats] = useState(DEFAULT_CATS);
   const [configOwners, setConfigOwners] = useState([]);

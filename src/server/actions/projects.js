@@ -2,7 +2,7 @@
 
 import { db } from '@/server/db';
 import { projects, tasks, subtasks } from '@/server/db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, inArray } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 
 export async function getProjects() {
@@ -59,8 +59,7 @@ export async function getProjectWithTasks(projectId) {
   const taskIds = projectTasks.map(t => t.id);
   let projectSubtasks = [];
   if (taskIds.length > 0) {
-    const allSubs = await db.select().from(subtasks).orderBy(asc(subtasks.sortOrder));
-    projectSubtasks = allSubs.filter(s => taskIds.includes(s.taskId));
+    projectSubtasks = await db.select().from(subtasks).where(inArray(subtasks.taskId, taskIds)).orderBy(asc(subtasks.sortOrder));
   }
 
   return {

@@ -22,6 +22,20 @@ export function computeProgress(tid, subs) {
   return { total: s.length, done: d, pct: Math.round(d / s.length * 100) };
 }
 
+export function computeAllProgress(subs) {
+  const map = new Map();
+  for (const s of subs) {
+    let entry = map.get(s.taskId);
+    if (!entry) { entry = { total: 0, done: 0, pct: 0 }; map.set(s.taskId, entry); }
+    entry.total++;
+    if (s.done) entry.done++;
+  }
+  for (const entry of map.values()) {
+    entry.pct = entry.total ? Math.round(entry.done / entry.total * 100) : 0;
+  }
+  return map;
+}
+
 export function tasksToCSV(tasks) {
   const h = ["id", "project", "task", "status", "category", "start", "duration", "end", "owner", "priority", "notes"];
   const rows = [h.join(","), ...tasks.map(t => h.map(k => `"${(t[k] ?? "").toString().replace(/"/g, '""')}"`).join(","))];
