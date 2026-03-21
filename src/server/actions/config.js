@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/server/db';
-import { config } from '@/server/db/schema';
+import { configTable as config } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 

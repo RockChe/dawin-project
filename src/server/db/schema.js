@@ -78,7 +78,7 @@ export const links = pgTable('links', {
 });
 
 // ── Config (key-value) ──
-export const config = pgTable('config', {
+export const configTable = pgTable('config', {
   id: uuid('id').defaultRandom().primaryKey(),
   key: varchar('key', { length: 255 }).unique().notNull(),
   value: text('value').notNull(),
@@ -97,10 +97,3 @@ export const files = pgTable('files', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-// ── Config (key-value store) ──
-export const config = pgTable('config', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  key: varchar('key', { length: 100 }).unique().notNull(),
-  value: text('value').notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
