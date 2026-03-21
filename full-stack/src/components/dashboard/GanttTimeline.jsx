@@ -77,7 +77,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
   const ss = (s, t) => { if (sy.current) return; sy.current = true; if (t.current) t.current.scrollTop = s.current.scrollTop; requestAnimationFrame(() => { sy.current = false; }); };
   return (
     <div style={{ border: `1px solid ${X.border}`, borderRadius: 12, overflow: "hidden", background: X.surface }}>
-      <div style={{ display: "flex", overflow: "hidden", maxHeight: "85vh" }}>
+      <div style={{ display: "flex", overflow: "hidden", maxHeight: "100vh" }}>
         <div ref={lR} onScroll={() => ss(lR, rR)} className={`dash-gantt-left dash-gantt-left-collapsible${leftHidden ? " dash-gantt-left-hidden" : ""}`} style={{ overflowY: "auto", borderRight: leftHidden ? "none" : `1px solid ${X.border}`, background: X.surfaceLight }}>
           <div style={{ position: "sticky", top: 0, zIndex: 5, height: 48, display: "flex", alignItems: "flex-end", padding: "0 16px 10px", background: X.surfaceLight, borderBottom: `1px solid ${X.border}`, fontSize: 14, color: X.textDim }}>Project / Task</div>
           <div>{rows.map((r, i) => {

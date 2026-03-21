@@ -8,6 +8,8 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
   const [showAdd, setShowAdd] = useState(false);
   const [linkDraft, setLinkDraft] = useState({ url: "", title: "", taskId: "" });
   const [fileDraftTask, setFileDraftTask] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
   const iS2 = getIS2();
 
@@ -61,14 +63,26 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file || !fileDraftTask) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      addFile(fileDraftTask, { name: file.name, size: file.size, type: file.type, dataUrl: ev.target.result });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('taskId', fileDraftTask);
+    setUploading(true);
+    setUploadProgress(0);
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); };
+    xhr.onload = () => {
+      try {
+        const result = JSON.parse(xhr.responseText);
+        if (result.success) { addFile(fileDraftTask, result.file); }
+      } catch {}
+      setUploading(false);
+      setFileDraftTask("");
+      setShowAdd(false);
     };
-    reader.readAsDataURL(file);
+    xhr.onerror = () => { setUploading(false); };
+    xhr.open('POST', '/api/upload');
+    xhr.send(formData);
     e.target.value = "";
-    setFileDraftTask("");
-    setShowAdd(false);
   };
 
   const tabStyle = (active) => ({
@@ -116,7 +130,19 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
                   {projTasks.map(t => <option key={t.id} value={t.id}>{t.task || t.id}</option>)}
                 </select>
                 <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
-                <button onClick={() => { if (!fileDraftTask) return; fileInputRef.current?.click(); }} disabled={!fileDraftTask} style={{ background: fileDraftTask ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 16, padding: "6px 16px", fontSize: 13, fontWeight: 600, cursor: fileDraftTask ? "pointer" : "not-allowed" }}>📎 Choose File</button>
+                {uploading ? (
+                  <div style={{ width: "100%" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 14, height: 14, border: `2px solid ${X.border}`, borderTopColor: X.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                      <span style={{ fontSize: 13, color: X.accent, fontWeight: 500 }}>上傳中 {uploadProgress}%</span>
+                    </div>
+                    <div style={{ height: 4, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${uploadProgress}%`, background: X.accent, borderRadius: 2, transition: "width 0.2s" }} />
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { if (!fileDraftTask) return; fileInputRef.current?.click(); }} disabled={!fileDraftTask} style={{ background: fileDraftTask ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 16, padding: "6px 16px", fontSize: 13, fontWeight: 600, cursor: fileDraftTask ? "pointer" : "not-allowed" }}>📎 Choose File</button>
+                )}
               </>
             )}
           </div>
