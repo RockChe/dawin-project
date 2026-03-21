@@ -6,18 +6,13 @@ import { sql } from 'drizzle-orm';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const checks = { db: false, timestamp: new Date().toISOString() };
+  const checks = { status: 'ok', timestamp: new Date().toISOString() };
   try {
-    const result = await db.select({ count: sql`count(*)` }).from(users);
+    await db.select({ count: sql`count(*)` }).from(users);
     checks.db = true;
-    checks.userCount = Number(result[0]?.count || 0);
-  } catch (err) {
-    checks.dbError = err.message;
+  } catch {
+    checks.status = 'degraded';
+    checks.db = false;
   }
-  checks.envVars = {
-    DATABASE_URL: !!process.env.DATABASE_URL,
-    SESSION_SECRET: !!process.env.SESSION_SECRET,
-    R2_ACCOUNT_ID: !!process.env.R2_ACCOUNT_ID,
-  };
   return NextResponse.json(checks);
 }

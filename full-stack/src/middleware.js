@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/health', '/api/debug'];
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/health'];
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -11,7 +11,7 @@ export function middleware(request) {
   }
 
   // Allow static files and Next.js internals
-  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon') || pathname.includes('.')) {
+  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon') || /\.\w{2,5}$/.test(pathname)) {
     return NextResponse.next();
   }
 

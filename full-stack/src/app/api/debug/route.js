@@ -3,10 +3,16 @@ import { cookies } from 'next/headers';
 import { db } from '@/server/db';
 import { sessions, users, projects, tasks } from '@/server/db/schema';
 import { eq, and, gt, sql } from 'drizzle-orm';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const session = await getSession();
+  if (!session || session.role !== 'super_admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const result = { timestamp: new Date().toISOString(), checks: {} };
 
   // 1. Check cookie

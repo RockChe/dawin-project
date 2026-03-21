@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { db } from '@/server/db';
 import { sessions, users } from '@/server/db/schema';
@@ -7,7 +8,8 @@ const SESSION_COOKIE = 'session_token';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export async function createSession(userId) {
-  const token = crypto.randomUUID();
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE);
 
   const insert = () =>
@@ -37,7 +39,8 @@ export async function createSession(userId) {
   return token;
 }
 
-export async function getSession() {
+// cache() deduplicates calls within a single server request
+export const getSession = cache(async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
@@ -71,7 +74,7 @@ export async function getSession() {
   }
 
   return result[0] || null;
-}
+});
 
 export async function destroySession() {
   const cookieStore = await cookies();

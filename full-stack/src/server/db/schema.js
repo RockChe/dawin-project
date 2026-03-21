@@ -23,14 +23,17 @@ export const sessions = pgTable('sessions', {
   token: varchar('token', { length: 255 }).unique().notNull(),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  index('sessions_user_id_idx').on(table.userId),
+  index('sessions_expires_at_idx').on(table.expiresAt),
+]);
 
 // ── Projects ──
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   sortOrder: integer('sort_order').default(0).notNull(),
-  createdBy: uuid('created_by').references(() => users.id),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -49,11 +52,12 @@ export const tasks = pgTable('tasks', {
   priority: priorityEnum('priority').default('中').notNull(),
   notes: text('notes'),
   sortOrder: integer('sort_order').default(0).notNull(),
-  createdBy: uuid('created_by').references(() => users.id),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
   index('tasks_project_id_idx').on(table.projectId),
+  index('tasks_created_at_idx').on(table.createdAt),
 ]);
 
 // ── Subtasks ──
@@ -77,7 +81,7 @@ export const links = pgTable('links', {
   taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }).notNull(),
   url: text('url').notNull(),
   title: varchar('title', { length: 500 }),
-  createdBy: uuid('created_by').references(() => users.id),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('links_task_id_idx').on(table.taskId),
@@ -99,7 +103,7 @@ export const files = pgTable('files', {
   size: integer('size'),
   mimeType: varchar('mime_type', { length: 255 }),
   r2Key: varchar('r2_key', { length: 1000 }).notNull(),
-  createdBy: uuid('created_by').references(() => users.id),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('files_task_id_idx').on(table.taskId),

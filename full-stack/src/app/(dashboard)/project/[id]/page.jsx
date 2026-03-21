@@ -1,6 +1,7 @@
 import { getProjectWithTasks } from '@/server/actions/projects';
 import { notFound, redirect } from 'next/navigation';
 import ProjectDetail from '@/components/dashboard/ProjectDetail';
+import ErrorBoundary from '@/components/dashboard/ErrorBoundary';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,5 +19,5 @@ export default async function ProjectPage({ params }) {
     redirect('/login');
   }
 
-  return <ProjectDetail initialData={data} />;
+  return <ErrorBoundary><ProjectDetail initialData={data} /></ErrorBoundary>;
 }

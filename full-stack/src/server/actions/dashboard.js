@@ -1,0 +1,40 @@
+'use server';
+
+import { db } from '@/server/db';
+import { tasks, subtasks, links, files, projects, configTable as config } from '@/server/db/schema';
+import { asc, desc, inArray } from 'drizzle-orm';
+import { safeRequireAuth } from '@/lib/auth';
+
+/**
+ * Consolidated initial data loader — 1 auth check + 6 parallel queries.
+ * Replaces getDashboardData() + getProjects() + getConfigs() + getSessionInfo().
+ */
+export async function getInitialData() {
+  const { session, error } = await safeRequireAuth();
+  if (error) return { error };
+
+  const [allTasks, allSubtasks, allLinks, allFiles, allProjects, configRows] = await Promise.all([
+    db.select().from(tasks).orderBy(asc(tasks.sortOrder)),
+    db.select().from(subtasks).orderBy(asc(subtasks.sortOrder)),
+    db.select().from(links).orderBy(desc(links.createdAt)),
+    db.select().from(files).orderBy(desc(files.createdAt)),
+    db.select().from(projects).orderBy(asc(projects.sortOrder), asc(projects.createdAt)),
+    db.select().from(config).where(inArray(config.key, ['owners', 'categories'])),
+  ]);
+
+  const configs = {};
+  for (const row of configRows) {
+    try { configs[row.key] = JSON.parse(row.value); }
+    catch { configs[row.key] = row.value; }
+  }
+
+  return {
+    tasks: allTasks,
+    subtasks: allSubtasks,
+    links: allLinks,
+    files: allFiles,
+    projects: allProjects,
+    configs,
+    session: { role: session.role, name: session.name, email: session.email },
+  };
+}

@@ -32,6 +32,12 @@ export async function createUser(formData) {
   const password = formData.get('password')?.toString();
   const role = formData.get('role')?.toString() || 'admin';
 
+  // Validate role enum
+  const VALID_ROLES = ['super_admin', 'admin'];
+  if (!VALID_ROLES.includes(role)) {
+    return { error: `無效的角色: ${role}` };
+  }
+
   if (!email || !name || !password) {
     return { error: '請填寫所有欄位' };
   }

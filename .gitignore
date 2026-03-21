@@ -1,19 +1,12 @@
 # dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+**/node_modules/
 
 # next.js
-/.next/
-/out/
+**/.next/
+**/out/
 
 # production
-/build
+**/build/
 
 # misc
 .DS_Store
@@ -26,14 +19,15 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files
-.env
-.env*.local
+**/.env
+**/.env*.local
 
 # vercel
-.vercel
+**/.vercel/
 
 # IDE
 .vscode/
 .idea/
 
-.vercel
+# Claude Code
+.claude-terminal/
