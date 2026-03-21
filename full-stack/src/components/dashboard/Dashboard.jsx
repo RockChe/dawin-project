@@ -11,7 +11,7 @@ import OverviewTab from "./tabs/OverviewTab";
 import ProjectsTab from "./tabs/ProjectsTab";
 import DataTab from "./tabs/DataTab";
 
-export default function Dashboard() {
+export default function Dashboard({ initialData }) {
   const {
     projects, allT, allS,
     allL, allF,
@@ -25,7 +25,7 @@ export default function Dashboard() {
     reorderSubs, importTasks,
     deleteManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
-  } = useTaskManager();
+  } = useTaskManager(initialData);
   const [fpSet, setFPSet] = useState(new Set());
   const toggleFP = p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; });
   const [fs, setFS] = useState("全部");
@@ -63,23 +63,51 @@ export default function Dashboard() {
 
   // Computed
   const filtered = useMemo(() => twp.filter(d => { if (fpSet.size > 0 && !fpSet.has(d.project)) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; if (searchQ) { const q = searchQ.toLowerCase(); if (!(d.task || "").toLowerCase().includes(q) && !(d.project || "").toLowerCase().includes(q) && !(d.owner || "").toLowerCase().includes(q) && !(d.notes || "").toLowerCase().includes(q)) return false; } return true; }), [fpSet, fs, fpr, twp, searchQ]);
-  const stats = useMemo(() => { const s = {}; Object.keys(SC).forEach(k => s[k] = 0); filtered.forEach(d => s[d.status]++); return s; }, [filtered]);
+  const stats = useMemo(() => { const s = {}; Object.keys(SC).forEach(k => s[k] = 0); twp.forEach(d => s[d.status]++); return s; }, [twp]);
   const avgProg = useMemo(() => filtered.length === 0 ? 0 : Math.round(filtered.reduce((s, d) => s + d.progress, 0) / filtered.length), [filtered]);
   const priStats = useMemo(() => { const p = { "高": 0, "中": 0, "低": 0 }; filtered.forEach(d => p[d.priority]++); return p; }, [filtered]);
-  const allProjNames = useMemo(() => [...new Set([...twp.map(d => d.project), ...customProjects])], [twp, customProjects]);
+  const allProjNames = useMemo(() => [...new Set([...projects.map(p => p.name), ...twp.map(d => d.project), ...customProjects])], [projects, twp, customProjects]);
   const pcMap = {}; allProjNames.forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
 
   if (loading) {
+    const shimmerBg = `linear-gradient(90deg, ${X.surfaceLight || X.surface} 25%, ${X.surface} 50%, ${X.surfaceLight || X.surface} 75%)`;
+    const shimmerStyle = { backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 12, background: shimmerBg };
     return (
-      <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+      <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text }}>
         <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
-        <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${X.border}`, borderTopColor: X.accent, animation: "spin 0.8s linear infinite" }} />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <div style={{ fontSize: 15, color: X.textDim, fontWeight: 500 }}>載入資料中...</div>
-        <div style={{ width: "90%", maxWidth: 600, display: "flex", flexDirection: "column", gap: 12, marginTop: 20 }}>
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} style={{ height: 48, borderRadius: 12, background: `linear-gradient(90deg, ${X.surfaceLight} 25%, ${X.surface} 50%, ${X.surfaceLight} 75%)`, backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
-          ))}
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 20px" }}>
+          {/* Header skeleton */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+            <div style={{ ...shimmerStyle, width: 180, height: 32 }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ ...shimmerStyle, width: 36, height: 36, borderRadius: "50%" }} />
+              <div style={{ ...shimmerStyle, width: 36, height: 36, borderRadius: "50%" }} />
+            </div>
+          </div>
+          {/* Status cards skeleton */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} style={{ ...shimmerStyle, height: 80 }} />
+            ))}
+          </div>
+          {/* Filter bar skeleton */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} style={{ ...shimmerStyle, width: 70, height: 32, borderRadius: 20 }} />
+            ))}
+          </div>
+          {/* Tab bar skeleton */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} style={{ ...shimmerStyle, width: 90, height: 36, borderRadius: 8 }} />
+            ))}
+          </div>
+          {/* Task list skeleton */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} style={{ ...shimmerStyle, height: 56 }} />
+            ))}
+          </div>
         </div>
       </div>
     );

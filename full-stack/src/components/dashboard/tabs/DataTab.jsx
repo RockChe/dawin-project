@@ -38,6 +38,8 @@ export default function DataTab({
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [showCleanAllModal, setShowCleanAllModal] = useState(false);
   const [cleanAllInput, setCleanAllInput] = useState("");
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
   const tableRef = useRef(null);
 
   const toggle = id => setExpanded(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -45,8 +47,12 @@ export default function DataTab({
   const iS2 = getIS2();
 
   const sorted = useMemo(() => { if (!sortCol) return filtered; const po = { "高": 0, "中": 1, "低": 2 }; return [...filtered].sort((a, b) => { let va = a[sortCol], vb = b[sortCol]; if (sortCol === "start" || sortCol === "end") { va = va ? pD(va).getTime() : 0; vb = vb ? pD(vb).getTime() : 0; } if (sortCol === "duration" || sortCol === "progress") { va = va || 0; vb = vb || 0; } if (sortCol === "priority") { va = po[va] ?? 9; vb = po[vb] ?? 9; } if (typeof va === "string") { va = va.toLowerCase(); vb = (vb || "").toLowerCase(); } return sortDir === "asc" ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0); }); }, [filtered, sortCol, sortDir]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paged = useMemo(() => sorted.slice((safePage - 1) * pageSize, safePage * pageSize), [sorted, safePage, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [filtered, sortCol, sortDir, pageSize]);
   const subsByTaskId = useMemo(() => { const map = {}; allS.forEach(s => { if (!map[s.taskId]) map[s.taskId] = []; map[s.taskId].push(s); }); return map; }, [allS]);
-  const flatRows = useMemo(() => { const rows = []; sorted.forEach(d => { rows.push({ type: "task", id: d.id, data: d }); if (expanded.has(d.id)) { (subsByTaskId[d.id] || []).forEach(sub => { rows.push({ type: "sub", id: sub.id, data: sub }); }); } }); return rows; }, [sorted, expanded, subsByTaskId]);
+  const flatRows = useMemo(() => { const rows = []; paged.forEach(d => { rows.push({ type: "task", id: d.id, data: d }); if (expanded.has(d.id)) { (subsByTaskId[d.id] || []).forEach(sub => { rows.push({ type: "sub", id: sub.id, data: sub }); }); } }); return rows; }, [paged, expanded, subsByTaskId]);
 
   const handleSort = col => { if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc"); else { setSortCol(col); setSortDir("asc"); } };
   const SI = ({ col }) => sortCol !== col ? <span style={{ opacity: 0.3, marginLeft: 3 }}>↕</span> : <span style={{ marginLeft: 3, color: X.accent }}>{sortDir === "asc" ? "↑" : "↓"}</span>;
@@ -186,8 +192,8 @@ export default function DataTab({
         })()}
         {isMobile ? (
           <div style={{ padding: 12 }}>
-            {sorted.length === 0 && <div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></div>}
-            {sorted.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
+            {paged.length === 0 && <div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></div>}
+            {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
               return (
                 <div key={d.id} style={{ background: selectedRows.has(d.id) ? `${X.accent}10` : X.surface, borderRadius: 12, border: `1px solid ${selectedRows.has(d.id) ? X.accent + "40" : X.border}`, overflow: "hidden", marginBottom: 8 }}>
                   <div onClick={() => toggle(d.id)} style={{ padding: "12px 14px", cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -245,7 +251,7 @@ export default function DataTab({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead><tr style={{ background: X.surfaceLight }}>
                 <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}`, textAlign: "center" }}>
-                  <input type="checkbox" checked={sorted.length > 0 && sorted.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(sorted.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />
+                  <input type="checkbox" checked={paged.length > 0 && paged.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(paged.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />
                 </th>
                 {[{ k: "project", l: "Project" }, { k: "task", l: "Task" }, { k: "owner", l: "Owner" }, { k: "status", l: "Status" }, { k: "priority", l: "Pri" }, { k: "progress", l: "Progress" }, { k: "category", l: "Category" }, { k: "start", l: "Start" }, { k: "end", l: "End" }, { k: "notes", l: "Notes" }].map(col => (
                   <th key={col.k} onClick={() => handleSort(col.k)} style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: X.textDim, fontSize: 13, borderBottom: `1px solid ${X.border}`, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>{col.l}<SI col={col.k} /></th>
@@ -253,8 +259,8 @@ export default function DataTab({
                 <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}` }} />
               </tr></thead>
               <tbody>
-                {sorted.length === 0 && <tr><td colSpan={12} style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></td></tr>}
-                {sorted.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
+                {paged.length === 0 && <tr><td colSpan={12} style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></td></tr>}
+                {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
                   return [
                     <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}`, background: selectedRows.has(d.id) ? `${X.accent}10` : "transparent" }} onMouseEnter={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = X.surfaceHover; }} onMouseLeave={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = "transparent"; }}>
                       <td style={{ padding: "9px 6px", textAlign: "center" }}><input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} /></td>
@@ -308,6 +314,25 @@ export default function DataTab({
           </div>
         )}
       </div>
+      {sorted.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: `1px solid ${X.border}`, fontSize: 13, color: X.textSec, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>每頁</span>
+            <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} style={{ background: X.surfaceLight, color: X.text, border: `1px solid ${X.border}`, borderRadius: 8, padding: "4px 8px", fontSize: 13, cursor: "pointer", outline: "none" }}>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span>筆</span>
+            <span style={{ marginLeft: 8, color: X.textDim }}>共 {sorted.length} 筆</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage <= 1} style={{ background: safePage <= 1 ? X.surfaceLight : X.surface, color: safePage <= 1 ? X.textDim : X.text, border: `1px solid ${X.border}`, borderRadius: 8, padding: "4px 12px", fontSize: 13, cursor: safePage <= 1 ? "not-allowed" : "pointer", opacity: safePage <= 1 ? 0.5 : 1 }}>上一頁</button>
+            <span style={{ fontFamily: FM, minWidth: 80, textAlign: "center" }}>{safePage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} style={{ background: safePage >= totalPages ? X.surfaceLight : X.surface, color: safePage >= totalPages ? X.textDim : X.text, border: `1px solid ${X.border}`, borderRadius: 8, padding: "4px 12px", fontSize: 13, cursor: safePage >= totalPages ? "not-allowed" : "pointer", opacity: safePage >= totalPages ? 0.5 : 1 }}>下一頁</button>
+          </div>
+        </div>
+      )}
       {showCleanAllModal && (
         <div onClick={() => setShowCleanAllModal(false)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: X.surface, borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: `0 16px 48px ${X.shadowHeavy}`, border: `1px solid ${X.border}`, padding: 24 }}>

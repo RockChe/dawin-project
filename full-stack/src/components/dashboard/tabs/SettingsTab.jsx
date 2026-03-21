@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { X, CC, getIS2 } from "@/lib/theme";
+import { X, CC, PJC, getIS2 } from "@/lib/theme";
 
 export default function SettingsTab({ configCats, saveConfigCats, configOwners, saveConfigOwners, ganttDraft, setGanttDraft, saveGanttWidths, isMobile, showToast }) {
   const [newCat, setNewCat] = useState("");
@@ -24,7 +24,7 @@ export default function SettingsTab({ configCats, saveConfigCats, configOwners, 
       <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.purple, borderRadius: 2 }} />Owners</h3>
         {configOwners.map((ow, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: X.accent, flexShrink: 0 }} />
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: PJC[i % PJC.length], flexShrink: 0 }} />
           <span style={{ fontSize: 14, color: X.text, flex: 1 }}>{ow}</span>
           <button onClick={() => { saveConfigOwners(configOwners.filter((_, j) => j !== i)); showToast("Owner removed", "error"); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
         </div>))}

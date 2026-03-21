@@ -1,8 +1,8 @@
 'use client';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { computeAllProgress } from '@/lib/utils';
+import { getInitialData } from '@/server/actions/dashboard';
 import {
-  getDashboardData,
   createTask as createTaskAction,
   updateTask as updateTaskAction,
   deleteTask as deleteTaskAction,
@@ -17,16 +17,16 @@ import {
   deleteManyTasks as deleteManyTasksAction,
   deleteAllTasks as deleteAllTasksAction,
 } from '@/server/actions/tasks';
-import { getSessionInfo } from '@/server/actions/auth';
 import {
-  getProjects,
   createProject as createProjectAction,
   updateProject as updateProjectAction,
   deleteProject as deleteProjectAction,
 } from '@/server/actions/projects';
-import { getConfigs, saveConfig } from '@/server/actions/config';
+import { saveConfig } from '@/server/actions/config';
 
 const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
+const CACHE_KEY = 'dash_cache';
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function checkAuthError(result) {
   if (result?.error === 'UNAUTHORIZED' || result?.error === 'FORBIDDEN') {
@@ -36,48 +36,50 @@ function checkAuthError(result) {
   return false;
 }
 
-export default function useTaskManager() {
-  const [projects, setProjects] = useState([]);
-  const [allT, setAllT] = useState([]);
-  const [allS, setAllS] = useState([]);
-  const [allL, setAllL] = useState([]);
-  const [allF, setAllF] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState(null);
+export default function useTaskManager(initialData) {
+  const [projects, setProjects] = useState(initialData?.projects || []);
+  const [allT, setAllT] = useState(initialData?.tasks || []);
+  const [allS, setAllS] = useState(initialData?.subtasks || []);
+  const [allL, setAllL] = useState(initialData?.links || []);
+  const [allF, setAllF] = useState(initialData?.files || []);
+  const [loading, setLoading] = useState(!initialData);
+  const [userRole, setUserRole] = useState(initialData?.session?.role || null);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
+  const initialDataApplied = useRef(!!initialData);
+
+  const [configCats, setConfigCats] = useState(DEFAULT_CATS);
+  const [configOwners, setConfigOwners] = useState([]);
 
   const showToast = useCallback((msg, type = 'success') => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast({ msg, type, fading: false });
     toastTimer.current = setTimeout(() => {
       setToast(prev => prev ? { ...prev, fading: true } : null);
-      setTimeout(() => setToast(null), 300);
+      toastTimer.current = setTimeout(() => setToast(null), 300);
     }, 2200);
   }, []);
 
-  const CACHE_KEY = 'dash_cache';
-
-  const applyData = useCallback((dashData, projData, configsRes, sessionInfo) => {
-    if (checkAuthError(dashData) || checkAuthError(projData)) return;
-    if (sessionInfo?.role) setUserRole(sessionInfo.role);
-    const tasksList = dashData.tasks || [];
-    const subsList = dashData.subtasks || [];
+  const applyData = useCallback((data) => {
+    if (checkAuthError(data)) return;
+    const tasksList = data.tasks || [];
+    const subsList = data.subtasks || [];
+    if (data.session?.role) setUserRole(data.session.role);
     setAllT(tasksList);
     setAllS(subsList);
-    setAllL(dashData.links || []);
-    setAllF(dashData.files || []);
-    setProjects(Array.isArray(projData) ? projData : []);
+    setAllL(data.links || []);
+    setAllF(data.files || []);
+    setProjects(Array.isArray(data.projects) ? data.projects : []);
 
     // Owners: merge configured + unique owners from tasks/subtasks
     const taskOwners = tasksList.flatMap(t => (t.owner || '').split(',').map(o => o.trim()).filter(Boolean));
     const subOwners = subsList.map(s => s.owner).filter(Boolean);
-    const dbOwners = Array.isArray(configsRes?.owners) ? configsRes.owners : [];
+    const dbOwners = Array.isArray(data.configs?.owners) ? data.configs.owners : [];
     const mergedOwners = [...new Set([...dbOwners, ...taskOwners, ...subOwners])];
     setConfigOwners(mergedOwners);
 
     // Categories: seed default if DB has no data
-    const cats = configsRes?.categories;
+    const cats = data.configs?.categories;
     if (Array.isArray(cats) && cats.length > 0) {
       setConfigCats(cats);
     } else {
@@ -86,32 +88,35 @@ export default function useTaskManager() {
     }
   }, []);
 
-  // Load data from server with SWR cache
-  const loadData = useCallback(async () => {
+  // Load data from server with TTL-based SWR cache
+  const loadData = useCallback(async (force = false) => {
     // Try to restore from sessionStorage cache first
     try {
       const cached = sessionStorage.getItem(CACHE_KEY);
       if (cached) {
-        const { dashData, projData, configsRes, sessionInfo } = JSON.parse(cached);
-        applyData(dashData, projData, configsRes, sessionInfo);
+        const parsed = JSON.parse(cached);
+        applyData(parsed);
         setLoading(false);
+
+        // If cache is fresh and not forced, skip server fetch
+        if (!force && parsed.cachedAt && (Date.now() - parsed.cachedAt < CACHE_TTL)) {
+          return;
+        }
       }
     } catch {}
 
-    // Always fetch fresh data from server
+    // Fetch fresh data from server (single consolidated action)
     try {
-      const [dashData, projData, configsRes, sessionInfo] = await Promise.all([
-        getDashboardData(),
-        getProjects(),
-        getConfigs(['owners', 'categories']),
-        getSessionInfo(),
-      ]);
-      if (checkAuthError(dashData) || checkAuthError(projData) || checkAuthError(configsRes)) return;
-      applyData(dashData, projData, configsRes, sessionInfo);
+      const data = await getInitialData();
+      if (checkAuthError(data)) return;
+      applyData(data);
 
-      // Update cache
+      // Update cache with timestamp
       try {
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ dashData, projData, configsRes, sessionInfo }));
+        const payload = JSON.stringify({ ...data, cachedAt: Date.now() });
+        if (payload.length < 4 * 1024 * 1024) {
+          sessionStorage.setItem(CACHE_KEY, payload);
+        }
       } catch {}
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -124,21 +129,61 @@ export default function useTaskManager() {
     try { sessionStorage.removeItem(CACHE_KEY); } catch {}
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    // If SSR data was provided, just cache it and skip fetch
+    if (initialDataApplied.current) {
+      initialDataApplied.current = false;
+      try {
+        const payload = JSON.stringify({ ...initialData, cachedAt: Date.now() });
+        if (payload.length < 4 * 1024 * 1024) {
+          sessionStorage.setItem(CACHE_KEY, payload);
+        }
+      } catch {}
+
+      // Seed default categories if needed
+      const cats = initialData?.configs?.categories;
+      if (Array.isArray(cats) && cats.length > 0) {
+        setConfigCats(cats);
+      } else {
+        setConfigCats(DEFAULT_CATS);
+        saveConfig('categories', DEFAULT_CATS);
+      }
+
+      // Merge owners
+      const taskOwners = (initialData?.tasks || []).flatMap(t => (t.owner || '').split(',').map(o => o.trim()).filter(Boolean));
+      const subOwners = (initialData?.subtasks || []).map(s => s.owner).filter(Boolean);
+      const dbOwners = Array.isArray(initialData?.configs?.owners) ? initialData.configs.owners : [];
+      setConfigOwners([...new Set([...dbOwners, ...taskOwners, ...subOwners])]);
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      await loadData();
+      if (cancelled) return;
+    };
+    run();
+    return () => {
+      cancelled = true;
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, [loadData, initialData]);
 
   // ── Task CRUD ──
   const updateTask = useCallback(async (id, field, value) => {
-    // Optimistic update
-    setAllT(p => p.map(t => t.id === id ? { ...t, [field]: value } : t));
+    let prev;
+    setAllT(p => { prev = p; return p.map(t => t.id === id ? { ...t, [field]: value } : t); });
     invalidateCache();
     const updateData = {};
-    // Map field names for the DB
     const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
     const dbField = fieldMap[field] || field;
     updateData[dbField] = value;
     const result = await updateTaskAction(id, updateData);
     if (checkAuthError(result)) return;
-    if (result?.error) showToast(result.error, 'error');
+    if (result?.error) {
+      setAllT(prev);
+      showToast(result.error, 'error');
+    }
   }, [showToast, invalidateCache]);
 
   const addTask = useCallback(async (projectId, data) => {
@@ -155,29 +200,46 @@ export default function useTaskManager() {
   }, [showToast, invalidateCache]);
 
   const deleteTask = useCallback(async (id) => {
-    setAllT(p => p.filter(t => t.id !== id));
-    setAllS(p => p.filter(s => s.taskId !== id));
-    setAllL(p => p.filter(l => l.taskId !== id));
-    setAllF(p => p.filter(f => f.taskId !== id));
+    let prevT, prevS, prevL, prevF;
+    setAllT(p => { prevT = p; return p.filter(t => t.id !== id); });
+    setAllS(p => { prevS = p; return p.filter(s => s.taskId !== id); });
+    setAllL(p => { prevL = p; return p.filter(l => l.taskId !== id); });
+    setAllF(p => { prevF = p; return p.filter(f => f.taskId !== id); });
     invalidateCache();
     const result = await deleteTaskAction(id);
     if (checkAuthError(result)) return;
-    showToast('任務已刪除', 'error');
+    if (result?.error) {
+      setAllT(prevT); setAllS(prevS); setAllL(prevL); setAllF(prevF);
+      showToast(result.error, 'error');
+    } else {
+      showToast('任務已刪除', 'error');
+    }
   }, [showToast, invalidateCache]);
 
   // ── Subtask CRUD ──
   const toggleSub = useCallback(async (id) => {
-    setAllS(p => p.map(s => s.id === id ? { ...s, done: !s.done, doneDate: !s.done ? new Date().toISOString().split('T')[0] : null } : s));
+    let prev;
+    setAllS(p => { prev = p; return p.map(s => s.id === id ? { ...s, done: !s.done, doneDate: !s.done ? new Date().toISOString().split('T')[0] : null } : s); });
     invalidateCache();
     const result = await toggleSubtaskAction(id);
     if (checkAuthError(result)) return;
-  }, [invalidateCache]);
+    if (result?.error) {
+      setAllS(prev);
+      showToast(result.error, 'error');
+    }
+  }, [invalidateCache, showToast]);
 
   const updateSub = useCallback(async (id, field, value) => {
-    setAllS(p => p.map(s => s.id === id ? { ...s, [field]: value } : s));
+    let prev;
+    setAllS(p => { prev = p; return p.map(s => s.id === id ? { ...s, [field]: value } : s); });
+    invalidateCache();
     const result = await updateSubtaskAction(id, { [field]: value });
     if (checkAuthError(result)) return;
-  }, []);
+    if (result?.error) {
+      setAllS(prev);
+      showToast(result.error, 'error');
+    }
+  }, [invalidateCache, showToast]);
 
   const addSub = useCallback(async (taskId, data) => {
     const result = await createSubtaskAction({ taskId, ...data });
@@ -191,11 +253,17 @@ export default function useTaskManager() {
   }, [showToast, invalidateCache]);
 
   const deleteSub = useCallback(async (id) => {
-    setAllS(p => p.filter(s => s.id !== id));
+    let prev;
+    setAllS(p => { prev = p; return p.filter(s => s.id !== id); });
     invalidateCache();
     const result = await deleteSubtaskAction(id);
     if (checkAuthError(result)) return;
-    showToast('子任務已刪除', 'error');
+    if (result?.error) {
+      setAllS(prev);
+      showToast(result.error, 'error');
+    } else {
+      showToast('子任務已刪除', 'error');
+    }
   }, [showToast, invalidateCache]);
 
   // ── Link CRUD ──
@@ -210,11 +278,18 @@ export default function useTaskManager() {
   }, [showToast]);
 
   const deleteLink = useCallback(async (id) => {
-    setAllL(p => p.filter(l => l.id !== id));
+    let prev;
+    setAllL(p => { prev = p; return p.filter(l => l.id !== id); });
+    invalidateCache();
     const result = await deleteLinkAction(id);
     if (checkAuthError(result)) return;
-    showToast('連結已刪除', 'error');
-  }, [showToast]);
+    if (result?.error) {
+      setAllL(prev);
+      showToast(result.error, 'error');
+    } else {
+      showToast('連結已刪除', 'error');
+    }
+  }, [showToast, invalidateCache]);
 
   // ── File CRUD ──
   const addFile = useCallback((taskId, fileData) => {
@@ -223,11 +298,18 @@ export default function useTaskManager() {
   }, [showToast]);
 
   const deleteFileHandler = useCallback(async (id) => {
-    setAllF(p => p.filter(f => f.id !== id));
+    let prev;
+    setAllF(p => { prev = p; return p.filter(f => f.id !== id); });
+    invalidateCache();
     const result = await deleteFileAction(id);
     if (checkAuthError(result)) return;
-    showToast('檔案已刪除', 'error');
-  }, [showToast]);
+    if (result?.error) {
+      setAllF(prev);
+      showToast(result.error, 'error');
+    } else {
+      showToast('檔案已刪除', 'error');
+    }
+  }, [showToast, invalidateCache]);
 
   // ── Project CRUD ──
   const renameProject = useCallback(async (id, newName) => {
@@ -245,29 +327,43 @@ export default function useTaskManager() {
     if (checkAuthError(result)) return;
     if (result?.success) {
       setProjects(p => [...p, result.project]);
+      invalidateCache();
       showToast('專案已建立', 'success');
     }
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const deleteProjectHandler = useCallback(async (id) => {
-    setProjects(p => p.filter(proj => proj.id !== id));
-    setAllT(p => p.filter(t => t.projectId !== id));
+    let prevProj, prevT;
+    setProjects(p => { prevProj = p; return p.filter(proj => proj.id !== id); });
+    setAllT(p => { prevT = p; return p.filter(t => t.projectId !== id); });
+    invalidateCache();
     const result = await deleteProjectAction(id);
     if (checkAuthError(result)) return;
-    showToast('專案已刪除', 'error');
-  }, [showToast]);
+    if (result?.error) {
+      setProjects(prevProj); setAllT(prevT);
+      showToast(result.error, 'error');
+    } else {
+      showToast('專案已刪除', 'error');
+    }
+  }, [showToast, invalidateCache]);
 
   // ── Batch Delete ──
   const deleteManyTasks = useCallback(async (ids) => {
-    setAllT(p => p.filter(t => !ids.includes(t.id)));
-    setAllS(p => p.filter(s => !ids.includes(s.taskId)));
-    setAllL(p => p.filter(l => !ids.includes(l.taskId)));
-    setAllF(p => p.filter(f => !ids.includes(f.taskId)));
+    let prevT, prevS, prevL, prevF;
+    setAllT(p => { prevT = p; return p.filter(t => !ids.includes(t.id)); });
+    setAllS(p => { prevS = p; return p.filter(s => !ids.includes(s.taskId)); });
+    setAllL(p => { prevL = p; return p.filter(l => !ids.includes(l.taskId)); });
+    setAllF(p => { prevF = p; return p.filter(f => !ids.includes(f.taskId)); });
     invalidateCache();
     const result = await deleteManyTasksAction(ids);
     if (checkAuthError(result)) return;
-    showToast(`已刪除 ${result.deleted} 筆任務`, 'error');
+    if (result?.error) {
+      setAllT(prevT); setAllS(prevS); setAllL(prevL); setAllF(prevF);
+      showToast(result.error, 'error');
+    } else {
+      showToast(`已刪除 ${result.deleted} 筆任務`, 'error');
+    }
     return result;
   }, [showToast, invalidateCache]);
 
@@ -295,7 +391,7 @@ export default function useTaskManager() {
       return result;
     }
     showToast(`匯入完成：${result.updated} 筆更新、${result.inserted} 筆新增`, 'success');
-    await loadData();
+    await loadData(true); // force refetch after import
     return result;
   }, [showToast, loadData]);
 
@@ -331,9 +427,6 @@ export default function useTaskManager() {
       };
     });
   }, [allT, allS, projects]);
-
-  const [configCats, setConfigCats] = useState(DEFAULT_CATS);
-  const [configOwners, setConfigOwners] = useState([]);
 
   const saveConfigOwners = useCallback(async (newOwners) => {
     setConfigOwners(newOwners);
