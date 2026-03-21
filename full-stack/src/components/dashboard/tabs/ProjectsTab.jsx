@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { X, SC, FM, getIS2 } from "@/lib/theme";
 import { pD, fD } from "@/lib/utils";
 import EditableCell from "../EditableCell";
@@ -9,9 +9,10 @@ import ProgressBar from "../ProgressBar";
 import SortableSubItem from "../SortableSubItem";
 import GanttTimeline, { TimeScaleToggle } from "../GanttTimeline";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
+import SortableProjectCard from "../SortableProjectCard";
 
-export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, projIcons, setProjIcons, onProjectRenamed, onProjectDeleted }) {
+export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projIcons, setProjIcons, onProjectRenamed, onProjectDeleted }) {
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
   const [newProjName, setNewProjName] = useState("");
@@ -21,9 +22,33 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
   const [showSubAdd, setShowSubAdd] = useState(null);
   const [subDraft, setSubDraft] = useState({ name: "", owner: "" });
   const [timeDim, setTimeDim] = useState("月");
+  const [sortMode, setSortMode] = useState("manual");
   const fileRef = useRef(null);
   const iS2 = getIS2();
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const sortedProjList = useMemo(() => {
+    const valid = projects.filter(p => !archived.has(p.name));
+    switch (sortMode) {
+      case "name": return [...valid].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+      case "created": return [...valid].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      case "progress": return [...valid].sort((a, b) => {
+        const ptA = twp.filter(d => d.project === a.name);
+        const ptB = twp.filter(d => d.project === b.name);
+        const avgA = ptA.length ? ptA.reduce((s, t) => s + t.progress, 0) / ptA.length : 0;
+        const avgB = ptB.length ? ptB.reduce((s, t) => s + t.progress, 0) / ptB.length : 0;
+        return avgB - avgA;
+      });
+      default: return [...valid].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    }
+  }, [projects, archived, sortMode, twp]);
+
+  const handleProjectDragEnd = useCallback((ev) => {
+    const { active, over } = ev;
+    if (active && over && active.id !== over.id) {
+      reorderProjects(active.id, over.id);
+    }
+  }, [reorderProjects]);
 
   const handleIconUpload = (e, proj) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { setProjIcons(p => ({ ...p, [proj]: ev.target.result })); }; reader.readAsDataURL(file); };
 
@@ -61,10 +86,18 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
   if (!selProj) return (
     <div>
       <input type="file" accept="image/*" ref={fileRef} style={{ display: "none" }} onChange={e => { if (uploadTarget) handleIconUpload(e, uploadTarget); setUploadTarget(null); }} />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <button onClick={() => setShowArch(!showArch)} style={{ background: showArch ? X.surfaceLight : X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, cursor: "pointer" }}>
-          Archived ({archived.size})
-        </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => setShowArch(!showArch)} style={{ background: showArch ? X.surfaceLight : X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, cursor: "pointer" }}>
+            Archived ({archived.size})
+          </button>
+          <select value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ background: X.surface, color: X.text, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 12px", fontSize: 14, cursor: "pointer", outline: "none" }}>
+            <option value="manual">手動排序</option>
+            <option value="name">依名稱</option>
+            <option value="created">依建立時間</option>
+            <option value="progress">依進度</option>
+          </select>
+        </div>
         {!showCreateProj ? (<button onClick={() => setShowCreateProj(true)} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>
         ) : (<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input value={newProjName} onChange={e => setNewProjName(e.target.value)} placeholder="Project name" onKeyDown={e => { if (e.key === "Enter") createProj(newProjName); if (e.key === "Escape") { setShowCreateProj(false); setNewProjName(""); } }} autoFocus style={{ fontSize: 14, padding: "6px 12px", borderRadius: 20, border: `1px solid ${X.accent}`, outline: "none", background: X.surface, color: X.text, width: 200 }} />
@@ -72,43 +105,25 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
           <button onClick={() => { setShowCreateProj(false); setNewProjName(""); }} style={{ background: X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, cursor: "pointer" }}>Cancel</button>
         </div>)}
       </div>
-      <div className="dash-grid-cards">
-        {allProjNames.filter(p => !archived.has(p)).map(pn => {
-          const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
-          const ts = allS.filter(s => pt.some(t => t.id === s.taskId)); const ds = ts.filter(s => s.done).length;
-          const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
-          const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
-          const icon = projIcons[pn];
-          return (
-            <div key={pn} onClick={() => setSelProj(pn)} style={{ background: X.surface, borderRadius: 16, border: `1px solid ${X.border}`, overflow: "hidden", transition: "border-color 0.2s", cursor: "pointer" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = c} onMouseLeave={e => e.currentTarget.style.borderColor = X.border}>
-              <div style={{ padding: "18px 20px 12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div onClick={e => { e.stopPropagation(); setUploadTarget(pn); fileRef.current?.click(); }} title="Upload icon"
-                    style={{ width: 56, height: 56, borderRadius: 14, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, color: c, flexShrink: 0, cursor: "pointer", overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
-                    {icon ? <img src={icon} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 14 }} /> : pn[0]}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pn}</div>
-                    <div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks</div>
-                  </div>
-                  <span style={{ fontSize: 20, color: X.textDim }}>›</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ flex: 1, height: 5, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}><div style={{ height: "100%", width: `${avg}%`, background: c, borderRadius: 2, opacity: 0.8 }} /></div>
-                  <span style={{ fontFamily: FM, fontSize: 14, fontWeight: 600, color: avg === 100 ? X.green : X.text }}>{avg}%</span>
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                  {Object.entries(stC).map(([st, cnt]) => { const sc = SC[st] || {}; return (<span key={st} style={{ fontSize: 14, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color }}>{st} {cnt}</span>); })}
-                </div>
-              </div>
-              <div style={{ padding: "10px 20px 14px", display: "flex", gap: 8, justifyContent: "flex-end", borderTop: `1px solid ${X.border}` }}>
-                <button onClick={e => { e.stopPropagation(); archiveProj(pn); }} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "3px 12px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>
-                <button onClick={e => { e.stopPropagation(); if (confirm("Delete " + pn + "?")) deleteProj(pn); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "3px 12px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>
-              </div>
-            </div>);
-        })}
-      </div>
+      <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
+        <SortableContext items={sortedProjList.map(p => p.id)} strategy={rectSortingStrategy} disabled={sortMode !== "manual"}>
+          <div className="dash-grid-cards">
+            {sortedProjList.map(proj => {
+              const pn = proj.name;
+              const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
+              const ts = allS.filter(s => pt.some(t => t.id === s.taskId));
+              const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
+              const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
+              const icon = projIcons[pn];
+              return (
+                <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icon}
+                  dragEnabled={sortMode === "manual"} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
+                  onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
       {showArch && archived.size > 0 && (<div style={{ marginTop: 24 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: X.textDim, marginBottom: 12 }}>Archived</div>
         <div className="dash-grid-2col" style={{ gap: 12 }}>

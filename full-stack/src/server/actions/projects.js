@@ -69,6 +69,23 @@ export async function deleteProject(id) {
   }
 }
 
+export async function reorderProjects(orderedIds) {
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
+  if (!Array.isArray(orderedIds) || !orderedIds.every(isValidUUID)) return { error: 'Invalid project IDs' };
+  try {
+    await Promise.all(
+      orderedIds.map((id, i) =>
+        db.update(projects).set({ sortOrder: i + 1, updatedAt: new Date() }).where(eq(projects.id, id))
+      )
+    );
+    return { success: true };
+  } catch (err) {
+    console.error("[reorderProjects] error:", err);
+    return { error: err.message || "重新排序失敗" };
+  }
+}
+
 export async function getProjectWithTasks(projectId) {
   const { error } = await safeRequireAuth();
   if (error) return { error };

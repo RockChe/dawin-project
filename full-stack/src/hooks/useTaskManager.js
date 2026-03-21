@@ -21,6 +21,7 @@ import {
   createProject as createProjectAction,
   updateProject as updateProjectAction,
   deleteProject as deleteProjectAction,
+  reorderProjects as reorderProjectsAction,
 } from '@/server/actions/projects';
 import { saveConfig } from '@/server/actions/config';
 
@@ -410,6 +411,35 @@ export default function useTaskManager(initialData) {
     });
   }, []);
 
+  // ── Reorder projects ──
+  const reorderProjects = useCallback(async (activeId, overId) => {
+    let prev;
+    setProjects(p => {
+      prev = [...p];
+      const sorted = [...p].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      const oldIdx = sorted.findIndex(pr => pr.id === activeId);
+      const newIdx = sorted.findIndex(pr => pr.id === overId);
+      if (oldIdx === -1 || newIdx === -1) return p;
+      const [moved] = sorted.splice(oldIdx, 1);
+      sorted.splice(newIdx, 0, moved);
+      return sorted.map((pr, i) => ({ ...pr, sortOrder: i + 1 }));
+    });
+    invalidateCache();
+    const currentProjects = prev.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const oldIdx = currentProjects.findIndex(pr => pr.id === activeId);
+    const newIdx = currentProjects.findIndex(pr => pr.id === overId);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const [moved] = currentProjects.splice(oldIdx, 1);
+    currentProjects.splice(newIdx, 0, moved);
+    const orderedIds = currentProjects.map(pr => pr.id);
+    const result = await reorderProjectsAction(orderedIds);
+    if (checkAuthError(result)) return;
+    if (result?.error) {
+      setProjects(prev);
+      showToast(result.error, 'error');
+    }
+  }, [showToast, invalidateCache]);
+
   // ── Computed: tasks with progress ──
   const twp = useMemo(() => {
     const progressMap = computeAllProgress(allS);
@@ -454,7 +484,7 @@ export default function useTaskManager(initialData) {
     addLink, deleteLink,
     addFile, deleteFile: deleteFileHandler,
     renameProject, addProject, deleteProject: deleteProjectHandler,
-    reorderSubs, importTasks,
+    reorderSubs, reorderProjects, importTasks,
     deleteManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
     reload: loadData,
