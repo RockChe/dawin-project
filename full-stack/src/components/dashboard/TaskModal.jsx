@@ -6,28 +6,11 @@ import CalendarPicker from "./CalendarPicker";
 import TagInput from "./TagInput";
 import EditableCell from "./EditableCell";
 import InlineNote from "./InlineNote";
+import SortableSubItem from "./SortableSubItem";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
-function SortableSubItem({ sub, toggleSub, updateSub, deleteSub, configOwners }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: sub.id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
-  return (
-    <div ref={setNodeRef} style={style}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span {...attributes} {...listeners} style={{ cursor: "grab", fontSize: 14, color: X.textDim, flexShrink: 0, userSelect: "none" }}>⠿</span>
-        <span onClick={() => toggleSub(sub.id)} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: "pointer" }}>{sub.done ? "✓" : ""}</span>
-        <span style={{ flexShrink: 0, maxWidth: "40%" }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 14, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
-        <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
-        <span><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} options={configOwners} style={{ fontSize: 13, color: X.textDim }} /></span>
-        <button onClick={() => deleteSub(sub.id)} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>
-      </div>
-    </div>
-  );
-}
-
-export default function TaskModal({ task, projectId, projectName, onClose, addTask, updateTask, allS, addSub, deleteSub, toggleSub, updateSub, configCats, configOwners, reorderSubs, allL, allF, addLink, addFile, deleteLink, deleteFile }) {
+export default function TaskModal({ task, projectId, projectName, onClose, addTask, updateTask, allS, addSub, deleteSub, toggleSub, updateSub, configCats, configOwners, reorderSubs, allL, allF, addLink, addFile, deleteLink, deleteFile, showToast }) {
   const isNew = task === "new";
   const [form, setForm] = useState(() => isNew
     ? { task: "", start: "", end: "", category: "活動", priority: "中", owner: "—", status: "待辦", notes: "" }
@@ -63,6 +46,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           notes: form.notes,
         });
         if (!result?.success) {
+          if (showToast) showToast(result?.error || '建立任務失敗', 'error');
           setLoading(false);
           return;
         }
@@ -84,6 +68,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
       onClose();
     } catch (err) {
       console.error("Task save failed:", err);
+      if (showToast) showToast('儲存失敗', 'error');
       setLoading(false);
     }
   };
@@ -113,19 +98,22 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
       const result = await res.json();
       if (result.success) {
         addFile(task.id, result.file);
+      } else if (result.error) {
+        if (showToast) showToast(result.error, 'error');
       }
     } catch (err) {
       console.error('Upload failed:', err);
+      if (showToast) showToast('上傳失敗', 'error');
     }
     e.target.value = "";
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <div onClick={onClose} role="dialog" aria-modal="true" aria-label={isNew ? "建立任務" : "編輯任務"} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: X.surface, borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", boxShadow: `0 16px 48px ${X.shadowHeavy}`, border: `1px solid ${X.border}` }}>
         <div style={{ padding: "16px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 16, fontWeight: 700 }}>{isNew ? "建立任務" : "編輯任務"}</span>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 20, color: X.textDim, cursor: "pointer", padding: "2px 6px", lineHeight: 1 }}>×</button>
+          <button onClick={onClose} aria-label="關閉" style={{ background: "transparent", border: "none", fontSize: 20, color: X.textDim, cursor: "pointer", padding: "2px 6px", lineHeight: 1 }}>×</button>
         </div>
         <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
           {projectName && <div style={{ fontSize: 13, color: X.textDim }}>專案：<span style={{ color: X.accent, fontWeight: 600 }}>{projectName}</span></div>}
@@ -180,14 +168,18 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           {/* Links */}
           {!isNew && <div>
             <div style={{ fontSize: 12, color: X.textDim, marginBottom: 8, paddingTop: 8, borderTop: `1px solid ${X.border}` }}>連結</div>
-            {tLinks.map(l => (
+            {tLinks.map(l => {
+              let safeUrl = '#';
+              try { const u = new URL(l.url); if (['http:', 'https:'].includes(u.protocol)) safeUrl = l.url; } catch {}
+              return (
               <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, padding: "4px 8px", borderRadius: 6, background: X.surfaceLight }}>
-                <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: 13, color: X.accent, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.url}>
+                <a href={safeUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: 13, color: X.accent, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.url}>
                   <span style={{ color: X.textDim, marginRight: 4 }}>{extractDomain(l.url)}</span>— {l.title}
                 </a>
                 <button onClick={() => deleteLink(l.id)} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>
               </div>
-            ))}
+              );
+            })}
             {showLinkInput
               ? <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
                 <input value={linkDraft.url} onChange={e => setLinkDraft(p => ({ ...p, url: e.target.value }))} placeholder="URL *" autoFocus onKeyDown={e => { if (e.key === "Enter") handleAddLink(); if (e.key === "Escape") setShowLinkInput(false); }} style={{ ...iS2, flex: 2, fontSize: 13, padding: "5px 10px", minWidth: 160 }} />
