@@ -4,39 +4,35 @@
 
 - Node.js 18+
 - npm
-- [Neon](https://neon.tech/) PostgreSQL 帳號
-- [Cloudflare R2](https://www.cloudflare.com/products/r2/) 帳號
+- Google Cloud 專案（已啟用 Sheets API + Drive API）
+- Google Service Account 金鑰 JSON
+- 一個 Google Sheets 試算表
+- 一個 Google Drive 資料夾（用於檔案上傳）
 
 ## Clone & Install
 
 ```bash
 git clone <repo-url>
-cd dawin-dash
+cd dawin-dash/gws
 npm install
 ```
 
 ## 環境變數
 
-在專案根目錄建立 `.env` 檔案：
+在 `gws/` 目錄下建立 `.env` 檔案：
 
 | 變數名稱 | 說明 |
 |----------|------|
-| `DATABASE_URL` | Neon PostgreSQL 連線字串 |
-| `R2_ACCOUNT_ID` | Cloudflare 帳號 ID |
-| `R2_ACCESS_KEY_ID` | R2 Access Key |
-| `R2_SECRET_ACCESS_KEY` | R2 Secret Key |
-| `R2_BUCKET_NAME` | R2 Bucket 名稱 |
-| `R2_PUBLIC_URL` | R2 公開存取 URL（選填） |
-| `NEXT_PUBLIC_BASE_URL` | 應用程式 URL（如 `http://localhost:3000`） |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | Service Account 金鑰 JSON（完整 JSON 字串） |
+| `GOOGLE_SPREADSHEET_ID` | Google Sheets 試算表 ID |
+| `GOOGLE_DRIVE_ROOT_FOLDER_ID` | Google Drive 檔案上傳根目錄 ID |
+| `SESSION_SECRET` | Session 加密金鑰（選填） |
 
-## 資料庫初始化
+## Google Sheets 初始化
 
 ```bash
-# 將 schema 推送到 Neon 資料庫
-npm run db:push
-
-# 建立預設帳號
-npm run seed
+# 自動建立 8 個 sheet tabs、寫入欄位標頭、建立預設帳號與範例資料
+npm run setup:sheets
 ```
 
 ## 啟動
@@ -45,7 +41,7 @@ npm run seed
 npm run dev
 ```
 
-開啟 http://localhost:3000
+開啟 http://localhost:3001
 
 ## 預設登入帳號
 
@@ -55,17 +51,22 @@ npm run dev
 
 | 指令 | 說明 |
 |------|------|
-| `npm run dev` | 啟動開發伺服器（port 3000） |
+| `npm run dev` | 啟動開發伺服器（port 3001） |
 | `npm run build` | 建置正式版 |
-| `npm run start` | 啟動正式版（port 3000） |
-| `npm run db:generate` | 產生 Drizzle migration 檔案 |
-| `npm run db:migrate` | 執行 migration |
-| `npm run db:push` | 直接推送 schema 到資料庫（開發用） |
-| `npm run db:studio` | 開啟 Drizzle Studio（資料庫 GUI） |
-| `npm run seed` | 執行 seed 腳本建立預設帳號 |
+| `npm run start` | 啟動正式版 |
+| `npm run setup:sheets` | 初始化 Google Sheets（建表 + 範例資料） |
 
 ## 部署
 
 專案部署在 Vercel，推送到 `master` 分支後自動部署。
 
 部署時需在 Vercel 專案設定中配置上述所有環境變數。
+
+## 與 Full-Stack 版差異
+
+| 項目 | Full-Stack 版 (`full-stack/`) | GWS 版 (`gws/`) |
+|------|------------------------------|-----------------|
+| 資料庫 | Neon PostgreSQL + Drizzle ORM | Google Sheets |
+| 檔案儲存 | Cloudflare R2 | Google Drive |
+| 初始化 | `npm run db:push` + `npm run seed` | `npm run setup:sheets` |
+| 開發 Port | 3000 | 3001 |

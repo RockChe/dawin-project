@@ -11,7 +11,7 @@
 
 ```bash
 git clone <repo-url>
-cd dawin-dash
+cd dawin-dash/full-stack
 npm install
 ```
 

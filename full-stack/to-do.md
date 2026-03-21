@@ -7,14 +7,14 @@
 
 ## 高優先
 
-- [ ] Dashboard.jsx 拆分 — 目前 937 行，應拆出 TableView、OverviewTab、DataTab 等子元件
+- [x] Dashboard.jsx 拆分 — 已完成（945→187 行，6 個 tab 子元件於 `tabs/` 目錄）
 - [ ] 主題系統重構 — mutable export 模式已導致 dark mode bug，考慮改用 React Context
 - [ ] middleware.js 安全性 — 只檢查 cookie 存在不驗證有效性，有安全隱患
 
 ## 中優先
 
 - [ ] utils.js 函式命名改善 — pD, fD, toISO 等縮寫不直觀，應改為完整命名
-- [ ] Server Action 錯誤處理統一化 — 部分用 throw、部分用回傳值，應統一為回傳值模式
+- [x] Server Action 錯誤處理統一化 — 已統一為 safeRequireAuth + 回傳值模式
 - [ ] 手機版甘特圖觸控體驗優化
 - [ ] 加入 loading skeleton 到 project detail 頁
 

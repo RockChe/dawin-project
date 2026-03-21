@@ -14,7 +14,7 @@
 
 ## v0.2.0 — 程式碼品質
 
-- Dashboard.jsx 元件拆分重構
+- ✅ Dashboard.jsx 元件拆分重構（945→187 行，6 個 tab 子元件）
 - 主題系統改用 React Context
 - 統一 Server Action 錯誤處理模式
 - 清理 `/api/debug` route
