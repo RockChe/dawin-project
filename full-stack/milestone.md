@@ -25,6 +25,12 @@
 - 通知系統（任務到期提醒）
 - 活動紀錄 / Audit Log
 - 報表 / 統計儀表板
+- Settings：上傳公司 Logo + 設定 Dashboard 標題
+- Settings：顯示 R2 儲存空間容量
+- 專案卡片：支援上傳 Profile 圖並顯示
+- 專案卡片排序順序可拖曳設定
+- MCP Server：AI Agent 可查詢/建立專案、任務、子任務、上傳檔案
+- 日報 / 週報系統：AI Agent 讀取數據後自動寄送報告（Email / LINE / Telegram）
 
 ## v0.4.0 — 穩定性
 
