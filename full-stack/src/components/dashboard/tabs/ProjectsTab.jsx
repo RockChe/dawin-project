@@ -13,7 +13,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
 import SortableProjectCard from "../SortableProjectCard";
 
-export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, ganttHeights, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projIcons, setProjIcons, onProjectRenamed, onProjectDeleted }) {
+export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projIcons, setProjIcons, onProjectRenamed, onProjectDeleted }) {
   const { X, SC, inputStyle } = useTheme();
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
@@ -161,7 +161,7 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
     </div>
     {pt.some(t => t.start) && (<div style={{ marginBottom: 20 }}>
       <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={setTimeDim} /></div>
-      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={"全部"} fpr={"全部"} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} ganttHeights={ganttHeights} />
+      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={"全部"} fpr={"全部"} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} />
     </div>)}
     <div className="dash-detail-grid" style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

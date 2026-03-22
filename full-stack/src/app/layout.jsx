@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 
 const notoSansTC = Noto_Sans_TC({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700', '800'],
   display: 'swap',
   variable: '--font-noto-sans-tc',
 });

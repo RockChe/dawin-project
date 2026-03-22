@@ -5,14 +5,28 @@
   --font-mono: var(--font-jetbrains-mono), 'SF Mono', monospace;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar — dynamic colors handled by Dashboard.jsx <style> tag */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #C8C7C3; border-radius: 5px; }
-::-webkit-scrollbar-thumb:hover { background: #9B9A97; }
+::-webkit-scrollbar-thumb { border-radius: 5px; }
 
-.dark ::-webkit-scrollbar-thumb { background: #545D68; }
-.dark ::-webkit-scrollbar-thumb:hover { background: #768390; }
+/* Animations */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(16px); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* Smooth transitions */
 * { transition: background-color 0.15s ease, border-color 0.15s ease; }

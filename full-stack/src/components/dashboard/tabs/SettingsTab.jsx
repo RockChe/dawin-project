@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
-export default function SettingsTab({ configCats, saveConfigCats, configOwners, saveConfigOwners, ganttDraft, setGanttDraft, saveGanttWidths, ganttHeightsDraft, setGanttHeightsDraft, saveGanttHeights, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast }) {
+export default function SettingsTab({ configCats, saveConfigCats, configOwners, saveConfigOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast }) {
   const { X, CC, PJC, inputStyle } = useTheme();
   const [newCat, setNewCat] = useState("");
   const [newOwner, setNewOwner] = useState("");
+  const [tlHeightDraft, setTlHeightDraft] = useState(timelineHeight);
   const [upDaysDraft, setUpDaysDraft] = useState(upcomingDays);
   const [upLimitDraft, setUpLimitDraft] = useState(upcomingLimit);
   const iS2 = inputStyle;
@@ -58,17 +59,11 @@ export default function SettingsTab({ configCats, saveConfigCats, configOwners, 
       <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.green, borderRadius: 2 }} />Display Settings</h3>
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: X.textSec, marginBottom: 6 }}>Timeline Row Height (px)</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {[{ k: "header", l: "Header" }, { k: "projectRow", l: "Project Row" }, { k: "taskRow", l: "Task Row" }, { k: "taskBarHeight", l: "Task Bar" }].map(({ k, l }) => (
-              <div key={k}>
-                <div style={{ fontSize: 11, color: X.textDim, marginBottom: 2 }}>{l}</div>
-                <input type="number" value={ganttHeightsDraft[k] ?? ''} onChange={e => { const raw = e.target.value; setGanttHeightsDraft(p => ({ ...p, [k]: raw === '' ? '' : (parseInt(raw) || 1) })); }} onKeyDown={e => { if (e.key === "Enter") saveGanttHeights(); }} style={{ ...iS2, fontSize: 14, padding: "6px 10px", width: "100%" }} />
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-            <button onClick={saveGanttHeights} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "7px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Save Heights</button>
+          <div style={{ fontSize: 13, fontWeight: 600, color: X.textSec, marginBottom: 6 }}>Timeline Height (vh)</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="number" value={tlHeightDraft} onChange={e => setTlHeightDraft(e.target.value === '' ? '' : (parseInt(e.target.value) || 10))} onKeyDown={e => { if (e.key === "Enter") saveTimelineHeight(tlHeightDraft); }} style={{ ...iS2, fontSize: 14, padding: "6px 10px", width: 80 }} />
+            <span style={{ fontSize: 12, color: X.textDim }}>vh (10~200)</span>
+            <button onClick={() => saveTimelineHeight(tlHeightDraft)} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "7px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Save</button>
           </div>
         </div>
         <div>

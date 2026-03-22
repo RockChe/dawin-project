@@ -1,11 +1,11 @@
 "use client";
-import { THEMES, F, FM } from "@/lib/theme";
+import { THEMES, F, FM, FD_STYLE } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 
 export default function DashboardHeader({ themeKey, cycleTheme, isMobile, scrolled, searchInput, handleSearch, searchQ, clearSearch, avgProg, filtered }) {
   const { X } = useTheme();
   return (
-    <div className="dash-header" style={{ borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 50, background: X.surface, boxShadow: scrolled ? `0 2px 8px ${X.shadow}` : "none", transition: "box-shadow 0.2s" }}>
+    <div className="dash-header" style={{ borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 50, background: X.surface, boxShadow: scrolled ? X.surfaceShadow : "none", transition: "box-shadow 0.2s" }}>
       <div style={{ maxWidth: 1400, margin: "0 auto", ...(isMobile ? {} : { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }) }}>
         {isMobile ? (
           <>
@@ -36,7 +36,7 @@ export default function DashboardHeader({ themeKey, cycleTheme, isMobile, scroll
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: X.accent, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 17, color: "#fff" }}>P</div>
-              <span className="dash-title" style={{ fontWeight: 700 }}>專案管理儀表板</span>
+              <span className="dash-title" style={{ ...FD_STYLE }}>專案管理儀表板</span>
             </div>
             <div className="dash-hdr-right">
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>

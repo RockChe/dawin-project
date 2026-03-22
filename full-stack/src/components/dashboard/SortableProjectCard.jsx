@@ -10,8 +10,8 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
   const sStyle = { transform: CSS.Transform.toString(transform), transition };
   return (
     <div ref={setNodeRef} style={sStyle}>
-      <div onClick={onSelect} style={{ background: X.surface, borderRadius: 16, border: `1px solid ${X.border}`, overflow: "hidden", transition: "border-color 0.2s", cursor: "pointer", position: "relative" }}
-        onMouseEnter={e => e.currentTarget.style.borderColor = c} onMouseLeave={e => e.currentTarget.style.borderColor = X.border}>
+      <div onClick={onSelect} style={{ background: X.surface, borderRadius: 16, border: `1px solid ${X.border}`, overflow: "hidden", transition: "border-color 0.2s, box-shadow 0.2s", boxShadow: X.surfaceShadow, cursor: "pointer", position: "relative" }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = c; e.currentTarget.style.boxShadow = X.surfaceShadowHover; }} onMouseLeave={e => { e.currentTarget.style.borderColor = X.border; e.currentTarget.style.boxShadow = X.surfaceShadow; }}>
         {dragEnabled && (
           <span {...attributes} {...listeners} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 10, right: 12, cursor: "grab", fontSize: 16, color: X.textDim, userSelect: "none", zIndex: 2, padding: "2px 4px", borderRadius: 4 }}
             onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>⠿</span>
