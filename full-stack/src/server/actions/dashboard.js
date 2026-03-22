@@ -4,6 +4,7 @@ import { db } from '@/server/db';
 import { tasks, subtasks, links, files, projects, configTable as config } from '@/server/db/schema';
 import { asc, desc, inArray } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
+import { getDownloadUrl } from '@/lib/r2';
 
 /**
  * Consolidated initial data loader — 1 auth check + 6 parallel queries.
@@ -28,12 +29,25 @@ export async function getInitialData() {
     catch { configs[row.key] = row.value; }
   }
 
+  // Resolve banner URLs server-side
+  const projectsWithBanners = await Promise.all(
+    allProjects.map(async (p) => {
+      if (p.bannerR2Key) {
+        try {
+          const bannerUrl = await getDownloadUrl(p.bannerR2Key);
+          return { ...p, bannerUrl };
+        } catch { return p; }
+      }
+      return p;
+    })
+  );
+
   return {
     tasks: allTasks,
     subtasks: allSubtasks,
     links: allLinks,
     files: allFiles,
-    projects: allProjects,
+    projects: projectsWithBanners,
     configs,
     session: { role: session.role, name: session.name, email: session.email },
   };

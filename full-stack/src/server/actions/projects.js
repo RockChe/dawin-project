@@ -5,6 +5,7 @@ import { projects, tasks, subtasks } from '@/server/db/schema';
 import { eq, asc, inArray, sql } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 import { isValidUUID } from '@/lib/utils';
+import { deleteFromR2 } from '@/lib/r2';
 
 export async function getProjects() {
   const { error } = await safeRequireAuth();
@@ -71,10 +72,17 @@ export async function deleteProject(id) {
 
   try {
     // Ownership check: only creator or super_admin can delete
-    const proj = await db.select({ createdBy: projects.createdBy }).from(projects).where(eq(projects.id, id)).limit(1);
+    const proj = await db.select({ createdBy: projects.createdBy, bannerR2Key: projects.bannerR2Key }).from(projects).where(eq(projects.id, id)).limit(1);
     if (!proj[0]) return { error: '專案不存在' };
     if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
       return { error: '無權限刪除此專案' };
+    }
+
+    // Clean up banner from R2
+    if (proj[0].bannerR2Key) {
+      try { await deleteFromR2(proj[0].bannerR2Key); } catch (err) {
+        console.error('[deleteProject] banner cleanup:', err);
+      }
     }
 
     await db.delete(projects).where(eq(projects.id, id));
@@ -82,6 +90,35 @@ export async function deleteProject(id) {
   } catch (err) {
     console.error("deleteProject error:", err);
     return { error: err.message || "刪除專案失敗" };
+  }
+}
+
+export async function deleteProjectBanner(projectId) {
+  const { session, error } = await safeRequireAuth();
+  if (error) return { error };
+
+  if (!isValidUUID(projectId)) return { error: 'Invalid project ID' };
+
+  try {
+    const proj = await db.select({ bannerR2Key: projects.bannerR2Key, createdBy: projects.createdBy })
+      .from(projects).where(eq(projects.id, projectId)).limit(1);
+    if (!proj[0]) return { error: '專案不存在' };
+    if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+      return { error: '無權限修改此專案' };
+    }
+
+    if (proj[0].bannerR2Key) {
+      try { await deleteFromR2(proj[0].bannerR2Key); } catch (err) {
+        console.error('[deleteProjectBanner] R2 cleanup:', err);
+      }
+    }
+
+    await db.update(projects).set({ bannerR2Key: null, updatedAt: new Date() })
+      .where(eq(projects.id, projectId));
+    return { success: true };
+  } catch (err) {
+    console.error("[deleteProjectBanner] error:", err);
+    return { error: err.message || "刪除 Banner 失敗" };
   }
 }
 

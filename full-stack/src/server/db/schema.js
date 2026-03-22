@@ -32,6 +32,7 @@ export const sessions = pgTable('sessions', {
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
+  bannerR2Key: varchar('banner_r2_key', { length: 1000 }),
   sortOrder: integer('sort_order').default(0).notNull(),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),

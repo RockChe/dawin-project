@@ -12,8 +12,9 @@ import GanttTimeline, { TimeScaleToggle } from "../GanttTimeline";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
 import SortableProjectCard from "../SortableProjectCard";
+import { deleteProjectBanner } from "@/server/actions/projects";
 
-export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projIcons, setProjIcons, onProjectRenamed, onProjectDeleted }) {
+export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
   const { X, SC, inputStyle } = useTheme();
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
@@ -25,6 +26,7 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
   const [subDraft, setSubDraft] = useState({ name: "", owner: "" });
   const [timeDim, setTimeDim] = useState("月");
   const [sortMode, setSortMode] = useState("manual");
+  const [detailIconHover, setDetailIconHover] = useState(false);
   const fileRef = useRef(null);
   const iS2 = inputStyle;
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -52,7 +54,48 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
     }
   }, [reorderProjects]);
 
-  const handleIconUpload = (e, proj) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { setProjIcons(p => ({ ...p, [proj]: ev.target.result })); }; reader.readAsDataURL(file); };
+  const handleIconUpload = async (e, projName) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const proj = projects.find(p => p.name === projName);
+    if (!proj) return;
+    // Optimistic update with DataURL
+    const reader = new FileReader();
+    reader.onload = (ev) => setProjBanners(p => ({ ...p, [projName]: ev.target.result }));
+    reader.readAsDataURL(file);
+    // Upload to R2
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('projectId', proj.id);
+    try {
+      const res = await fetch('/api/upload-banner', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.bannerUrl) {
+        setProjBanners(p => ({ ...p, [projName]: data.bannerUrl }));
+        showToast("圖示已上傳", "success");
+      } else if (data.error) {
+        setProjBanners(p => { const n = { ...p }; delete n[projName]; return n; });
+        showToast(data.error, "error");
+      }
+    } catch {
+      setProjBanners(p => { const n = { ...p }; delete n[projName]; return n; });
+      showToast("圖示上傳失敗", "error");
+    }
+  };
+  const handleIconRemove = async (projName) => {
+    const proj = projects.find(p => p.name === projName);
+    if (!proj) return;
+    // Optimistic remove
+    const old = projBanners[projName];
+    setProjBanners(p => { const n = { ...p }; delete n[projName]; return n; });
+    const result = await deleteProjectBanner(proj.id);
+    if (result?.error) {
+      setProjBanners(p => ({ ...p, [projName]: old }));
+      showToast(result.error, "error");
+    } else {
+      showToast("圖示已刪除", "success");
+    }
+  };
 
   const archiveProj = useCallback(p => { setArchived(prev => { const n = new Set(prev); n.add(p); return n; }); setSelProj(null); showToast("Project archived", "warn"); }, [showToast]);
   const unarchiveProj = useCallback(p => { setArchived(prev => { const n = new Set(prev); n.delete(p); return n; }); showToast("Project unarchived", "success"); }, [showToast]);
@@ -73,11 +116,11 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
   const handleRename = useCallback((oldName, newName) => {
     if (!newName || newName === oldName) return;
     renameProject(oldName, newName);
-    setProjIcons(p => { const n = { ...p }; if (n[oldName]) { n[newName] = n[oldName]; delete n[oldName]; } return n; });
+    setProjBanners(p => { const n = { ...p }; if (n[oldName]) { n[newName] = n[oldName]; delete n[oldName]; } return n; });
     setArchived(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; });
     onProjectRenamed(oldName, newName);
     setSelProj(newName);
-  }, [renameProject, setProjIcons, onProjectRenamed]);
+  }, [renameProject, setProjBanners, onProjectRenamed]);
 
   const openNewTaskModal = useCallback(() => {
     const proj = projects.find(p => p.name === selProj);
@@ -116,11 +159,11 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
               const ts = allS.filter(s => pt.some(t => t.id === s.taskId));
               const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
               const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
-              const icon = projIcons[pn];
+              const icn = projBanners[pn];
               return (
-                <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icon}
+                <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
                   dragEnabled={sortMode === "manual"} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
-                  onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} />
+                  onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} onIconRemove={() => handleIconRemove(pn)} />
               );
             })}
           </div>
@@ -145,14 +188,26 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
   const pt = twp.filter(d => d.project === selProj).sort((a, b) => { const da = a.start ? pD(a.start) : new Date(9999, 0); const db = b.start ? pD(b.start) : new Date(9999, 0); return da - db; });
   const c = pcMap[selProj] || X.accent; const ts = allS.filter(s => pt.some(t => t.id === s.taskId)); const ds = ts.filter(s => s.done).length;
   const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
-  const icon = projIcons[selProj];
+  const detailIcon = projBanners[selProj];
 
   return (<div>
     <input type="file" accept="image/*" ref={fileRef} style={{ display: "none" }} onChange={e => { if (uploadTarget) handleIconUpload(e, uploadTarget); setUploadTarget(null); }} />
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
       <button onClick={() => { setSelProj(null); }} style={{ background: X.surface, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>← Back</button>
-      <div onClick={() => { setUploadTarget(selProj); fileRef.current?.click(); }} style={{ width: 64, height: 64, borderRadius: 16, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: c, cursor: "pointer", overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
-        {icon ? <img src={icon} style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 16 }} /> : selProj[0]}
+      {/* Detail Icon */}
+      <div
+        onClick={e => { e.stopPropagation(); setUploadTarget(selProj); fileRef.current?.click(); }}
+        onMouseEnter={() => setDetailIconHover(true)}
+        onMouseLeave={() => setDetailIconHover(false)}
+        title={detailIcon ? "更換圖示" : "上傳圖示"}
+        style={{ position: "relative", width: 80, height: 80, borderRadius: 18, background: detailIcon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 700, color: c, cursor: "pointer", overflow: "hidden", border: detailIcon ? "none" : `1px dashed ${c}50`, flexShrink: 0 }}>
+        {detailIcon ? <img src={detailIcon} alt="" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 18 }} /> : selProj[0]}
+        {detailIcon && detailIconHover && (
+          <button
+            onClick={e => { e.stopPropagation(); handleIconRemove(selProj); }}
+            style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.5)", color: "#fff", border: "none", fontSize: 14, lineHeight: "22px", textAlign: "center", cursor: "pointer", padding: 0, zIndex: 2 }}
+            title="刪除圖示">×</button>
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}><h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /></h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div></div>
       <button onClick={() => setShowFileManager(selProj)} style={{ background: "transparent", border: `1px solid ${X.accent}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.accent, cursor: "pointer", fontWeight: 600 }}>📁 檔案管理</button>

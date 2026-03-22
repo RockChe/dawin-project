@@ -36,7 +36,13 @@ export default function Dashboard({ initialData }) {
   const [customProjects, setCustomProjects] = useState(new Set());
   const [modalTask, setModalTask] = useState(null);
   const [showFileManager, setShowFileManager] = useState(null);
-  const [projIcons, setProjIcons] = useState({});
+  const [projBanners, setProjBanners] = useState(() => {
+    const banners = {};
+    (initialData?.projects || []).forEach(p => {
+      if (p.bannerUrl) banners[p.name] = p.bannerUrl;
+    });
+    return banners;
+  });
   const [scrolled, setScrolled] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [searchQ, setSearchQ] = useState("");
@@ -166,10 +172,10 @@ export default function Dashboard({ initialData }) {
         </div>
 
         {/* OVERVIEW */}
-        {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidths.overview} projIcons={projIcons} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} />}
+        {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidths.overview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} />}
 
         {/* PROJECTS */}
-        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={setModalTask} setShowFileManager={setShowFileManager} ganttWidths={ganttWidths.project} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projIcons={projIcons} setProjIcons={setProjIcons} onProjectRenamed={(oldName, newName) => { setFPSet(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); setCustomProjects(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); }} onProjectDeleted={(name) => { setCustomProjects(p => { const n = new Set(p); n.delete(name); return n; }); }} />}
+        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={setModalTask} setShowFileManager={setShowFileManager} ganttWidths={ganttWidths.project} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={(oldName, newName) => { setFPSet(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); setCustomProjects(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); }} onProjectDeleted={(name) => { setCustomProjects(p => { const n = new Set(p); n.delete(name); return n; }); }} />}
 
         {/* TIMELINE */}
         {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidths.timeline} timelineHeight={timelineHeight} />}

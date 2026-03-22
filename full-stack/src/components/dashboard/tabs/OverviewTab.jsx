@@ -6,7 +6,7 @@ import { pD, fD } from "@/lib/utils";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
 
-export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projIcons, stats, upcomingDays = 30, upcomingLimit = 5 }) {
+export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5 }) {
   const { X, SC } = useTheme();
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
@@ -134,7 +134,7 @@ export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, gant
           <div key={proj} style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[proj] }} />
-                {projIcons[proj] && <img src={projIcons[proj]} style={{ width: 16, height: 16, borderRadius: 4, objectFit: "cover" }} />}{proj}
+                {projBanners[proj] && <img src={projBanners[proj]} style={{ width: 20, height: 20, borderRadius: 5, objectFit: "cover" }} />}{proj}
               </span>
               <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{avg}%</span>
             </div>

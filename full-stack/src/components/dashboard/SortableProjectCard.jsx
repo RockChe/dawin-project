@@ -1,11 +1,13 @@
 "use client";
+import { useState } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, onSelect, onArchive, onDelete, onIconClick }) {
+export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, onSelect, onArchive, onDelete, onIconClick, onIconRemove }) {
   const { X, SC } = useTheme();
+  const [iconHover, setIconHover] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id });
   const sStyle = { transform: CSS.Transform.toString(transform), transition };
   return (
@@ -17,12 +19,23 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
             onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>⠿</span>
         )}
         <div style={{ padding: "18px 20px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <div onClick={e => { e.stopPropagation(); onIconClick(); }} title="Upload icon"
-              style={{ width: 56, height: 56, borderRadius: 14, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, color: c, flexShrink: 0, cursor: "pointer", overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
-              {icon ? <img src={icon} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 14 }} /> : pn[0]}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            {/* Icon */}
+            <div
+              onClick={e => { e.stopPropagation(); onIconClick(); }}
+              onMouseEnter={() => setIconHover(true)}
+              onMouseLeave={() => setIconHover(false)}
+              title={icon ? "更換圖示" : "上傳圖示"}
+              style={{ position: "relative", width: 72, height: 72, borderRadius: 16, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: c, flexShrink: 0, cursor: "pointer", overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
+              {icon ? <img src={icon} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 16 }} /> : pn[0]}
+              {icon && iconHover && (
+                <button
+                  onClick={e => { e.stopPropagation(); onIconRemove(); }}
+                  style={{ position: "absolute", top: 3, right: 3, width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.5)", color: "#fff", border: "none", fontSize: 13, lineHeight: "20px", textAlign: "center", cursor: "pointer", padding: 0, zIndex: 2 }}
+                  title="刪除圖示">×</button>
+              )}
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pn}</div>
               <div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks</div>
             </div>
