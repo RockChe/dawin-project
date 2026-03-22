@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { X, getIS2 } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 
 export default function FileManagerModal({ project, tasks, allL, allF, addLink, addFile, deleteLink, deleteFile, onClose }) {
@@ -13,7 +13,7 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
   const fileInputRef = useRef(null);
   const xhrRef = useRef(null);
   const mountedRef = useRef(true);
-  const iS2 = getIS2();
+  const { X, inputStyle: iS2 } = useTheme();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -148,12 +148,12 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
                 </select>
                 <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
                 {uploading ? (
-                  <div style={{ width: "100%" }}>
+                  <div style={{ width: "100%" }} aria-live="polite">
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <div style={{ width: 14, height: 14, border: `2px solid ${X.border}`, borderTopColor: X.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                      <div aria-hidden="true" style={{ width: 14, height: 14, border: `2px solid ${X.border}`, borderTopColor: X.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                       <span style={{ fontSize: 13, color: X.accent, fontWeight: 500 }}>上傳中 {uploadProgress}%</span>
                     </div>
-                    <div style={{ height: 4, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}>
+                    <div role="progressbar" aria-valuenow={uploadProgress} aria-valuemin={0} aria-valuemax={100} aria-label="檔案上傳進度" style={{ height: 4, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${uploadProgress}%`, background: X.accent, borderRadius: 2, transition: "width 0.2s" }} />
                     </div>
                   </div>

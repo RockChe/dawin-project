@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { X, getIS2 } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toISO, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 import CalendarPicker from "./CalendarPicker";
 import TagInput from "./TagInput";
@@ -29,7 +29,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
   const tSubs = isNew ? [] : allS.filter(s => s.taskId === task.id).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   const tLinks = isNew ? [] : (allL || []).filter(l => l.taskId === task.id);
   const tFiles = isNew ? [] : (allF || []).filter(f => f.taskId === task.id);
-  const iS2 = getIS2();
+  const { X, inputStyle: iS2 } = useTheme();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   useEffect(() => { const h = e => { if (e.key === "Escape") onClose(); }; document.addEventListener("keydown", h); return () => document.removeEventListener("keydown", h); }, [onClose]);
   useEffect(() => {
@@ -230,12 +230,12 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
               );
             })}
             {uploading ? (
-              <div style={{ padding: "4px 0" }}>
+              <div style={{ padding: "4px 0" }} aria-live="polite">
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <div style={{ width: 14, height: 14, border: `2px solid ${X.border}`, borderTopColor: X.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                  <div aria-hidden="true" style={{ width: 14, height: 14, border: `2px solid ${X.border}`, borderTopColor: X.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                   <span style={{ fontSize: 13, color: X.accent, fontWeight: 500 }}>上傳中 {uploadProgress}%</span>
                 </div>
-                <div style={{ height: 4, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}>
+                <div role="progressbar" aria-valuenow={uploadProgress} aria-valuemin={0} aria-valuemax={100} aria-label="檔案上傳進度" style={{ height: 4, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${uploadProgress}%`, background: X.accent, borderRadius: 2, transition: "width 0.2s" }} />
                 </div>
               </div>

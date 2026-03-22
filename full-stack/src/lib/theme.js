@@ -1,4 +1,4 @@
-// Theme system — mutable live-binding exports
+// Theme system — constants and pure functions (reactive state in ThemeProvider)
 export const THEMES = {
   warm: { key:"warm", label:"Warm Neutral", icon:"\uD83D\uDCC4", isDark:false,
     bg:"#F5F3EF", surface:"#FFFFFF", surfaceHover:"#EEECE8", surfaceLight:"#EEECE8",
@@ -25,23 +25,5 @@ export function mkPC(t){ return {"高":{color:t.red},"中":{color:t.amber},"低"
 export function mkCC(t){ return {"商務合作":t.accent,"活動":t.purple,"播出/開始":t.amber,"行銷":"#06B6D4","發行":t.green,"市場展":t.red}; }
 export function mkPJC(t){ return [t.accent,t.purple,t.amber,t.red,t.green,"#06B6D4",t.pink]; }
 
-export let X = THEMES.warm;
-export let SC = mkSC(X);
-export let PC = mkPC(X);
-export let CC = mkCC(X);
-export let PJC = mkPJC(X);
-
-export const F = "'Noto Sans TC',-apple-system,BlinkMacSystemFont,sans-serif";
-export const FM = "'JetBrains Mono','SF Mono',monospace";
-
-export function applyTheme(key) {
-  X = THEMES[key] || THEMES.warm;
-  SC = mkSC(X);
-  PC = mkPC(X);
-  CC = mkCC(X);
-  PJC = mkPJC(X);
-}
-
-export function getIS2() {
-  return { fontFamily:F, fontSize:14, padding:"6px 10px", borderRadius:8, border:`1px solid ${X.border}`, outline:"none", color:X.text, background:X.surface, width:"100%" };
-}
+export const F = "var(--font-noto-sans-tc),-apple-system,BlinkMacSystemFont,sans-serif";
+export const FM = "var(--font-jetbrains-mono),'SF Mono',monospace";

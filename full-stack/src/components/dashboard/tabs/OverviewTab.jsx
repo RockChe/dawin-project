@@ -1,15 +1,28 @@
 "use client";
 import { useState, useMemo } from "react";
-import { X, SC, FM } from "@/lib/theme";
+import { FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
 
 export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projIcons, stats }) {
+  const { X, SC } = useTheme();
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
 
   const projStats = useMemo(() => { const p = {}; filtered.forEach(d => { if (!p[d.project]) p[d.project] = { total: 0, pSum: 0 }; p[d.project].total++; p[d.project].pSum += d.progress; }); return p; }, [filtered]);
+
+  const pieData = useMemo(() => {
+    const entries = Object.entries(SC).map(([k, c]) => ({ label: k, count: stats[k] || 0, color: c.color }));
+    const total = entries.reduce((s, e) => s + e.count, 0);
+    if (!total) return null;
+    const cx = 100, cy = 100, R = 90, r = 58; let ca = -Math.PI / 2; const g = 0.04;
+    const arcs = entries.filter(e => e.count > 0).map(e => { const a = (e.count / total) * Math.PI * 2 - g, sa = ca + g / 2; ca += a + g; const ea = sa + a, la = a > Math.PI ? 1 : 0;
+      const d = `M${cx+R*Math.cos(sa)},${cy+R*Math.sin(sa)} A${R},${R} 0 ${la} 1 ${cx+R*Math.cos(ea)},${cy+R*Math.sin(ea)} L${cx+r*Math.cos(ea)},${cy+r*Math.sin(ea)} A${r},${r} 0 ${la} 0 ${cx+r*Math.cos(sa)},${cy+r*Math.sin(sa)} Z`;
+      return { ...e, d, pct: Math.round(e.count / total * 100) }; });
+    return { arcs, total };
+  }, [SC, stats]);
 
   return (<>
     {/* Project Timeline */}
@@ -130,29 +143,23 @@ export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, gant
       </div>
       <div style={{ background: X.surface, borderRadius: 12, padding: 16, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 8px" }}>Status Distribution</h3>
-        {(() => { const entries = Object.entries(SC).map(([k, c]) => ({ label: k, count: stats[k] || 0, color: c.color })); const total = entries.reduce((s, e) => s + e.count, 0); if (!total) return null;
-          const cx = 100, cy = 100, R = 90, r = 58; let ca = -Math.PI / 2; const g = 0.04;
-          const arcs = entries.filter(e => e.count > 0).map(e => { const a = (e.count / total) * Math.PI * 2 - g, sa = ca + g / 2; ca += a + g; const ea = sa + a, la = a > Math.PI ? 1 : 0;
-            const d = `M${cx + R * Math.cos(sa)},${cy + R * Math.sin(sa)} A${R},${R} 0 ${la} 1 ${cx + R * Math.cos(ea)},${cy + R * Math.sin(ea)} L${cx + r * Math.cos(ea)},${cy + r * Math.sin(ea)} A${r},${r} 0 ${la} 0 ${cx + r * Math.cos(sa)},${cy + r * Math.sin(sa)} Z`;
-            return { ...e, d, pct: Math.round(e.count / total * 100) }; });
-          return (<div className="dash-chart-wrap">
+        {pieData && (<div className="dash-chart-wrap">
             <div className="dash-chart-svg" style={{ position: "relative" }}>
-              <svg viewBox="0 0 200 200" style={{ width: "100%", height: "100%" }}>{arcs.map((a, i) => <path key={i} d={a.d} fill={a.color} opacity={0.85} />)}</svg>
+              <svg viewBox="0 0 200 200" style={{ width: "100%", height: "100%" }}>{pieData.arcs.map((a, i) => <path key={i} d={a.d} fill={a.color} opacity={0.85} />)}</svg>
               <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center" }}>
-                <div style={{ fontFamily: FM, fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{total}</div>
+                <div style={{ fontFamily: FM, fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{pieData.total}</div>
                 <div style={{ fontSize: 14, color: X.textDim, marginTop: 2 }}>Total</div>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {arcs.map((a, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {pieData.arcs.map((a, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: a.color, opacity: 0.85 }} />
                 <span style={{ fontSize: 14, color: X.textSec, minWidth: 42 }}>{a.label}</span>
                 <span style={{ fontFamily: FM, fontSize: 12, fontWeight: 600 }}>{a.count}</span>
                 <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>({a.pct}%)</span>
               </div>))}
             </div>
-          </div>);
-        })()}
+          </div>)}
       </div>
     </div>
 

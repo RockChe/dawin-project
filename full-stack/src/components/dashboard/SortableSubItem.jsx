@@ -1,10 +1,12 @@
-import { X } from "@/lib/theme";
+"use client";
+import { useTheme } from "@/components/ThemeProvider";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import EditableCell from "./EditableCell";
 import InlineNote from "./InlineNote";
 
 export default function SortableSubItem({ sub, toggleSub, updateSub, deleteSub, configOwners }) {
+  const { X } = useTheme();
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: sub.id });
   const sStyle = { transform: CSS.Transform.toString(transform), transition };
   return (

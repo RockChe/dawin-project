@@ -1,8 +1,11 @@
-import { X, SC, FM } from "@/lib/theme";
+"use client";
+import { FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, onSelect, onArchive, onDelete, onIconClick }) {
+  const { X, SC } = useTheme();
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id });
   const sStyle = { transform: CSS.Transform.toString(transform), transition };
   return (

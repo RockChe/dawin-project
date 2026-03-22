@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { X, getIS2 } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
 
 export default function CalendarPicker({ value, onChange, showTime = false, autoOpen = false, onClose, style = {} }) {
@@ -22,7 +22,7 @@ export default function CalendarPicker({ value, onChange, showTime = false, auto
   const todayStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}`;
   const pick = day => { const ds = `${y}/${String(mo + 1).padStart(2, "0")}/${String(day).padStart(2, "0")}`; onChange(showTime ? ds + " " + timeVal : ds); setOpen(false); if (onClose) onClose(); };
   const confirmT = () => { const ds = selStr || `${y}/${String(mo + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}`; onChange(ds + " " + timeVal); setOpen(false); if (onClose) onClose(); };
-  const cIS2 = getIS2();
+  const { X, inputStyle: cIS2 } = useTheme();
   return (<div ref={ref} style={{ position: "relative", ...style }}>
     <div onClick={() => setOpen(!open)} style={{ ...cIS2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
       <span style={{ color: value ? X.text : X.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value ? fD(value) : "Select date"}</span>

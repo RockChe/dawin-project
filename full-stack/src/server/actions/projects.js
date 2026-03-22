@@ -4,9 +4,7 @@ import { db } from '@/server/db';
 import { projects, tasks, subtasks } from '@/server/db/schema';
 import { eq, asc, inArray, sql } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isValidUUID(str) { return typeof str === 'string' && UUID_RE.test(str); }
+import { isValidUUID } from '@/lib/utils';
 
 export async function getProjects() {
   const { error } = await safeRequireAuth();

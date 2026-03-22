@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, memo } from "react";
-import { X, F, getIS2 } from "@/lib/theme";
+import { F } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { toISO, fromISO } from "@/lib/utils";
 import CalendarPicker from "./CalendarPicker";
 
@@ -8,6 +9,7 @@ const EditableCell = memo(function EditableCell({
   value, onSave, options = null, isDate = false, style = {},
   isSelected, isEditing, onSelect, onStartEdit, onStopEdit, onNavigate, initialTypedChar
 }) {
+  const { X, inputStyle } = useTheme();
   const controlled = isSelected !== undefined;
   const ref = useRef(null);
   const committedRef = useRef(false);
@@ -15,6 +17,8 @@ const EditableCell = memo(function EditableCell({
   const [dr, setDr] = useState(isDate ? toISO(value) : value);
   const [editVal, setEditVal] = useState("");
 
+  // Only runs on edit mode entry. value, initialTypedChar, isDate, options
+  // intentionally omitted — including them would reset in-progress edits.
   useEffect(() => {
     if (!controlled || !isEditing) return;
     committedRef.current = false;
@@ -23,8 +27,9 @@ const EditableCell = memo(function EditableCell({
     } else {
       setEditVal(isDate ? toISO(value) : (value || ""));
     }
-    setTimeout(() => ref.current?.focus(), 0);
-  }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
+    const tid = setTimeout(() => ref.current?.focus(), 0);
+    return () => clearTimeout(tid);
+  }, [isEditing, controlled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========== LEGACY MODE (no isSelected prop) ==========
   if (!controlled) {
@@ -56,6 +61,8 @@ const EditableCell = memo(function EditableCell({
   if (!isEditing) {
     return (
       <span
+        role="gridcell"
+        tabIndex={isSelected ? 0 : -1}
         onClick={e => { e.stopPropagation(); if (onSelect) onSelect(); }}
         onDoubleClick={e => { e.stopPropagation(); if (onStartEdit) onStartEdit(); }}
         style={{ cursor: "default", display: "block", padding: "1px 2px", borderRadius: 3, outline: isSelected ? `2px solid ${X.accent}` : "none", outlineOffset: -1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 20, ...style }}

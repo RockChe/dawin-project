@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
-import { X, CC, PJC, getIS2 } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function SettingsTab({ configCats, saveConfigCats, configOwners, saveConfigOwners, ganttDraft, setGanttDraft, saveGanttWidths, isMobile, showToast }) {
+  const { X, CC, PJC, inputStyle } = useTheme();
   const [newCat, setNewCat] = useState("");
   const [newOwner, setNewOwner] = useState("");
-  const iS2 = getIS2();
+  const iS2 = inputStyle;
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>

@@ -5,10 +5,7 @@ import { tasks, subtasks, links, files, projects } from '@/server/db/schema';
 import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 import { safeRequireAuth, safeRequireAdmin } from '@/lib/auth';
 import { deleteFromR2 } from '@/lib/r2';
-
-// UUID validation
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isValidUUID(str) { return typeof str === 'string' && UUID_RE.test(str); }
+import { isValidUUID } from '@/lib/utils';
 
 // ── Tasks ──
 

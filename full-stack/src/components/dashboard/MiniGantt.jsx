@@ -1,8 +1,10 @@
 "use client";
-import { X, FM } from "@/lib/theme";
+import { FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { computeProgress } from "@/lib/utils";
 
 export default function MiniGantt({ tasks, subtasks, height = 28, color }) {
+  const { X } = useTheme();
   const totalProg = tasks.length > 0 ? Math.round(tasks.reduce((s, t) => { const p = computeProgress(t.id, subtasks); return s + (t.status === "已完成" ? 100 : p.pct); }, 0) / tasks.length) : 0;
   const c = color || X.accent;
   return (

@@ -1,19 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { logout } from '@/server/actions/auth';
-import { X } from '@/lib/theme';
+import { useTheme } from '@/components/ThemeProvider';
 
 export default function Sidebar({ user }) {
+  const { X } = useTheme();
   const [collapsed, setCollapsed] = useState(true);
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    const h = () => setTick(t => t + 1);
-    window.addEventListener('theme-change', h);
-    return () => window.removeEventListener('theme-change', h);
-  }, []);
-
   const [hoverToggle, setHoverToggle] = useState(false);
   const [hoverLogout, setHoverLogout] = useState(false);
   const [hoverNav, setHoverNav] = useState(null);

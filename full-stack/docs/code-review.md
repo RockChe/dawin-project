@@ -41,10 +41,10 @@
 
 ~~C7. 所有 Tab 同時掛載~~ — **驗證後確認不存在**，Dashboard.jsx 已使用 `{tab === "xxx" && <Component />}` 條件渲染，每次只掛載一個 Tab
 
-### C8. Theme 使用 mutable global export
-- **檔案**: `src/lib/theme.js`
+### C8. Theme 使用 mutable global export ✅ 已修正
+- **檔案**: `src/lib/theme.js`、`src/components/ThemeProvider.jsx`（新增）
 - **問題**: `applyTheme()` 直接修改 module export（X, SC, PC, CC, PJC），React 無法偵測變更，依賴 `window.dispatchEvent('theme-change')` 強制 re-render
-- **修正**: 遷移至 React Context + useContext，或 Zustand store
+- **修正**: 建立 ThemeProvider（React Context）+ useTheme hook，22 個元件遷移至 context 消費，移除 mutable globals、applyTheme、getIS2、window event hack
 
 ---
 
@@ -65,17 +65,20 @@
 - **問題**: 不驗證 session 有效性，偽造 cookie 可進入頁面（Server Action 會擋，但 UX 差）
 - **備註**: 已知設計決策，實際驗證在各 Server Action 中進行
 
-### W4. Search debounce timer 未清理
+### W4. Search debounce timer 未清理 ✅ 已修正
 - **檔案**: `Dashboard.jsx:41-46`
 - **問題**: useCallback 中的 setTimeout 在元件卸載時仍可能觸發
+- **修正**: 加 cleanup useEffect，卸載時清除 searchTimer ref
 
-### W5. useEffect 依賴不完整
+### W5. useEffect 依賴不完整 ✅ 已修正
 - **檔案**: `EditableCell.jsx:18-27`（缺 `initialTypedChar`）、`InlineNote.jsx:10`（缺 `value`）
+- **修正**: EditableCell 加 `controlled` 到依賴、setTimeout cleanup、解釋註解。InlineNote 加 setTimeout cleanup、解釋註解。value/initialTypedChar 刻意不加入（避免編輯中被覆蓋）
 - **備註**: ~~`users/page.jsx:23`~~ 經驗證 `[]` 依賴正確，已移除
 
-### W6. Admin 頁面 setTimeout 未清理
+### W6. Admin 頁面 setTimeout 未清理 ✅ 已修正
 - **檔案**: `(admin)/users/page.jsx:33,48,58`
 - **問題**: `setTimeout(() => setSuccess(null), 3000)` 無 cleanup，元件卸載後仍觸發
+- **修正**: 移除 3 處散落的 setTimeout，改為統一 useEffect 監聯 success state，自動 cleanup
 
 ### W7. Server Component 缺少 Suspense
 - **檔案**: `(dashboard)/dashboard/page.jsx:8-16`
@@ -125,13 +128,13 @@
 | S2 | ProjectsTab 接收 24 個 props，考慮 Context | `tabs/ProjectsTab.jsx` |
 | S3 | 無 TypeScript，大型專案應遷移 | 全域 |
 | S4 | 無任何測試（unit / E2E） | 全域 |
-| S5 | 上傳進度缺少 aria 無障礙標籤 | `TaskModal.jsx:218-220` |
-| S6 | EditableCell 缺少語義 HTML / ARIA | `EditableCell.jsx:58-63` |
-| S7 | External Google Fonts 阻塞首次渲染 | `layout.jsx:12-15` |
-| S8 | OverviewTab 圓餅圖計算未 useMemo | `OverviewTab.jsx:133-156` |
-| S9 | GanttTimeline 位置計算未 memoize | `GanttTimeline.jsx:70-73` |
-| S10 | UUID regex 重複定義，應提取共用 | `projects.js`, `tasks.js`, `users.js`, `upload/route.js` |
-| S11 | Sidebar 用 dummy state 強制 re-render | `Sidebar.jsx:9-14` |
+| ~~S5~~ | ~~上傳進度缺少 aria 無障礙標籤~~ ✅ 已修正 | `TaskModal.jsx`, `FileManagerModal.jsx` |
+| ~~S6~~ | ~~EditableCell 缺少語義 HTML / ARIA~~ ✅ 已修正 | `EditableCell.jsx` |
+| ~~S7~~ | ~~External Google Fonts 阻塞首次渲染~~ ✅ 已修正 | `layout.jsx` |
+| ~~S8~~ | ~~OverviewTab 圓餅圖計算未 useMemo~~ ✅ 已修正 | `OverviewTab.jsx` |
+| ~~S9~~ | ~~GanttTimeline 位置計算未 memoize~~ ✅ 已修正 | `GanttTimeline.jsx` |
+| ~~S10~~ | ~~UUID regex 重複定義，應提取共用~~ ✅ 已修正 | `utils.js` |
+| ~~S11~~ | ~~Sidebar 用 dummy state 強制 re-render~~ ✅ 已隨 C8 修正 | `Sidebar.jsx` |
 | S12 | Session 7 天無 refresh token 機制 | `auth.js:8` |
 
 ---
@@ -152,15 +155,20 @@
 4. ~~W1~~ 刪除操作順序改為 DB 先刪再清 R2；upload 失敗自動清理 R2
 5. ~~W10~~ 已與 W1 合併修正
 
-### Phase 3 — 效能（C8, W4, W5, W6）
-1. Theme 遷移至 Context
-2. 修正 useEffect 依賴與清理
+### Phase 3 — 效能 ✅ 已完成
+1. ~~C8~~ Theme 系統遷移至 React Context（ThemeProvider + useTheme hook），移除 mutable global exports、applyTheme、getIS2、window event hack
+2. ~~W4~~ Dashboard 搜尋 debounce timer 加 unmount cleanup
+3. ~~W5~~ EditableCell / InlineNote useEffect 加 controlled 依賴、setTimeout cleanup、解釋註解
+4. ~~W6~~ Admin users 頁面 setTimeout 統一為 useEffect 監聽 success state
 
-### Phase 4 — 程式碼品質（S1-S12）
-1. 拆分大型元件
-2. 減少 prop drilling
-3. 加無障礙屬性
-4. 效能最佳化（useMemo）
+### Phase 4 — 程式碼品質 ✅ 已完成
+1. ~~S10~~ UUID regex 提取至 `utils.js` 共用，移除 4 處重複定義
+2. ~~S5~~ 上傳進度加 `role="progressbar"` + `aria-live` + `aria-hidden`（TaskModal、FileManagerModal）
+3. ~~S6~~ EditableCell controlled 模式加 `role="gridcell"` + `tabIndex`
+4. ~~S7~~ Google Fonts 遷移至 `next/font/google` 自代管，消除外部請求阻塞
+5. ~~S8~~ OverviewTab 圓餅圖計算提取為 `useMemo`
+6. ~~S9~~ GanttTimeline 位置/行計算提取為 `useMemo`
+7. S1（DataTab 拆分）、S2（ProjectsTab props）、S3（TypeScript）、S4（測試）、S12（Session refresh）— 跳過，列入後續版本
 
 ---
 

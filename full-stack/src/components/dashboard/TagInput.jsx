@@ -1,8 +1,9 @@
 "use client";
 import { useState, useRef } from "react";
-import { X } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function TagInput({ value, onChange, suggestions = [], placeholder = "Add...", style = {} }) {
+  const { X } = useTheme();
   const [input, setInput] = useState("");
   const [showSug, setShowSug] = useState(false);
   const inputRef = useRef(null);

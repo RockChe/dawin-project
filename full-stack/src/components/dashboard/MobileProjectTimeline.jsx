@@ -1,7 +1,9 @@
 "use client";
-import { X, FM } from "@/lib/theme";
+import { FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function MobileProjectTimeline({ projBars }) {
+  const { X } = useTheme();
   if (!projBars.length) return (<div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 32, marginBottom: 8, opacity: 0.3 }}>📅</div><div style={{ fontSize: 14 }}>No timeline data available</div></div>);
   const fmtD = d => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
   return (

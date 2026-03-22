@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { uploadToR2, deleteFromR2 } from '@/lib/r2';
 import { createFileRecord } from '@/server/actions/tasks';
+import { isValidUUID } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,11 +32,6 @@ function sanitizeFilename(name) {
     .replace(/\.\./g, '_')
     .replace(/[\x00-\x1f\x7f]/g, '')
     .trim();
-}
-
-// Validate UUID format
-function isValidUUID(str) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 }
 
 export async function POST(request) {

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { THEME_ORDER, X, SC, PC, PJC, F, FM, applyTheme } from "@/lib/theme";
+import { F, FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import useTaskManager from "@/hooks/useTaskManager";
 import TaskModal from "./TaskModal";
 import FileManagerModal from "./FileManagerModal";
@@ -12,6 +13,7 @@ import ProjectsTab from "./tabs/ProjectsTab";
 import DataTab from "./tabs/DataTab";
 
 export default function Dashboard({ initialData }) {
+  const { themeKey, cycleTheme, X, SC, PC, PJC } = useTheme();
   const {
     projects, allT, allS,
     allL, allF,
@@ -44,6 +46,7 @@ export default function Dashboard({ initialData }) {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => setSearchQ(v), 300);
   }, []);
+  useEffect(() => { return () => { if (searchTimer.current) clearTimeout(searchTimer.current); }; }, []);
   const clearSearch = useCallback(() => { setSearchInput(""); setSearchQ(""); }, []);
   const defaultGW = { day: 20, week: 50, month: 50, quarter: 100 };
   const [ganttWidths, setGanttWidths] = useState(() => {
@@ -52,11 +55,6 @@ export default function Dashboard({ initialData }) {
   });
   const [ganttDraft, setGanttDraft] = useState(() => JSON.parse(JSON.stringify(ganttWidths)));
   const saveGanttWidths = () => { const filled = {}; for (const v of ["overview", "project", "timeline"]) { filled[v] = {}; for (const k of ["day", "week", "month", "quarter"]) { const val = ganttDraft[v]?.[k]; filled[v][k] = (val === '' || val == null) ? defaultGW[k] : Math.max(1, val); } } const deep = JSON.parse(JSON.stringify(filled)); setGanttWidths(deep); setGanttDraft(JSON.parse(JSON.stringify(deep))); localStorage.setItem("dash-ganttWidths", JSON.stringify(deep)); showToast("Timeline widths saved", "success"); };
-  // Theme
-  const [themeKey, setThemeKey] = useState(() => { try { return localStorage.getItem("dash-theme") || "warm"; } catch { return "warm"; } });
-  applyTheme(themeKey);
-  const cycleTheme = useCallback(() => { setThemeKey(p => { const i = THEME_ORDER.indexOf(p); return THEME_ORDER[(i + 1) % THEME_ORDER.length]; }); }, []);
-  useEffect(() => { try { localStorage.setItem("dash-theme", themeKey); } catch {} document.body.style.background = X.bg; window.dispatchEvent(new Event('theme-change')); }, [themeKey]);
   useEffect(() => { const h = () => setScrolled(window.scrollY > 10); window.addEventListener("scroll", h, { passive: true }); return () => window.removeEventListener("scroll", h); }, []);
   const [isMobile, setIsMobile] = useState(() => { try { return window.innerWidth <= 768; } catch { return false; } });
   useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);

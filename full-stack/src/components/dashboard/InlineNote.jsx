@@ -1,13 +1,21 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { X } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function InlineNote({ value, onSave }) {
+  const { X } = useTheme();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
   const ref = useRef(null);
 
-  useEffect(() => { if (editing) { setDraft(value || ""); setTimeout(() => ref.current?.focus(), 0); } }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only runs on edit mode entry. value intentionally omitted
+  // to avoid resetting draft while user is typing.
+  useEffect(() => {
+    if (!editing) return;
+    setDraft(value || "");
+    const tid = setTimeout(() => ref.current?.focus(), 0);
+    return () => clearTimeout(tid);
+  }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commit = () => { setEditing(false); const v = draft.trim(); if (v !== (value || "")) onSave(v); };
   const cancel = () => { setEditing(false); setDraft(value || ""); };

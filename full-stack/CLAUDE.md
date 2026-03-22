@@ -33,7 +33,7 @@ src/
 ├── lib/
 │   ├── auth.js                # Session 認證（7 天過期）
 │   ├── r2.js                  # R2 檔案操作
-│   ├── theme.js               # 雙主題系統（warm/dimmed）
+│   ├── theme.js               # 主題常數與工廠函式（THEMES, F, FM, mkSC 等）
 │   └── utils.js               # 日期格式化、進度計算、CSV 工具
 ├── server/
 │   ├── actions/               # Server Actions（auth, config, projects, tasks, users）
@@ -96,7 +96,7 @@ export async function actionName(params) {
 - 預設分類：`['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展']`
 
 ### UI 慣例
-- 主題透過 `lib/theme.js` 的 mutable export 切換（`X`, `SC`, `PC`, `CC`, `PJC`）
+- 主題透過 `ThemeProvider`（React Context）管理，元件使用 `useTheme()` hook 取得 `X`, `SC`, `PC`, `CC`, `PJC`, `inputStyle`
 - 字體：`'Noto Sans TC'` (內文)、`'JetBrains Mono'` (等寬)
 - Toast 通知透過 `useTaskManager` 的 `showToast(msg, type)` 顯示
 - 拖曳排序使用 `@dnd-kit`，需設定 sensors 和 sortable context
@@ -119,7 +119,8 @@ export async function actionName(params) {
 - `src/hooks/useTaskManager.js` — 核心 hook
 - `src/lib/auth.js` — 認證機制
 - `src/server/actions/tasks.js` — Server Action 標準範例
-- `src/lib/theme.js` — 主題系統
+- `src/components/ThemeProvider.jsx` — 主題 Context（ThemeProvider + useTheme hook）
+- `src/lib/theme.js` — 主題常數與工廠函式
 - `src/components/dashboard/Dashboard.jsx` — 主元件（187 行）
 - `src/components/dashboard/tabs/` — 6 個 tab 子元件
 

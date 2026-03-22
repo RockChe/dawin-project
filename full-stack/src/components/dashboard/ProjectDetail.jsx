@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { X, SC, PC, PJC, FM } from '@/lib/theme';
+import { FM } from '@/lib/theme';
+import { useTheme } from '@/components/ThemeProvider';
 import { pD, fD, computeProgress } from '@/lib/utils';
 import ProgressBar from './ProgressBar';
 
 export default function ProjectDetail({ initialData }) {
+  const { X, SC, PC, PJC } = useTheme();
   const { project, tasks, subtasks } = initialData;
 
   const tasksWithProgress = tasks.map(t => {

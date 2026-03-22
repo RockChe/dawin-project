@@ -1,7 +1,9 @@
 "use client";
-import { THEMES, X, F, FM } from "@/lib/theme";
+import { THEMES, F, FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function DashboardHeader({ themeKey, cycleTheme, isMobile, scrolled, searchInput, handleSearch, searchQ, clearSearch, avgProg, filtered }) {
+  const { X } = useTheme();
   return (
     <div className="dash-header" style={{ borderBottom: `1px solid ${X.border}`, position: "sticky", top: 0, zIndex: 50, background: X.surface, boxShadow: scrolled ? `0 2px 8px ${X.shadow}` : "none", transition: "box-shadow 0.2s" }}>
       <div style={{ maxWidth: 1400, margin: "0 auto", ...(isMobile ? {} : { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }) }}>

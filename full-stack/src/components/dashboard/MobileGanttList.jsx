@@ -1,8 +1,10 @@
 "use client";
-import { X, FM, SC, PC, PJC } from "@/lib/theme";
+import { FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeProgress } from "@/lib/utils";
 
 export default function MobileGanttList({ tasks, subtasks, fp, fs, fpr, timeDim = "月" }) {
+  const { X, SC, PC, PJC } = useTheme();
   const fil = tasks.filter(d => { if (!d.start) return false; if (fp instanceof Set) { if (fp.size > 0 && !fp.has(d.project)) return false; } else if (typeof fp === "string" && fp !== "全部" && d.project !== fp) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; return true; });
   if (!fil.length) return (<div style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📅</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No timeline data</div><div style={{ fontSize: 14 }}>Try adjusting filters or adding tasks with dates</div></div>);
   const pcMap = {}; [...new Set(tasks.map(d => d.project))].forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });

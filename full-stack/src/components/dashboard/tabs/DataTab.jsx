@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { X, SC, PC, CC, FM, getIS2 } from "@/lib/theme";
+import { FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toISO, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
 import EditableCell from "../EditableCell";
 import InlineNote from "../InlineNote";
@@ -21,6 +22,7 @@ export default function DataTab({
   importTasks, deleteManyTasks, deleteAllTasks,
   showToast, setModalTask,
 }) {
+  const { X, SC, PC, CC, inputStyle } = useTheme();
   const [expanded, setExpanded] = useState(new Set());
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -44,7 +46,7 @@ export default function DataTab({
 
   const toggle = id => setExpanded(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const iS2 = getIS2();
+  const iS2 = inputStyle;
 
   const sorted = useMemo(() => { if (!sortCol) return filtered; const po = { "高": 0, "中": 1, "低": 2 }; return [...filtered].sort((a, b) => { let va = a[sortCol], vb = b[sortCol]; if (sortCol === "start" || sortCol === "end") { va = va ? pD(va).getTime() : 0; vb = vb ? pD(vb).getTime() : 0; } if (sortCol === "duration" || sortCol === "progress") { va = va || 0; vb = vb || 0; } if (sortCol === "priority") { va = po[va] ?? 9; vb = po[vb] ?? 9; } if (typeof va === "string") { va = va.toLowerCase(); vb = (vb || "").toLowerCase(); } return sortDir === "asc" ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0); }); }, [filtered, sortCol, sortDir]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));

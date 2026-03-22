@@ -21,6 +21,11 @@ export default function UsersPage() {
   };
 
   useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    if (!success) return;
+    const tid = setTimeout(() => setSuccess(null), 3000);
+    return () => clearTimeout(tid);
+  }, [success]);
 
   const handleCreate = async (formData) => {
     setError(null);
@@ -31,7 +36,6 @@ export default function UsersPage() {
       setSuccess('帳號已建立');
       setShowCreate(false);
       loadUsers();
-      setTimeout(() => setSuccess(null), 3000);
     }
   };
 
@@ -45,7 +49,6 @@ export default function UsersPage() {
       setSuccess('密碼已重置');
       setResetTarget(null);
       setResetPw('');
-      setTimeout(() => setSuccess(null), 3000);
     }
   };
 
@@ -57,7 +60,6 @@ export default function UsersPage() {
     } else {
       loadUsers();
       setSuccess('帳號已刪除');
-      setTimeout(() => setSuccess(null), 3000);
     }
   };
 

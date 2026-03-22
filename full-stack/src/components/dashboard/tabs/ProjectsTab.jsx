@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useCallback, useMemo } from "react";
-import { X, SC, FM, getIS2 } from "@/lib/theme";
+import { FM } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
 import EditableCell from "../EditableCell";
 import InlineNote from "../InlineNote";
@@ -13,6 +14,7 @@ import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } fro
 import SortableProjectCard from "../SortableProjectCard";
 
 export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projIcons, setProjIcons, onProjectRenamed, onProjectDeleted }) {
+  const { X, SC, inputStyle } = useTheme();
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
   const [newProjName, setNewProjName] = useState("");
@@ -24,7 +26,7 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
   const [timeDim, setTimeDim] = useState("月");
   const [sortMode, setSortMode] = useState("manual");
   const fileRef = useRef(null);
-  const iS2 = getIS2();
+  const iS2 = inputStyle;
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const sortedProjList = useMemo(() => {
