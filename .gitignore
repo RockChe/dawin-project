@@ -31,3 +31,6 @@ yarn-error.log*
 
 # Claude Code
 .claude-terminal/
+
+# Backup files
+**/backups/

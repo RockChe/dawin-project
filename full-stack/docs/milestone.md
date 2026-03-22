@@ -15,8 +15,8 @@
 ## v0.2.0 — 程式碼品質
 
 - ✅ Dashboard.jsx 元件拆分重構（945→187 行，6 個 tab 子元件）
-- 主題系統改用 React Context
-- 統一 Server Action 錯誤處理模式
+- ✅ 主題系統改用 React Context
+- ✅ 統一 Server Action 錯誤處理模式
 - 清理 `/api/debug` route
 - utils.js 函式重新命名
 
@@ -28,7 +28,7 @@
 - Settings：上傳公司 Logo + 設定 Dashboard 標題
 - Settings：顯示 R2 儲存空間容量
 - 專案卡片：支援上傳 Profile 圖並顯示
-- 專案卡片排序順序可拖曳設定
+- ✅ 專案卡片排序順序可拖曳設定
 - REST API：`/api/mcp/*` endpoints 供外部服務存取（詳見 `docs/api-spec.md`）
 - MCP Server：本地 Claude Desktop 專用包裝，呼叫 REST API
 - Python Chatbot：LINE + Telegram AI 對話 Bot（詳見 `chatbot/README.md`、`chatbot/docs/architecture.md`）

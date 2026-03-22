@@ -6,7 +6,7 @@ import { pD, fD } from "@/lib/utils";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
 
-export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projIcons, stats }) {
+export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projIcons, stats, upcomingDays = 30, upcomingLimit = 5 }) {
   const { X, SC } = useTheme();
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
@@ -105,11 +105,11 @@ export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, gant
         </div>);
       })()}
       {(() => {
-        const now = new Date(); const in30 = new Date(now.getTime() + 30 * 864e5);
-        const upcoming = filtered.filter(t => { if (!t.end || t.status === "已完成") return false; const ed = pD(t.end); return ed >= now && ed <= in30; }).sort((a, b) => pD(a.end) - pD(b.end)).slice(0, 5);
+        const now = new Date(); const inDays = new Date(now.getTime() + upcomingDays * 864e5);
+        const upcoming = filtered.filter(t => { if (!t.end || t.status === "已完成") return false; const ed = pD(t.end); return ed >= now && ed <= inDays; }).sort((a, b) => pD(a.end) - pD(b.end)).slice(0, upcomingLimit);
         return (<div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.red, borderRadius: 2 }} />Upcoming Deadlines</h3>
-          {upcoming.length === 0 ? (<div style={{ padding: 20, textAlign: "center", color: X.textDim, fontSize: 14 }}>No upcoming deadlines in next 30 days</div>)
+          {upcoming.length === 0 ? (<div style={{ padding: 20, textAlign: "center", color: X.textDim, fontSize: 14 }}>No upcoming deadlines in next {upcomingDays} days</div>)
           : upcoming.map(t => { const ed = pD(t.end); const days = Math.ceil((ed - now) / 864e5); const urgent = days <= 7;
             return (<div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${X.border}22` }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[t.project] || X.accent, flexShrink: 0 }} />

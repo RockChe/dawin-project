@@ -38,16 +38,8 @@ export default function Sidebar({ user }) {
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1">
-        <NavItem href="/dashboard" icon="◻" label="儀表板" collapsed={collapsed} hoverNav={hoverNav} setHoverNav={setHoverNav} />
-        {user.role === 'super_admin' && (
-          <NavItem href="/users" icon="◎" label="帳號管理" collapsed={collapsed} hoverNav={hoverNav} setHoverNav={setHoverNav} />
-        )}
-      </nav>
-
       {/* User info */}
-      <div className="p-3 border-t" style={{ borderColor: X.border }}>
+      <div className="p-3 border-b" style={{ borderColor: X.border }}>
         {!collapsed && (
           <div className="mb-2">
             <div className="text-xs font-medium truncate" style={{ color: X.text }}>{user.name}</div>
@@ -66,6 +58,17 @@ export default function Sidebar({ user }) {
           </button>
         </form>
       </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-2 space-y-1">
+        <NavItem href="/dashboard" icon="◻" label="儀表板" collapsed={collapsed} hoverNav={hoverNav} setHoverNav={setHoverNav} />
+        {user.role === 'super_admin' && (
+          <>
+            <NavItem href="/users" icon="◎" label="帳號管理" collapsed={collapsed} hoverNav={hoverNav} setHoverNav={setHoverNav} />
+            <NavItem href="/backup" icon="⟳" label="資料備份" collapsed={collapsed} hoverNav={hoverNav} setHoverNav={setHoverNav} />
+          </>
+        )}
+      </nav>
     </aside>
   );
 }

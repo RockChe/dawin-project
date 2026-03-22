@@ -28,7 +28,9 @@ src/
 │   ├── (dashboard)/dashboard/ # 主儀表板
 │   ├── (dashboard)/project/[id]/ # 專案詳情頁
 │   └── api/                   # API routes (upload, download, fetch-csv, health)
-├── components/dashboard/      # 17 個元件 + tabs/ (6 個子元件)
+├── components/
+│   ├── ThemeProvider.jsx      # 主題 Context Provider + useTheme hook
+│   └── dashboard/             # 17 個元件 + tabs/ (6 個子元件)
 ├── hooks/useTaskManager.js    # 核心狀態管理 hook
 ├── lib/
 │   ├── auth.js                # Session 認證（7 天過期）

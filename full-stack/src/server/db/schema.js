@@ -109,3 +109,16 @@ export const files = pgTable('files', {
   index('files_task_id_idx').on(table.taskId),
 ]);
 
+// ── Backup History ──
+export const backupHistory = pgTable('backup_history', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  target: varchar('target', { length: 20 }).notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileSize: integer('file_size'),
+  status: varchar('status', { length: 20 }).notNull(),
+  error: text('error'),
+  durationMs: integer('duration_ms'),
+  tableCounts: text('table_counts'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+

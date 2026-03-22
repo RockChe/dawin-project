@@ -8,7 +8,7 @@
 ## 高優先
 
 - [x] Dashboard.jsx 拆分 — 已完成（945→187 行，6 個 tab 子元件於 `tabs/` 目錄）
-- [ ] 主題系統重構 — mutable export 模式已導致 dark mode bug，考慮改用 React Context
+- [x] 主題系統重構 — 已完成，ThemeProvider（React Context）+ useTheme hook 取代 mutable export（Code Review C8）
 - [ ] middleware.js 安全性 — 只檢查 cookie 存在不驗證有效性，有安全隱患
 
 ## 中優先
@@ -20,7 +20,7 @@
 
 ## 低優先
 
-- [ ] 移除 `/api/debug` route — 不應存在於正式環境
+- [x] 移除 `/api/debug` route — 已加 `NODE_ENV === 'production'` 回傳 404（Code Review C1）
 - [ ] cookies.txt 加入 .gitignore 或刪除
 - [ ] ESLint 規則調整
 
@@ -45,11 +45,11 @@
 - [ ] SettingsTab 新增 Storage Usage 區塊（進度條 + 分類明細）
 - [ ] utils.js 新增 formatBytes 工具函式
 
-### Feature 4: 專案卡片排序
-- [ ] 新增 reorderProjects server action
-- [ ] useTaskManager 新增 reorderProjects callback（樂觀更新）
-- [ ] ProjectsTab 加入 @dnd-kit 拖曳排序
-- [ ] 新增手動排序按鈕（名稱 / 日期 / 進度）
+### Feature 4: 專案卡片排序 ✅
+- [x] 新增 reorderProjects server action
+- [x] useTaskManager 新增 reorderProjects callback（樂觀更新）
+- [x] ProjectsTab 加入 @dnd-kit 拖曳排序
+- [x] 新增手動排序按鈕（名稱 / 日期 / 進度）
 
 ### Feature 5: REST API（詳見 `docs/api-spec.md`）
 - [ ] 修改 middleware.js — `/api/mcp` 加入 PUBLIC_PATHS
