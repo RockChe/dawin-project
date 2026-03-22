@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, getIS2 } from "@/lib/theme";
 import { extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 
@@ -11,7 +11,17 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+  const xhrRef = useRef(null);
+  const mountedRef = useRef(true);
   const iS2 = getIS2();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (xhrRef.current) { xhrRef.current.abort(); xhrRef.current = null; }
+    };
+  }, []);
 
   const projTasks = tasks.filter(t => t.project === project);
   const taskIds = projTasks.map(t => t.id);
@@ -69,8 +79,11 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
     setUploading(true);
     setUploadProgress(0);
     const xhr = new XMLHttpRequest();
-    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); };
+    xhrRef.current = xhr;
+    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable && mountedRef.current) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); };
     xhr.onload = () => {
+      xhrRef.current = null;
+      if (!mountedRef.current) return;
       try {
         const result = JSON.parse(xhr.responseText);
         if (result.success) { addFile(fileDraftTask, result.file); }
@@ -79,7 +92,11 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
       setFileDraftTask("");
       setShowAdd(false);
     };
-    xhr.onerror = () => { setUploading(false); };
+    xhr.onerror = () => {
+      xhrRef.current = null;
+      if (!mountedRef.current) return;
+      setUploading(false);
+    };
     xhr.open('POST', '/api/upload');
     xhr.send(formData);
     e.target.value = "";

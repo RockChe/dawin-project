@@ -65,9 +65,14 @@ export async function createUser(formData) {
   return { success: true };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUUID(str) { return typeof str === 'string' && UUID_RE.test(str); }
+
 export async function resetUserPassword(userId, newPassword) {
   const { error } = await safeRequireAdmin();
   if (error) return { error };
+
+  if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
 
   if (!newPassword || newPassword.length < 8) {
     return { error: '密碼至少需要 8 個字元' };
@@ -90,6 +95,8 @@ export async function resetUserPassword(userId, newPassword) {
 export async function deleteUser(userId) {
   const { session, error } = await safeRequireAdmin();
   if (error) return { error };
+
+  if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
 
   // Prevent deleting yourself
   if (userId === session.userId) {

@@ -413,29 +413,25 @@ export default function useTaskManager(initialData) {
 
   // ── Reorder projects ──
   const reorderProjects = useCallback(async (activeId, overId) => {
-    let prev;
+    let prevProjects;
+    let orderedIds;
     setProjects(p => {
-      prev = [...p];
+      prevProjects = [...p];
       const sorted = [...p].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
       const oldIdx = sorted.findIndex(pr => pr.id === activeId);
       const newIdx = sorted.findIndex(pr => pr.id === overId);
       if (oldIdx === -1 || newIdx === -1) return p;
       const [moved] = sorted.splice(oldIdx, 1);
       sorted.splice(newIdx, 0, moved);
+      orderedIds = sorted.map(pr => pr.id);
       return sorted.map((pr, i) => ({ ...pr, sortOrder: i + 1 }));
     });
     invalidateCache();
-    const currentProjects = prev.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-    const oldIdx = currentProjects.findIndex(pr => pr.id === activeId);
-    const newIdx = currentProjects.findIndex(pr => pr.id === overId);
-    if (oldIdx === -1 || newIdx === -1) return;
-    const [moved] = currentProjects.splice(oldIdx, 1);
-    currentProjects.splice(newIdx, 0, moved);
-    const orderedIds = currentProjects.map(pr => pr.id);
+    if (!orderedIds) return;
     const result = await reorderProjectsAction(orderedIds);
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setProjects(prev);
+      setProjects(prevProjects);
       showToast(result.error, 'error');
     }
   }, [showToast, invalidateCache]);

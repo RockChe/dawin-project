@@ -41,6 +41,8 @@ export async function login(prevState, formData) {
   }
 
   if (!valid) {
+    // Basic brute-force mitigation: delay on failed attempts
+    await new Promise(r => setTimeout(r, 1000));
     return { error: '帳號或密碼錯誤' };
   }
 

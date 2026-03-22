@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { uploadToR2 } from '@/lib/r2';
+import { uploadToR2, deleteFromR2 } from '@/lib/r2';
 import { createFileRecord } from '@/server/actions/tasks';
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +88,14 @@ export async function POST(request) {
       mimeType: file.type,
       r2Key: key,
     });
+
+    if (result.error) {
+      // DB record creation failed — clean up R2 orphan
+      try { await deleteFromR2(key); } catch (cleanupErr) {
+        console.error('[upload] R2 cleanup after DB failure:', cleanupErr);
+      }
+      return NextResponse.json(result, { status: 500 });
+    }
 
     return NextResponse.json(result);
   } catch (err) {

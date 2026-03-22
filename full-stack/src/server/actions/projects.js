@@ -2,7 +2,7 @@
 
 import { db } from '@/server/db';
 import { projects, tasks, subtasks } from '@/server/db/schema';
-import { eq, asc, inArray } from 'drizzle-orm';
+import { eq, asc, inArray, sql } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,12 +23,9 @@ export async function createProject(formData) {
   if (name.length > 255) return { error: '專案名稱過長 (上限 255 字元)' };
 
   try {
-    const maxOrder = await db.select({ max: projects.sortOrder }).from(projects);
-    const nextOrder = (maxOrder[0]?.max || 0) + 1;
-
     const result = await db.insert(projects).values({
       name,
-      sortOrder: nextOrder,
+      sortOrder: sql`COALESCE((SELECT MAX(sort_order) FROM projects), 0) + 1`,
       createdBy: session.userId,
     }).returning();
 
@@ -40,13 +37,27 @@ export async function createProject(formData) {
 }
 
 export async function updateProject(id, data) {
-  const { error } = await safeRequireAuth();
+  const { session, error } = await safeRequireAuth();
   if (error) return { error };
 
   if (!isValidUUID(id)) return { error: 'Invalid project ID' };
 
   try {
-    await db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id));
+    // Ownership check: only creator or super_admin can update
+    const proj = await db.select({ createdBy: projects.createdBy }).from(projects).where(eq(projects.id, id)).limit(1);
+    if (!proj[0]) return { error: '專案不存在' };
+    if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+      return { error: '無權限修改此專案' };
+    }
+
+    // Whitelist allowed fields
+    const ALLOWED = ['name', 'sortOrder'];
+    const updateData = { updatedAt: new Date() };
+    for (const key of ALLOWED) {
+      if (key in data) updateData[key] = data[key];
+    }
+
+    await db.update(projects).set(updateData).where(eq(projects.id, id));
     return { success: true };
   } catch (err) {
     console.error("updateProject error:", err);
@@ -55,12 +66,19 @@ export async function updateProject(id, data) {
 }
 
 export async function deleteProject(id) {
-  const { error } = await safeRequireAuth();
+  const { session, error } = await safeRequireAuth();
   if (error) return { error };
 
   if (!isValidUUID(id)) return { error: 'Invalid project ID' };
 
   try {
+    // Ownership check: only creator or super_admin can delete
+    const proj = await db.select({ createdBy: projects.createdBy }).from(projects).where(eq(projects.id, id)).limit(1);
+    if (!proj[0]) return { error: '專案不存在' };
+    if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+      return { error: '無權限刪除此專案' };
+    }
+
     await db.delete(projects).where(eq(projects.id, id));
     return { success: true };
   } catch (err) {

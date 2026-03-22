@@ -24,12 +24,21 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+  const xhrRef = useRef(null);
+  const mountedRef = useRef(true);
   const tSubs = isNew ? [] : allS.filter(s => s.taskId === task.id).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   const tLinks = isNew ? [] : (allL || []).filter(l => l.taskId === task.id);
   const tFiles = isNew ? [] : (allF || []).filter(f => f.taskId === task.id);
   const iS2 = getIS2();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   useEffect(() => { const h = e => { if (e.key === "Escape") onClose(); }; document.addEventListener("keydown", h); return () => document.removeEventListener("keydown", h); }, [onClose]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (xhrRef.current) { xhrRef.current.abort(); xhrRef.current = null; }
+    };
+  }, []);
 
   const handleConfirm = async () => {
     if (!form.task.trim() || loading) return;
@@ -98,8 +107,11 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
     setUploading(true);
     setUploadProgress(0);
     const xhr = new XMLHttpRequest();
-    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); };
+    xhrRef.current = xhr;
+    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable && mountedRef.current) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); };
     xhr.onload = () => {
+      xhrRef.current = null;
+      if (!mountedRef.current) return;
       try {
         const result = JSON.parse(xhr.responseText);
         if (result.success) { addFile(task.id, result.file); }
@@ -107,7 +119,12 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
       } catch { if (showToast) showToast('上傳失敗', 'error'); }
       setUploading(false);
     };
-    xhr.onerror = () => { if (showToast) showToast('上傳失敗', 'error'); setUploading(false); };
+    xhr.onerror = () => {
+      xhrRef.current = null;
+      if (!mountedRef.current) return;
+      if (showToast) showToast('上傳失敗', 'error');
+      setUploading(false);
+    };
     xhr.open('POST', '/api/upload');
     xhr.send(formData);
     e.target.value = "";

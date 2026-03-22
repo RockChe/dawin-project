@@ -62,8 +62,14 @@ export async function updateTask(id, data) {
 
   if (!isValidUUID(id)) return { error: 'Invalid task ID' };
 
+  // Whitelist allowed fields to prevent tampering with createdBy, projectId, etc.
+  const ALLOWED = ['task', 'status', 'category', 'startDate', 'endDate', 'duration', 'owner', 'priority', 'notes', 'sortOrder'];
+  const updateData = { updatedAt: new Date() };
+  for (const key of ALLOWED) {
+    if (key in data) updateData[key] = data[key];
+  }
+
   try {
-    const updateData = { ...data, updatedAt: new Date() };
     await db.update(tasks).set(updateData).where(eq(tasks.id, id));
     return { success: true };
   } catch (err) {
@@ -79,13 +85,18 @@ export async function deleteTask(id) {
   if (!isValidUUID(id)) return { error: 'Invalid task ID' };
 
   try {
-    // Delete associated R2 files first
-    const taskFiles = await db.select().from(files).where(eq(files.taskId, id));
-    for (const f of taskFiles) {
-      try { await deleteFromR2(f.r2Key); } catch (e) { console.error('R2 delete error:', e); }
+    // 1. Collect R2 keys before DB cascade removes file records
+    const taskFiles = await db.select({ r2Key: files.r2Key }).from(files).where(eq(files.taskId, id));
+    const r2Keys = taskFiles.map(f => f.r2Key);
+
+    // 2. Delete task (cascade deletes subtasks, links, files)
+    await db.delete(tasks).where(eq(tasks.id, id));
+
+    // 3. Best-effort R2 cleanup
+    for (const key of r2Keys) {
+      try { await deleteFromR2(key); } catch (e) { console.error('[deleteTask] R2 cleanup failed (orphan):', key, e); }
     }
 
-    await db.delete(tasks).where(eq(tasks.id, id));
     return { success: true };
   } catch (err) {
     console.error("deleteTask error:", err);
@@ -134,8 +145,15 @@ export async function updateSubtask(id, data) {
 
   if (!isValidUUID(id)) return { error: 'Invalid subtask ID' };
 
+  // Whitelist allowed fields
+  const ALLOWED = ['name', 'owner', 'done', 'doneDate', 'notes', 'sortOrder'];
+  const updateData = {};
+  for (const key of ALLOWED) {
+    if (key in data) updateData[key] = data[key];
+  }
+
   try {
-    await db.update(subtasks).set(data).where(eq(subtasks.id, id));
+    await db.update(subtasks).set(updateData).where(eq(subtasks.id, id));
     return { success: true };
   } catch (err) {
     console.error("updateSubtask error:", err);
@@ -278,11 +296,17 @@ export async function deleteFile(id) {
   if (!isValidUUID(id)) return { error: 'Invalid file ID' };
 
   try {
-    const result = await db.select().from(files).where(eq(files.id, id)).limit(1);
-    if (result[0]) {
-      try { await deleteFromR2(result[0].r2Key); } catch (e) { console.error('R2 delete error:', e); }
-    }
+    // 1. Query to get r2Key before deleting from DB
+    const result = await db.select({ r2Key: files.r2Key }).from(files).where(eq(files.id, id)).limit(1);
+    if (!result[0]) return { error: '檔案不存在' };
+    const r2Key = result[0].r2Key;
+
+    // 2. Delete DB record first (source of truth)
     await db.delete(files).where(eq(files.id, id));
+
+    // 3. Best-effort R2 cleanup
+    try { await deleteFromR2(r2Key); } catch (e) { console.error('[deleteFile] R2 cleanup failed (orphan):', r2Key, e); }
+
     return { success: true };
   } catch (err) {
     console.error("deleteFile error:", err);
@@ -378,14 +402,17 @@ export async function deleteManyTasks(ids) {
   if (!ids.every(isValidUUID)) return { error: 'Invalid task ID format' };
 
   try {
-    // Batch query all files for these tasks
-    const taskFiles = await db.select().from(files).where(inArray(files.taskId, ids));
-    for (const f of taskFiles) {
-      try { await deleteFromR2(f.r2Key); } catch (e) { console.error('R2 delete error:', e); }
-    }
+    // 1. Collect R2 keys before cascade deletes file records
+    const taskFiles = await db.select({ r2Key: files.r2Key }).from(files).where(inArray(files.taskId, ids));
+    const r2Keys = taskFiles.map(f => f.r2Key);
 
-    // Batch delete tasks
+    // 2. Batch delete tasks (cascade)
     await db.delete(tasks).where(inArray(tasks.id, ids));
+
+    // 3. Best-effort R2 cleanup
+    for (const key of r2Keys) {
+      try { await deleteFromR2(key); } catch (e) { console.error('[deleteManyTasks] R2 cleanup failed (orphan):', key, e); }
+    }
 
     return { success: true, deleted: ids.length };
   } catch (err) {
@@ -400,16 +427,24 @@ export async function deleteAllTasks() {
   const { error } = await safeRequireAdmin();
   if (error) return { error };
 
-  // Delete all R2 files
-  const allFiles = await db.select().from(files);
-  for (const f of allFiles) {
-    try { await deleteFromR2(f.r2Key); } catch (e) { console.error('R2 delete error:', e); }
+  try {
+    // 1. Collect all R2 keys
+    const allFiles = await db.select({ r2Key: files.r2Key }).from(files);
+    const r2Keys = allFiles.map(f => f.r2Key);
+
+    // 2. Delete all tasks (cascade deletes subtasks, links, files)
+    await db.delete(tasks);
+
+    // 3. Best-effort R2 cleanup
+    for (const key of r2Keys) {
+      try { await deleteFromR2(key); } catch (e) { console.error('[deleteAllTasks] R2 cleanup failed (orphan):', key, e); }
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("deleteAllTasks error:", err);
+    return { error: err.message || "清除所有任務失敗" };
   }
-
-  // Delete all tasks (cascade deletes subtasks, links, files)
-  await db.delete(tasks);
-
-  return { success: true };
 }
 
 // ── Dashboard Data (aggregated) ──
