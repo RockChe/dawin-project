@@ -71,6 +71,7 @@ export default function Sidebar({ user }) {
 }
 
 function NavItem({ href, icon, label, collapsed, hoverNav, setHoverNav }) {
+  const { X } = useTheme();
   const isHover = hoverNav === href;
   return (
     <a
