@@ -36,18 +36,26 @@ export async function POST(request) {
     return NextResponse.json({ error: `不支援的檔案類型: ${file.type}` }, { status: 400 });
   }
 
+  const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (!ALLOWED_EXTS.includes(ext)) {
+    return NextResponse.json({ error: `不支援的副檔名: .${ext}` }, { status: 400 });
+  }
+
   try {
-    // Check project exists and get old banner key
-    const proj = await db.select({ id: projects.id, bannerR2Key: projects.bannerR2Key })
+    // Check project exists, ownership, and get old banner key
+    const proj = await db.select({ id: projects.id, bannerR2Key: projects.bannerR2Key, createdBy: projects.createdBy })
       .from(projects).where(eq(projects.id, projectId)).limit(1);
     if (!proj[0]) {
       return NextResponse.json({ error: '專案不存在' }, { status: 404 });
+    }
+    if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+      return NextResponse.json({ error: '無權限修改此專案' }, { status: 403 });
     }
 
     const oldKey = proj[0].bannerR2Key;
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const ext = file.name.split('.').pop() || 'jpg';
     const key = `projects/${projectId}/banner-${Date.now()}.${ext}`;
 
     await uploadToR2(key, buffer, file.type);

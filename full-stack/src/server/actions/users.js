@@ -5,6 +5,7 @@ import { users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { safeRequireAdmin } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 
 export async function getUsers() {
   const { error } = await safeRequireAdmin();
@@ -68,7 +69,7 @@ export async function createUser(formData) {
 import { isValidUUID } from '@/lib/utils';
 
 export async function resetUserPassword(userId, newPassword) {
-  const { error } = await safeRequireAdmin();
+  const { session, error } = await safeRequireAdmin();
   if (error) return { error };
 
   if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
@@ -88,6 +89,11 @@ export async function resetUserPassword(userId, newPassword) {
     })
     .where(eq(users.id, userId));
 
+  await logAudit('PASSWORD_RESET', session.userId, {
+    resourceType: 'user',
+    resourceId: userId,
+  });
+
   return { success: true };
 }
 
@@ -102,6 +108,16 @@ export async function deleteUser(userId) {
     return { error: '無法刪除自己的帳號' };
   }
 
+  // 先取得被刪除使用者的 email 供 audit log 記錄
+  const target = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+
   await db.delete(users).where(eq(users.id, userId));
+
+  await logAudit('USER_DELETE', session.userId, {
+    resourceType: 'user',
+    resourceId: userId,
+    detail: target[0]?.email,
+  });
+
   return { success: true };
 }

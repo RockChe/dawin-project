@@ -6,6 +6,7 @@ import { eq, asc, inArray, sql } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 import { isValidUUID } from '@/lib/utils';
 import { deleteFromR2 } from '@/lib/r2';
+import { logAudit } from '@/lib/audit';
 
 export async function getProjects() {
   const { error } = await safeRequireAuth();
@@ -86,6 +87,12 @@ export async function deleteProject(id) {
     }
 
     await db.delete(projects).where(eq(projects.id, id));
+
+    await logAudit('PROJECT_DELETE', session.userId, {
+      resourceType: 'project',
+      resourceId: id,
+    });
+
     return { success: true };
   } catch (err) {
     console.error("deleteProject error:", err);
@@ -123,10 +130,20 @@ export async function deleteProjectBanner(projectId) {
 }
 
 export async function reorderProjects(orderedIds) {
-  const { error } = await safeRequireAuth();
+  const { session, error } = await safeRequireAuth();
   if (error) return { error };
   if (!Array.isArray(orderedIds) || !orderedIds.every(isValidUUID)) return { error: 'Invalid project IDs' };
   try {
+    // Verify ownership: user must own all projects or be super_admin
+    if (session.role !== 'super_admin') {
+      const projs = await db.select({ id: projects.id, createdBy: projects.createdBy })
+        .from(projects).where(inArray(projects.id, orderedIds));
+      const unauthorized = projs.filter(p => p.createdBy !== session.userId);
+      if (unauthorized.length > 0) {
+        return { error: '無權限修改某些專案的排序' };
+      }
+    }
+
     await Promise.all(
       orderedIds.map((id, i) =>
         db.update(projects).set({ sortOrder: i + 1, updatedAt: new Date() }).where(eq(projects.id, id))

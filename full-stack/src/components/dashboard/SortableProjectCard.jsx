@@ -51,7 +51,7 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
         </div>
         <div style={{ padding: "10px 20px 14px", display: "flex", gap: 8, justifyContent: "flex-end", borderTop: `1px solid ${X.border}` }}>
           <button onClick={e => { e.stopPropagation(); onArchive(); }} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "3px 12px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>
-          <button onClick={e => { e.stopPropagation(); if (confirm("Delete " + pn + "?")) onDelete(); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "3px 12px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>
+          <button onClick={e => { e.stopPropagation(); if (confirm(`確認刪除專案「${pn}」嗎？`)) onDelete(); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "3px 12px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>
         </div>
       </div>
     </div>

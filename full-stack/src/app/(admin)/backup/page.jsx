@@ -8,6 +8,7 @@ import {
   triggerBackup,
   testR2ConnectionAction,
   testGDriveConnectionAction,
+  getAuditLogs,
 } from '@/server/actions/backup';
 
 const FREQUENCY_OPTIONS = [
@@ -29,6 +30,8 @@ export default function BackupPage() {
     keepCount: 30,
   });
   const [history, setHistory] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [activeTab, setActiveTab] = useState('backup'); // 'backup' | 'audit'
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [testing, setTesting] = useState(null); // 'r2' | 'gdrive' | null
@@ -39,9 +42,10 @@ export default function BackupPage() {
   // ── Load ──
   const loadData = useCallback(async () => {
     try {
-      const [settingsRes, historyRes] = await Promise.all([
+      const [settingsRes, historyRes, auditRes] = await Promise.all([
         getBackupSettings(),
         getBackupHistory(30),
+        getAuditLogs(50),
       ]);
 
       if (settingsRes.error) { setError(settingsRes.error); return; }
@@ -66,6 +70,7 @@ export default function BackupPage() {
         keepCount: s.backup_keep_count || 30,
       });
       setHistory(historyRes.data || []);
+      setAuditLogs(auditRes?.data || []);
     } catch {
       setError('載入失敗');
     } finally {
@@ -229,11 +234,30 @@ export default function BackupPage() {
 
   return (
     <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: '#37352F', marginBottom: 24 }}>資料備份</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: '#37352F', marginBottom: 16 }}>系統管理</h1>
+
+      {/* ── Tabs ── */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '1px solid #E3E2DE' }}>
+        {[{ key: 'backup', label: '資料備份' }, { key: 'audit', label: '操作記錄' }].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: '10px 24px', fontSize: 14, fontWeight: activeTab === tab.key ? 600 : 400,
+              border: 'none', borderBottom: activeTab === tab.key ? '2px solid #2383E2' : '2px solid transparent',
+              background: 'none', color: activeTab === tab.key ? '#2383E2' : '#6B6B6B',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {error && <div style={{ padding: 12, borderRadius: 8, background: '#EB575715', color: '#EB5757', fontSize: 14, marginBottom: 16 }}>{error}</div>}
       {success && <div style={{ padding: 12, borderRadius: 8, background: '#4DAB9A15', color: '#4DAB9A', fontSize: 14, marginBottom: 16 }}>{success}</div>}
 
+      {activeTab === 'backup' && <>
       {/* ── R2 Settings ── */}
       <div style={sectionStyle}>
         <h3 style={sectionTitle}>Cloudflare R2 備份設定</h3>
@@ -444,11 +468,73 @@ export default function BackupPage() {
           </div>
         )}
       </div>
+      </>}
+
+      {activeTab === 'audit' && (
+        <div style={sectionStyle}>
+          <h3 style={sectionTitle}>操作記錄</h3>
+          {auditLogs.length === 0 ? (
+            <div style={{ color: '#9B9A97', fontSize: 14, padding: '20px 0', textAlign: 'center' }}>尚無操作記錄</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #E3E2DE', background: '#F5F3EF' }}>
+                    <th style={thStyle}>時間</th>
+                    <th style={thStyle}>操作者</th>
+                    <th style={thStyle}>動作</th>
+                    <th style={thStyle}>對象</th>
+                    <th style={thStyle}>備註</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map(row => (
+                    <tr key={row.id} style={{ borderBottom: '1px solid #E3E2DE' }}>
+                      <td style={tdStyle}>{formatTime(row.createdAt)}</td>
+                      <td style={tdStyle}>{row.userName || row.userEmail || '-'}</td>
+                      <td style={tdStyle}>
+                        <span style={{
+                          padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
+                          background: actionColor(row.action).bg,
+                          color: actionColor(row.action).text,
+                        }}>
+                          {actionLabel(row.action)}
+                        </span>
+                      </td>
+                      <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
+                        {row.resourceType ? `${row.resourceType}` : '-'}
+                      </td>
+                      <td style={{ ...tdStyle, fontSize: 12, color: '#6B6B6B', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {row.detail || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Helpers ──
+
+const ACTION_MAP = {
+  PASSWORD_RESET: { label: '密碼重置', bg: '#CB912F15', text: '#CB912F' },
+  USER_DELETE: { label: '刪除使用者', bg: '#EB575715', text: '#EB5757' },
+  PROJECT_DELETE: { label: '刪除專案', bg: '#EB575715', text: '#EB5757' },
+  BACKUP_TRIGGER: { label: '手動備份', bg: '#4DAB9A15', text: '#4DAB9A' },
+};
+
+function actionLabel(action) {
+  return ACTION_MAP[action]?.label || action;
+}
+
+function actionColor(action) {
+  return ACTION_MAP[action] || { bg: '#E3E2DE50', text: '#6B6B6B' };
+}
 
 const thStyle = { padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#6B6B6B', fontSize: 13 };
 const tdStyle = { padding: '10px 12px', color: '#37352F' };

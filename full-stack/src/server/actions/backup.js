@@ -1,10 +1,11 @@
 'use server';
 
 import { db } from '@/server/db';
-import { configTable as config, backupHistory } from '@/server/db/schema';
+import { configTable as config, backupHistory, auditLog, users } from '@/server/db/schema';
 import { eq, inArray, desc } from 'drizzle-orm';
 import { safeRequireAdmin } from '@/lib/auth';
 import { encrypt, decrypt } from '@/lib/crypto';
+import { logAudit } from '@/lib/audit';
 import {
   exportAllTables,
   uploadToR2,
@@ -85,7 +86,7 @@ export async function saveBackupSettings(settings) {
       }
     }
 
-    return { success: true };
+    return { success: true, data: null };
   } catch (err) {
     console.error('[saveBackupSettings] error:', err);
     return { error: err.message || '儲存備份設定失敗' };
@@ -109,6 +110,37 @@ export async function getBackupHistory(limit = 30) {
   } catch (err) {
     console.error('[getBackupHistory] error:', err);
     return { error: err.message || '讀取備份歷史失敗' };
+  }
+}
+
+// ── Audit Log ──
+
+export async function getAuditLogs(limit = 50) {
+  const { error } = await safeRequireAdmin();
+  if (error) return { error };
+
+  try {
+    const rows = await db
+      .select({
+        id: auditLog.id,
+        action: auditLog.action,
+        userId: auditLog.userId,
+        userName: users.name,
+        userEmail: users.email,
+        resourceType: auditLog.resourceType,
+        resourceId: auditLog.resourceId,
+        detail: auditLog.detail,
+        createdAt: auditLog.createdAt,
+      })
+      .from(auditLog)
+      .leftJoin(users, eq(auditLog.userId, users.id))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit);
+
+    return { success: true, data: rows };
+  } catch (err) {
+    console.error('[getAuditLogs] error:', err);
+    return { error: err.message || '讀取審計記錄失敗' };
   }
 }
 
@@ -143,7 +175,7 @@ export async function testGDriveConnectionAction(credentials) {
 // ── Trigger Backup ──
 
 export async function triggerBackup(targetOverride) {
-  const { error } = await safeRequireAdmin();
+  const { session, error } = await safeRequireAdmin();
   if (error) return { error };
 
   try {
@@ -226,6 +258,11 @@ export async function triggerBackup(targetOverride) {
       }
     }
 
+    await logAudit('BACKUP_TRIGGER', session.userId, {
+      resourceType: 'backup',
+      detail: JSON.stringify(results.map(r => `${r.target}:${r.success ? 'ok' : r.error}`)),
+    });
+
     return { success: true, results };
   } catch (err) {
     console.error('[triggerBackup] error:', err);
@@ -294,6 +331,9 @@ export async function cronBackup() {
             secretKey: s.backup_r2_secret_key,
             bucket: s.backup_r2_bucket,
           };
+          if (!creds.accountId || !creds.accessKey || !creds.secretKey || !creds.bucket) {
+            throw new Error('R2 憑證未完整設定');
+          }
           uploadResult = await uploadToR2(backupData, creds);
           await cleanupR2Backups(creds, keepCount);
         } else if (target === 'gdrive') {
@@ -302,8 +342,13 @@ export async function cronBackup() {
             privateKey: s.backup_gdrive_key,
             folderId: s.backup_gdrive_folder,
           };
+          if (!creds.email || !creds.privateKey || !creds.folderId) {
+            throw new Error('Google Drive 憑證未完整設定');
+          }
           uploadResult = await uploadToGoogleDrive(backupData, creds);
           await cleanupGDriveBackups(creds, keepCount);
+        } else {
+          throw new Error(`未知的備份目標: ${target}`);
         }
 
         const durationMs = Date.now() - startTime;

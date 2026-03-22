@@ -31,7 +31,7 @@ export async function getDownloadUrl(key) {
   return getSignedUrl(client, new GetObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME,
     Key: key,
-  }), { expiresIn: 3600 });
+  }), { expiresIn: 900 });
 }
 
 export async function deleteFromR2(key) {

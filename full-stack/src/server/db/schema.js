@@ -110,6 +110,21 @@ export const files = pgTable('files', {
   index('files_task_id_idx').on(table.taskId),
 ]);
 
+// ── Audit Log ──
+export const auditLog = pgTable('audit_log', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  action: varchar('action', { length: 50 }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  resourceType: varchar('resource_type', { length: 50 }),
+  resourceId: uuid('resource_id'),
+  detail: text('detail'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('audit_log_user_id_idx').on(table.userId),
+  index('audit_log_action_idx').on(table.action),
+  index('audit_log_created_at_idx').on(table.createdAt),
+]);
+
 // ── Backup History ──
 export const backupHistory = pgTable('backup_history', {
   id: uuid('id').defaultRandom().primaryKey(),

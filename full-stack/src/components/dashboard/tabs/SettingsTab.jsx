@@ -46,7 +46,7 @@ export default function SettingsTab({ configCats, saveConfigCats, configOwners, 
               {[{ k: "day", l: "日" }, { k: "week", l: "週" }, { k: "month", l: "月" }, { k: "quarter", l: "季" }].map(({ k, l }) => (
                 <div key={k}>
                   <div style={{ fontSize: 11, color: X.textDim, marginBottom: 2 }}>{l}</div>
-                  <input type="number" value={ganttDraft[view]?.[k] ?? ''} onChange={e => { const raw = e.target.value; setGanttDraft(p => ({ ...p, [view]: { ...p[view], [k]: raw === '' ? '' : (parseInt(raw) || 1) } })); }} onKeyDown={e => { if (e.key === "Enter") saveGanttWidths(); }} style={{ ...iS2, fontSize: 14, padding: "6px 10px", width: "100%" }} />
+                  <input type="number" min="1" max="200" value={ganttDraft[view]?.[k] ?? ''} onChange={e => { const raw = e.target.value; setGanttDraft(p => ({ ...p, [view]: { ...p[view], [k]: raw === '' ? '' : (parseInt(raw) || 1) } })); }} onKeyDown={e => { if (e.key === "Enter") saveGanttWidths(); }} style={{ ...iS2, fontSize: 14, padding: "6px 10px", width: "100%" }} />
                 </div>
               ))}
             </div>

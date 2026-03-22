@@ -173,7 +173,7 @@ export async function uploadToGoogleDrive(backupData, credentials) {
     },
     media: {
       mimeType: 'application/json',
-      body: Readable.from(content),
+      body: Readable.from([content]),
     },
     fields: 'id,name,size',
   });

@@ -168,7 +168,7 @@ export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, gant
       {(() => {
         const ownerMap = {}; filtered.forEach(t => { ownerMap[t.owner] = (ownerMap[t.owner] || 0) + 1; });
         const owners = Object.entries(ownerMap).map(([n, c]) => ({ name: n, count: c })).sort((a, b) => b.count - a.count);
-        const ownerColors = [X.accent, X.purple, X.amber, X.red, X.green, "#06B6D4", X.pink, X.accentDark, "#8B949E", "#D2A8FF"];
+        const ownerColors = [X.accent, X.purple, X.amber, X.red, X.green, X.cyan || "#06B6D4", X.pink, X.accentDark, X.textDim, X.purpleLight || "#D2A8FF"];
         const gm = Math.ceil(Math.max(...owners.map(o => o.count), 1) / 2) * 2;
         return (<div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.purple, borderRadius: 2 }} />Team Workload</h3>

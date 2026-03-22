@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/health', '/api/backup'];
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/health'];
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -10,8 +10,13 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
+  // Allow POST to /api/backup (cron uses CRON_SECRET, not session)
+  if (pathname.startsWith('/api/backup') && request.method === 'POST') {
+    return NextResponse.next();
+  }
+
   // Allow static files and Next.js internals
-  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon') || /\.\w{2,5}$/.test(pathname)) {
+  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon') || /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff2?|eot|ttf|otf|map|json)$/i.test(pathname)) {
     return NextResponse.next();
   }
 
