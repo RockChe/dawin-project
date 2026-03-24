@@ -14,6 +14,7 @@ import {
   deleteLink as deleteLinkAction,
   deleteFile as deleteFileAction,
   upsertTasks as upsertTasksAction,
+  updateManyTasks as updateManyTasksAction,
   deleteManyTasks as deleteManyTasksAction,
   deleteAllTasks as deleteAllTasksAction,
 } from '@/server/actions/tasks';
@@ -375,6 +376,23 @@ export default function useTaskManager(initialData) {
     return result;
   }, [showToast, invalidateCache]);
 
+  // ── Batch Update ──
+  const updateManyTasks = useCallback(async (ids, field, value) => {
+    let prevT;
+    setAllT(p => { prevT = p; return p.map(t => ids.includes(t.id) ? { ...t, [field]: value } : t); });
+    invalidateCache();
+    const fieldMap = { task: 'task', status: 'status', category: 'category', owner: 'owner', priority: 'priority' };
+    const result = await updateManyTasksAction(ids, { [fieldMap[field] || field]: value });
+    if (checkAuthError(result)) return;
+    if (result?.error) {
+      setAllT(prevT);
+      showToast(result.error, 'error');
+    } else {
+      showToast(`已更新 ${result.updated} 筆任務`, 'success');
+    }
+    return result;
+  }, [showToast, invalidateCache]);
+
   // ── Clean All ──
   const deleteAllTasks = useCallback(async () => {
     const result = await deleteAllTasksAction();
@@ -488,7 +506,7 @@ export default function useTaskManager(initialData) {
     addFile, deleteFile: deleteFileHandler,
     renameProject, addProject, deleteProject: deleteProjectHandler,
     reorderSubs, reorderProjects, importTasks,
-    deleteManyTasks, deleteAllTasks,
+    deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
     reload: loadData,
   };

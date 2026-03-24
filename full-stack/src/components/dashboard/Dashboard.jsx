@@ -25,7 +25,7 @@ export default function Dashboard({ initialData }) {
     addLink, deleteLink, addFile, deleteFile,
     renameProject, addProject, deleteProject: deleteProjectAction,
     reorderSubs, reorderProjects, importTasks,
-    deleteManyTasks, deleteAllTasks,
+    deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
   const [fpSet, setFPSet] = useState(new Set());
@@ -181,7 +181,7 @@ export default function Dashboard({ initialData }) {
         {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidths.timeline} timelineHeight={timelineHeight} />}
 
         {/* DATA TABLE */}
-        {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={setModalTask} />}
+        {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={setModalTask} />}
         {/* SETTINGS */}
         {tab === "settings" && <SettingsTab configCats={configCats} saveConfigCats={saveConfigCats} configOwners={configOwners} saveConfigOwners={saveConfigOwners} ganttDraft={ganttDraft} setGanttDraft={setGanttDraft} saveGanttWidths={saveGanttWidths} timelineHeight={timelineHeight} saveTimelineHeight={saveTimelineHeight} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} saveUpcomingSettings={saveUpcomingSettings} isMobile={isMobile} showToast={showToast} />}
       </div>

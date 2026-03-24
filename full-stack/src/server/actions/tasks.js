@@ -387,6 +387,31 @@ export async function upsertTasks(importedTasks) {
   return { success: true, updated, inserted, failed };
 }
 
+// ── Batch Update ──
+
+export async function updateManyTasks(ids, data) {
+  const { error } = await safeRequireAuth();
+  if (error) return { error };
+  if (!Array.isArray(ids) || ids.length === 0) return { error: 'No task IDs provided' };
+  if (ids.length > 500) return { error: 'Too many IDs (max 500)' };
+  if (!ids.every(isValidUUID)) return { error: 'Invalid task ID format' };
+
+  const ALLOWED = ['owner', 'status', 'priority', 'category'];
+  const updateData = {};
+  for (const key of ALLOWED) {
+    if (key in data) updateData[key] = data[key];
+  }
+  if (Object.keys(updateData).length === 0) return { error: 'No valid fields to update' };
+
+  try {
+    await db.update(tasks).set(updateData).where(inArray(tasks.id, ids));
+    return { success: true, updated: ids.length };
+  } catch (err) {
+    console.error("updateManyTasks error:", err);
+    return { error: err.message || "批次更新失敗" };
+  }
+}
+
 // ── Batch Delete ──
 
 export async function deleteManyTasks(ids) {
