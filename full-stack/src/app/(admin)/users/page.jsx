@@ -63,8 +63,10 @@ export default function UsersPage() {
   };
 
   const handleNameSave = async (userId) => {
+    if (editingId === null) return;
     const trimmed = editName.trim();
-    if (!trimmed) { setEditingId(null); return; }
+    setEditingId(null);
+    if (!trimmed) return;
     setError(null);
     const result = await updateUser(userId, { name: trimmed });
     if (result?.error) {
@@ -73,7 +75,6 @@ export default function UsersPage() {
       setSuccess('姓名已更新');
       loadUsers();
     }
-    setEditingId(null);
   };
 
   const handleDelete = async (id, name) => {

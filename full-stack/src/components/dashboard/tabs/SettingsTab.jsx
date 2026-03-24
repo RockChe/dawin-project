@@ -2,10 +2,9 @@
 import { useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
-export default function SettingsTab({ configCats, saveConfigCats, configOwners, saveConfigOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast }) {
+export default function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast }) {
   const { X, CC, PJC, inputStyle } = useTheme();
   const [newCat, setNewCat] = useState("");
-  const [newOwner, setNewOwner] = useState("");
   const [tlHeightDraft, setTlHeightDraft] = useState(timelineHeight);
   const [upDaysDraft, setUpDaysDraft] = useState(upcomingDays);
   const [upLimitDraft, setUpLimitDraft] = useState(upcomingLimit);
@@ -30,12 +29,8 @@ export default function SettingsTab({ configCats, saveConfigCats, configOwners, 
         {configOwners.map((ow, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: PJC[i % PJC.length], flexShrink: 0 }} />
           <span style={{ fontSize: 14, color: X.text, flex: 1 }}>{ow}</span>
-          <button onClick={() => { saveConfigOwners(configOwners.filter((_, j) => j !== i)); showToast("Owner removed", "error"); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
         </div>))}
-        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-          <input value={newOwner} onChange={e => setNewOwner(e.target.value)} placeholder="New owner" onKeyDown={e => { if (e.key === "Enter" && newOwner.trim()) { saveConfigOwners([...configOwners, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px" }} />
-          <button onClick={() => { if (newOwner.trim()) { saveConfigOwners([...configOwners, newOwner.trim()]); setNewOwner(""); showToast("Owner added", "success"); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+</button>
-        </div>
+        <div style={{ fontSize: 12, color: X.textDim, marginTop: 8 }}>Owner 由帳號管理頁面自動同步</div>
       </div>
       <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}`, gridColumn: "1" }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.amber, borderRadius: 2 }} />Timeline Width (px per unit)</h3>

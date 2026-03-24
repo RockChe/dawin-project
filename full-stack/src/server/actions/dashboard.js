@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/server/db';
-import { tasks, subtasks, links, files, projects, configTable as config } from '@/server/db/schema';
+import { tasks, subtasks, links, files, projects, users, configTable as config } from '@/server/db/schema';
 import { asc, desc, inArray } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 import { getDownloadUrl } from '@/lib/r2';
@@ -14,14 +14,17 @@ export async function getInitialData() {
   const { session, error } = await safeRequireAuth();
   if (error) return { error };
 
-  const [allTasks, allSubtasks, allLinks, allFiles, allProjects, configRows] = await Promise.all([
+  const [allTasks, allSubtasks, allLinks, allFiles, allProjects, configRows, allUsers] = await Promise.all([
     db.select().from(tasks).orderBy(asc(tasks.sortOrder)),
     db.select().from(subtasks).orderBy(asc(subtasks.sortOrder)),
     db.select().from(links).orderBy(desc(links.createdAt)),
     db.select().from(files).orderBy(desc(files.createdAt)),
     db.select().from(projects).orderBy(asc(projects.sortOrder), asc(projects.createdAt)),
     db.select().from(config).where(inArray(config.key, ['owners', 'categories'])),
+    db.select({ name: users.name }).from(users),
   ]);
+
+  const userNames = allUsers.map(u => u.name);
 
   const configs = {};
   for (const row of configRows) {
@@ -49,6 +52,7 @@ export async function getInitialData() {
     files: allFiles,
     projects: projectsWithBanners,
     configs,
+    userNames,
     session: { role: session.role, name: session.name, email: session.email },
   };
 }
