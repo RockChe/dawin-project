@@ -315,11 +315,18 @@ export default function useTaskManager(initialData) {
   // ── Project CRUD ──
   const renameProject = useCallback(async (id, newName) => {
     if (!newName.trim()) return;
+    const prev = [...projects];
     setProjects(p => p.map(proj => proj.id === id ? { ...proj, name: newName } : proj));
     const result = await updateProjectAction(id, { name: newName });
     if (checkAuthError(result)) return;
+    if (result?.error) {
+      setProjects(prev);
+      showToast(result.error, 'error');
+      return;
+    }
+    invalidateCache();
     showToast('專案已重新命名', 'success');
-  }, [showToast]);
+  }, [projects, showToast, invalidateCache]);
 
   const addProject = useCallback(async (name) => {
     const formData = new FormData();

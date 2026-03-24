@@ -115,12 +115,14 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
 
   const handleRename = useCallback((oldName, newName) => {
     if (!newName || newName === oldName) return;
-    renameProject(oldName, newName);
+    const proj = projects.find(p => p.name === oldName);
+    if (!proj) return;
+    renameProject(proj.id, newName);
     setProjBanners(p => { const n = { ...p }; if (n[oldName]) { n[newName] = n[oldName]; delete n[oldName]; } return n; });
     setArchived(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; });
     onProjectRenamed(oldName, newName);
     setSelProj(newName);
-  }, [renameProject, setProjBanners, onProjectRenamed]);
+  }, [projects, renameProject, setProjBanners, onProjectRenamed]);
 
   const openNewTaskModal = useCallback(() => {
     const proj = projects.find(p => p.name === selProj);

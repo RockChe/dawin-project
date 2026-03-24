@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getUsers, createUser, resetUserPassword, deleteUser } from '@/server/actions/users';
+import { getUsers, createUser, resetUserPassword, deleteUser, updateUser } from '@/server/actions/users';
 import { useTheme } from '@/components/ThemeProvider';
 import { F } from '@/lib/theme';
 
@@ -11,6 +11,8 @@ export default function UsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPw, setResetPw] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -53,6 +55,25 @@ export default function UsersPage() {
       setResetTarget(null);
       setResetPw('');
     }
+  };
+
+  const handleNameEdit = (user) => {
+    setEditingId(user.id);
+    setEditName(user.name);
+  };
+
+  const handleNameSave = async (userId) => {
+    const trimmed = editName.trim();
+    if (!trimmed) { setEditingId(null); return; }
+    setError(null);
+    const result = await updateUser(userId, { name: trimmed });
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      setSuccess('姓名已更新');
+      loadUsers();
+    }
+    setEditingId(null);
   };
 
   const handleDelete = async (id, name) => {
@@ -141,7 +162,20 @@ export default function UsersPage() {
           <tbody>
             {users.map(user => (
               <tr key={user.id} style={{ borderBottom: `1px solid ${X.border}` }}>
-                <td style={{ padding: '12px 16px', fontWeight: 500 }}>{user.name}</td>
+                <td style={{ padding: '12px 16px', fontWeight: 500 }}>
+                  {editingId === user.id ? (
+                    <input
+                      autoFocus
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      onBlur={() => handleNameSave(user.id)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleNameSave(user.id); if (e.key === 'Escape') setEditingId(null); }}
+                      style={{ ...inputStyle, padding: '4px 8px', width: 'auto', minWidth: 100 }}
+                    />
+                  ) : (
+                    <span onClick={() => handleNameEdit(user)} style={{ cursor: 'pointer', borderBottom: `1px dashed ${X.border}` }} title="點擊修改姓名">{user.name}</span>
+                  )}
+                </td>
                 <td style={{ padding: '12px 16px', color: X.textSec }}>{user.email}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <span style={{

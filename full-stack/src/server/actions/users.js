@@ -97,6 +97,27 @@ export async function resetUserPassword(userId, newPassword) {
   return { success: true };
 }
 
+export async function updateUser(userId, data) {
+  const { session, error } = await safeRequireAdmin();
+  if (error) return { error };
+
+  if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
+
+  const name = data?.name?.trim();
+  if (!name || name.length === 0) return { error: '姓名不可為空' };
+  if (name.length > 255) return { error: '姓名不可超過 255 字元' };
+
+  await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+
+  await logAudit('USER_UPDATE', session.userId, {
+    resourceType: 'user',
+    resourceId: userId,
+    detail: `name → ${name}`,
+  });
+
+  return { success: true };
+}
+
 export async function deleteUser(userId) {
   const { session, error } = await safeRequireAdmin();
   if (error) return { error };
