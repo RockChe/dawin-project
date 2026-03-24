@@ -73,13 +73,8 @@ export default function useTaskManager(initialData) {
     setAllF(data.files || []);
     setProjects(Array.isArray(data.projects) ? data.projects : []);
 
-    // Owners: merge user names + configured + unique owners from tasks/subtasks
-    const userNames = Array.isArray(data.userNames) ? data.userNames : [];
-    const taskOwners = tasksList.flatMap(t => (t.owner || '').split(',').map(o => o.trim()).filter(Boolean));
-    const subOwners = subsList.map(s => s.owner).filter(Boolean);
-    const dbOwners = Array.isArray(data.configs?.owners) ? data.configs.owners : [];
-    const mergedOwners = [...new Set([...userNames, ...dbOwners, ...taskOwners, ...subOwners])];
-    setConfigOwners(mergedOwners);
+    // Owners: solely from users table
+    setConfigOwners(Array.isArray(data.userNames) ? data.userNames : []);
 
     // Categories: seed default if DB has no data
     const cats = data.configs?.categories;
@@ -152,11 +147,8 @@ export default function useTaskManager(initialData) {
         saveConfig('categories', DEFAULT_CATS);
       }
 
-      // Merge owners
-      const taskOwners = (initialData?.tasks || []).flatMap(t => (t.owner || '').split(',').map(o => o.trim()).filter(Boolean));
-      const subOwners = (initialData?.subtasks || []).map(s => s.owner).filter(Boolean);
-      const dbOwners = Array.isArray(initialData?.configs?.owners) ? initialData.configs.owners : [];
-      setConfigOwners([...new Set([...dbOwners, ...taskOwners, ...subOwners])]);
+      // Owners: solely from users table
+      setConfigOwners(Array.isArray(initialData?.userNames) ? initialData.userNames : []);
       return;
     }
 

@@ -20,7 +20,7 @@ export async function getInitialData() {
     db.select().from(links).orderBy(desc(links.createdAt)),
     db.select().from(files).orderBy(desc(files.createdAt)),
     db.select().from(projects).orderBy(asc(projects.sortOrder), asc(projects.createdAt)),
-    db.select().from(config).where(inArray(config.key, ['owners', 'categories'])),
+    db.select().from(config).where(inArray(config.key, ['categories'])),
     db.select({ name: users.name }).from(users),
   ]);
 
