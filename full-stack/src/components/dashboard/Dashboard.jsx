@@ -76,7 +76,7 @@ export default function Dashboard({ initialData }) {
   const avgProg = useMemo(() => filtered.length === 0 ? 0 : Math.round(filtered.reduce((s, d) => s + d.progress, 0) / filtered.length), [filtered]);
   const priStats = useMemo(() => { const p = { "高": 0, "中": 0, "低": 0 }; filtered.forEach(d => p[d.priority]++); return p; }, [filtered]);
   const allProjNames = useMemo(() => [...new Set([...projects.map(p => p.name), ...twp.map(d => d.project), ...customProjects])], [projects, twp, customProjects]);
-  const pcMap = {}; allProjNames.forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
+  const pcMap = useMemo(() => { const m = {}; allProjNames.forEach((p, i) => { m[p] = PJC[i % PJC.length]; }); return m; }, [allProjNames, PJC]);
 
   if (loading) {
     const shimmerBg = `linear-gradient(90deg, ${X.surfaceLight || X.surface} 25%, ${X.surface} 50%, ${X.surfaceLight || X.surface} 75%)`;

@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
-export default function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast }) {
+function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast }) {
   const { X, CC, PJC, inputStyle } = useTheme();
   const [newCat, setNewCat] = useState("");
   const [tlHeightDraft, setTlHeightDraft] = useState(timelineHeight);
@@ -81,3 +81,5 @@ export default function SettingsTab({ configCats, saveConfigCats, configOwners, 
     </div>
   );
 }
+
+export default memo(SettingsTab);

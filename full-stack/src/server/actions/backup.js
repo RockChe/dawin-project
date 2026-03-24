@@ -2,7 +2,7 @@
 
 import { db } from '@/server/db';
 import { configTable as config, backupHistory, auditLog, users } from '@/server/db/schema';
-import { eq, inArray, desc } from 'drizzle-orm';
+import { eq, inArray, desc, and, or, like, gte, lte } from 'drizzle-orm';
 import { safeRequireAdmin } from '@/lib/auth';
 import { encrypt, decrypt } from '@/lib/crypto';
 import { logAudit } from '@/lib/audit';
@@ -28,6 +28,88 @@ const BACKUP_CONFIG_KEYS = [
   'backup_enabled', 'backup_frequency', 'backup_targets', 'backup_keep_count',
 ];
 
+// ── Internal Helpers ──
+
+/** Parse and decrypt backup config rows into a plain object */
+function loadBackupConfig(rows) {
+  const result = {};
+  for (const row of rows) {
+    let value;
+    try { value = JSON.parse(row.value); } catch { value = row.value; }
+    if (ENCRYPTED_KEYS.includes(row.key) && typeof value === 'string' && value.length > 0) {
+      try { result[row.key] = decrypt(value); } catch { result[row.key] = value; }
+    } else {
+      result[row.key] = value;
+    }
+  }
+  return result;
+}
+
+/** Execute backup uploads to specified targets and record history */
+async function performBackupToTargets(backupData, targets, keepCount, s) {
+  const results = [];
+
+  for (const target of targets) {
+    const startTime = Date.now();
+    try {
+      let uploadResult;
+
+      if (target === 'r2') {
+        const creds = {
+          accountId: s.backup_r2_account_id,
+          accessKey: s.backup_r2_access_key,
+          secretKey: s.backup_r2_secret_key,
+          bucket: s.backup_r2_bucket,
+        };
+        if (!creds.accountId || !creds.accessKey || !creds.secretKey || !creds.bucket) {
+          throw new Error('R2 憑證未完整設定');
+        }
+        uploadResult = await uploadToR2(backupData, creds);
+        await cleanupR2Backups(creds, keepCount);
+      } else if (target === 'gdrive') {
+        const creds = {
+          email: s.backup_gdrive_email,
+          privateKey: s.backup_gdrive_key,
+          folderId: s.backup_gdrive_folder,
+        };
+        if (!creds.email || !creds.privateKey || !creds.folderId) {
+          throw new Error('Google Drive 憑證未完整設定');
+        }
+        uploadResult = await uploadToGoogleDrive(backupData, creds);
+        await cleanupGDriveBackups(creds, keepCount);
+      } else {
+        throw new Error(`未知的備份目標: ${target}`);
+      }
+
+      const durationMs = Date.now() - startTime;
+      await db.insert(backupHistory).values({
+        target,
+        fileName: uploadResult.fileName,
+        fileSize: uploadResult.fileSize,
+        status: 'success',
+        durationMs,
+        tableCounts: JSON.stringify(backupData.meta.counts),
+      });
+
+      results.push({ target, success: true, fileName: uploadResult.fileName });
+    } catch (err) {
+      const durationMs = Date.now() - startTime;
+      await db.insert(backupHistory).values({
+        target,
+        fileName: 'N/A',
+        fileSize: 0,
+        status: 'failed',
+        error: err.message,
+        durationMs,
+        tableCounts: JSON.stringify(backupData.meta.counts),
+      });
+      results.push({ target, success: false, error: err.message });
+    }
+  }
+
+  return results;
+}
+
 // ── Settings ──
 
 export async function getBackupSettings() {
@@ -36,25 +118,7 @@ export async function getBackupSettings() {
 
   try {
     const rows = await db.select().from(config).where(inArray(config.key, BACKUP_CONFIG_KEYS));
-    const result = {};
-
-    for (const row of rows) {
-      let value;
-      try { value = JSON.parse(row.value); } catch { value = row.value; }
-
-      // Decrypt sensitive fields — return masked value for display
-      if (ENCRYPTED_KEYS.includes(row.key) && typeof value === 'string' && value.length > 0) {
-        try {
-          const decrypted = decrypt(value);
-          result[row.key] = decrypted;
-        } catch {
-          result[row.key] = value;
-        }
-      } else {
-        result[row.key] = value;
-      }
-    }
-
+    const result = loadBackupConfig(rows);
     return { success: true, data: result };
   } catch (err) {
     console.error('[getBackupSettings] error:', err);
@@ -115,12 +179,31 @@ export async function getBackupHistory(limit = 30) {
 
 // ── Audit Log ──
 
-export async function getAuditLogs(limit = 50) {
+export async function getAuditLogs(filters = {}) {
   const { error } = await safeRequireAdmin();
   if (error) return { error };
 
   try {
-    const rows = await db
+    const conditions = [];
+
+    if (filters.action) {
+      conditions.push(eq(auditLog.action, filters.action));
+    }
+    if (filters.keyword) {
+      const kw = `%${filters.keyword}%`;
+      conditions.push(or(like(users.name, kw), like(auditLog.detail, kw)));
+    }
+    if (filters.dateFrom) {
+      conditions.push(gte(auditLog.createdAt, new Date(filters.dateFrom)));
+    }
+    if (filters.dateTo) {
+      // dateTo 加到當天結束
+      const end = new Date(filters.dateTo);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(auditLog.createdAt, end));
+    }
+
+    let query = db
       .select({
         id: auditLog.id,
         action: auditLog.action,
@@ -133,9 +216,15 @@ export async function getAuditLogs(limit = 50) {
         createdAt: auditLog.createdAt,
       })
       .from(auditLog)
-      .leftJoin(users, eq(auditLog.userId, users.id))
+      .leftJoin(users, eq(auditLog.userId, users.id));
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const rows = await query
       .orderBy(desc(auditLog.createdAt))
-      .limit(limit);
+      .limit(filters.limit || 100);
 
     return { success: true, data: rows };
   } catch (err) {
@@ -191,72 +280,9 @@ export async function triggerBackup(targetOverride) {
       return { error: '未設定備份目標' };
     }
 
-    // Export data
+    // Export data and perform backup
     const backupData = await exportAllTables(db);
-    const results = [];
-
-    for (const target of targets) {
-      const startTime = Date.now();
-      try {
-        let uploadResult;
-
-        if (target === 'r2') {
-          const creds = {
-            accountId: s.backup_r2_account_id,
-            accessKey: s.backup_r2_access_key,
-            secretKey: s.backup_r2_secret_key,
-            bucket: s.backup_r2_bucket,
-          };
-          if (!creds.accountId || !creds.accessKey || !creds.secretKey || !creds.bucket) {
-            throw new Error('R2 憑證未完整設定');
-          }
-          uploadResult = await uploadToR2(backupData, creds);
-          await cleanupR2Backups(creds, keepCount);
-        } else if (target === 'gdrive') {
-          const creds = {
-            email: s.backup_gdrive_email,
-            privateKey: s.backup_gdrive_key,
-            folderId: s.backup_gdrive_folder,
-          };
-          if (!creds.email || !creds.privateKey || !creds.folderId) {
-            throw new Error('Google Drive 憑證未完整設定');
-          }
-          uploadResult = await uploadToGoogleDrive(backupData, creds);
-          await cleanupGDriveBackups(creds, keepCount);
-        } else {
-          throw new Error(`未知的備份目標: ${target}`);
-        }
-
-        const durationMs = Date.now() - startTime;
-
-        // Record success
-        await db.insert(backupHistory).values({
-          target,
-          fileName: uploadResult.fileName,
-          fileSize: uploadResult.fileSize,
-          status: 'success',
-          durationMs,
-          tableCounts: JSON.stringify(backupData.meta.counts),
-        });
-
-        results.push({ target, success: true, fileName: uploadResult.fileName });
-      } catch (err) {
-        const durationMs = Date.now() - startTime;
-
-        // Record failure
-        await db.insert(backupHistory).values({
-          target,
-          fileName: 'N/A',
-          fileSize: 0,
-          status: 'failed',
-          error: err.message,
-          durationMs,
-          tableCounts: JSON.stringify(backupData.meta.counts),
-        });
-
-        results.push({ target, success: false, error: err.message });
-      }
-    }
+    const results = await performBackupToTargets(backupData, targets, keepCount, s);
 
     await logAudit('BACKUP_TRIGGER', session.userId, {
       resourceType: 'backup',
@@ -276,16 +302,7 @@ export async function cronBackup() {
   try {
     // Load settings directly (no auth check — cron uses CRON_SECRET)
     const rows = await db.select().from(config).where(inArray(config.key, BACKUP_CONFIG_KEYS));
-    const s = {};
-    for (const row of rows) {
-      let value;
-      try { value = JSON.parse(row.value); } catch { value = row.value; }
-      if (ENCRYPTED_KEYS.includes(row.key) && typeof value === 'string' && value.length > 0) {
-        try { s[row.key] = decrypt(value); } catch { s[row.key] = value; }
-      } else {
-        s[row.key] = value;
-      }
-    }
+    const s = loadBackupConfig(rows);
 
     // Check if backup is enabled
     if (!s.backup_enabled) {
@@ -315,67 +332,15 @@ export async function cronBackup() {
       return { skipped: true, reason: '未設定備份目標' };
     }
 
-    // Export data
+    // Export data and perform backup
     const backupData = await exportAllTables(db);
-    const results = [];
+    const results = await performBackupToTargets(backupData, targets, keepCount, s);
 
-    for (const target of targets) {
-      const startTime = Date.now();
-      try {
-        let uploadResult;
-
-        if (target === 'r2') {
-          const creds = {
-            accountId: s.backup_r2_account_id,
-            accessKey: s.backup_r2_access_key,
-            secretKey: s.backup_r2_secret_key,
-            bucket: s.backup_r2_bucket,
-          };
-          if (!creds.accountId || !creds.accessKey || !creds.secretKey || !creds.bucket) {
-            throw new Error('R2 憑證未完整設定');
-          }
-          uploadResult = await uploadToR2(backupData, creds);
-          await cleanupR2Backups(creds, keepCount);
-        } else if (target === 'gdrive') {
-          const creds = {
-            email: s.backup_gdrive_email,
-            privateKey: s.backup_gdrive_key,
-            folderId: s.backup_gdrive_folder,
-          };
-          if (!creds.email || !creds.privateKey || !creds.folderId) {
-            throw new Error('Google Drive 憑證未完整設定');
-          }
-          uploadResult = await uploadToGoogleDrive(backupData, creds);
-          await cleanupGDriveBackups(creds, keepCount);
-        } else {
-          throw new Error(`未知的備份目標: ${target}`);
-        }
-
-        const durationMs = Date.now() - startTime;
-        await db.insert(backupHistory).values({
-          target,
-          fileName: uploadResult.fileName,
-          fileSize: uploadResult.fileSize,
-          status: 'success',
-          durationMs,
-          tableCounts: JSON.stringify(backupData.meta.counts),
-        });
-
-        results.push({ target, success: true, fileName: uploadResult.fileName });
-      } catch (err) {
-        const durationMs = Date.now() - startTime;
-        await db.insert(backupHistory).values({
-          target,
-          fileName: 'N/A',
-          fileSize: 0,
-          status: 'failed',
-          error: err.message,
-          durationMs,
-          tableCounts: JSON.stringify(backupData.meta.counts),
-        });
-        results.push({ target, success: false, error: err.message });
-      }
-    }
+    // Audit log for cron backup
+    await logAudit('BACKUP_CRON', null, {
+      resourceType: 'backup',
+      detail: JSON.stringify(results.map(r => `${r.target}:${r.success ? 'ok' : r.error}`)),
+    });
 
     return { success: true, results };
   } catch (err) {

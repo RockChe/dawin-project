@@ -48,6 +48,7 @@ export default function useTaskManager(initialData) {
   const [userRole, setUserRole] = useState(initialData?.session?.role || null);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
+  const toastFadeTimer = useRef(null);
   const initialDataApplied = useRef(!!initialData);
 
   const [configCats, setConfigCats] = useState(DEFAULT_CATS);
@@ -55,10 +56,11 @@ export default function useTaskManager(initialData) {
 
   const showToast = useCallback((msg, type = 'success') => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
+    if (toastFadeTimer.current) clearTimeout(toastFadeTimer.current);
     setToast({ msg, type, fading: false });
     toastTimer.current = setTimeout(() => {
       setToast(prev => prev ? { ...prev, fading: true } : null);
-      toastTimer.current = setTimeout(() => setToast(null), 300);
+      toastFadeTimer.current = setTimeout(() => setToast(null), 300);
     }, 2200);
   }, []);
 
@@ -161,11 +163,19 @@ export default function useTaskManager(initialData) {
     return () => {
       cancelled = true;
       if (toastTimer.current) clearTimeout(toastTimer.current);
+      if (toastFadeTimer.current) clearTimeout(toastFadeTimer.current);
     };
   }, [loadData, initialData]);
 
   // ── Task CRUD ──
+  const pendingUpdates = useRef(new Set());
+
   const updateTask = useCallback(async (id, field, value) => {
+    const key = `${id}:${field}`;
+    // Skip if same field on same task is already being updated (prevent race condition)
+    if (pendingUpdates.current.has(key)) return;
+    pendingUpdates.current.add(key);
+
     let prev;
     setAllT(p => { prev = p; return p.map(t => t.id === id ? { ...t, [field]: value } : t); });
     invalidateCache();
@@ -173,11 +183,15 @@ export default function useTaskManager(initialData) {
     const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
     const dbField = fieldMap[field] || field;
     updateData[dbField] = value;
-    const result = await updateTaskAction(id, updateData);
-    if (checkAuthError(result)) return;
-    if (result?.error) {
-      setAllT(prev);
-      showToast(result.error, 'error');
+    try {
+      const result = await updateTaskAction(id, updateData);
+      if (checkAuthError(result)) return;
+      if (result?.error) {
+        setAllT(prev);
+        showToast(result.error, 'error');
+      }
+    } finally {
+      pendingUpdates.current.delete(key);
     }
   }, [showToast, invalidateCache]);
 

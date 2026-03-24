@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
@@ -14,7 +14,7 @@ import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } fro
 import SortableProjectCard from "../SortableProjectCard";
 import { deleteProjectBanner } from "@/server/actions/projects";
 
-export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
   const { X, SC, inputStyle } = useTheme();
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
@@ -285,3 +285,5 @@ export default function ProjectsTab({ twp, allS, projects, configOwners, pcMap, 
     </div>
   </div>);
 }
+
+export default memo(ProjectsTab);

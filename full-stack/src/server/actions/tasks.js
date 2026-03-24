@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/server/db';
-import { tasks, subtasks, links, files, projects } from '@/server/db/schema';
+import { tasks, subtasks, links, files, projects, users } from '@/server/db/schema';
 import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 import { safeRequireAuth, safeRequireAdmin } from '@/lib/auth';
 import { deleteFromR2 } from '@/lib/r2';
@@ -30,6 +30,12 @@ export async function createTask(data) {
     // Verify project exists
     const proj = await db.select({ id: projects.id }).from(projects).where(eq(projects.id, data.projectId)).limit(1);
     if (!proj[0]) return { error: '專案不存在' };
+
+    // Validate owner exists in users table (if provided)
+    if (data.owner) {
+      const ownerExists = await db.select({ id: users.id }).from(users).where(eq(users.name, data.owner)).limit(1);
+      if (!ownerExists[0]) return { error: `Owner "${data.owner}" 不存在` };
+    }
 
     const result = await db.insert(tasks).values({
       projectId: data.projectId,
@@ -64,6 +70,12 @@ export async function updateTask(id, data) {
   const updateData = { updatedAt: new Date() };
   for (const key of ALLOWED) {
     if (key in data) updateData[key] = data[key];
+  }
+
+  // Validate owner exists in users table (if provided)
+  if (updateData.owner) {
+    const ownerExists = await db.select({ id: users.id }).from(users).where(eq(users.name, updateData.owner)).limit(1);
+    if (!ownerExists[0]) return { error: `Owner "${updateData.owner}" 不存在` };
   }
 
   try {
@@ -269,6 +281,10 @@ export async function createFileRecord(data) {
 
   if (!data.taskId || !isValidUUID(data.taskId)) return { error: 'Invalid taskId' };
 
+  // Verify task exists before creating file record
+  const taskExists = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.id, data.taskId)).limit(1);
+  if (!taskExists[0]) return { error: '任務不存在' };
+
   try {
     const result = await db.insert(files).values({
       taskId: data.taskId,
@@ -397,11 +413,17 @@ export async function updateManyTasks(ids, data) {
   if (!ids.every(isValidUUID)) return { error: 'Invalid task ID format' };
 
   const ALLOWED = ['owner', 'status', 'priority', 'category'];
-  const updateData = {};
+  const updateData = { updatedAt: new Date() };
   for (const key of ALLOWED) {
     if (key in data) updateData[key] = data[key];
   }
-  if (Object.keys(updateData).length === 0) return { error: 'No valid fields to update' };
+  if (Object.keys(updateData).length <= 1) return { error: 'No valid fields to update' };
+
+  // Validate owner exists in users table (if provided)
+  if (updateData.owner) {
+    const ownerExists = await db.select({ id: users.id }).from(users).where(eq(users.name, updateData.owner)).limit(1);
+    if (!ownerExists[0]) return { error: `Owner "${updateData.owner}" 不存在` };
+  }
 
   try {
     await db.update(tasks).set(updateData).where(inArray(tasks.id, ids));

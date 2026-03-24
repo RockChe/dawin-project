@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, memo } from "react";
 import GanttTimeline, { TimeScaleToggle } from "../GanttTimeline";
 
-export default function TimelineTab({ twp, allS, fpSet, fs, fpr, isMobile, ganttWidths, timelineHeight }) {
+function TimelineTab({ twp, allS, fpSet, fs, fpr, isMobile, ganttWidths, timelineHeight }) {
   const [timeDim, setTimeDim] = useState("月");
 
   return (
@@ -12,3 +12,5 @@ export default function TimelineTab({ twp, allS, fpSet, fs, fpr, isMobile, gantt
     </>
   );
 }
+
+export default memo(TimelineTab);

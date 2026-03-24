@@ -59,6 +59,8 @@ export const tasks = pgTable('tasks', {
 }, (table) => [
   index('tasks_project_id_idx').on(table.projectId),
   index('tasks_created_at_idx').on(table.createdAt),
+  index('tasks_status_idx').on(table.status),
+  index('tasks_created_by_idx').on(table.createdBy),
 ]);
 
 // ── Subtasks ──
@@ -74,6 +76,7 @@ export const subtasks = pgTable('subtasks', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('subtasks_task_id_idx').on(table.taskId),
+  index('subtasks_done_idx').on(table.done),
 ]);
 
 // ── Links ──
@@ -86,6 +89,7 @@ export const links = pgTable('links', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('links_task_id_idx').on(table.taskId),
+  index('links_created_by_idx').on(table.createdBy),
 ]);
 
 // ── Config (key-value) ──
@@ -108,6 +112,7 @@ export const files = pgTable('files', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('files_task_id_idx').on(table.taskId),
+  index('files_created_by_idx').on(table.createdBy),
 ]);
 
 // ── Audit Log ──

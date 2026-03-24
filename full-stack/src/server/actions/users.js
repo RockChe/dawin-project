@@ -78,6 +78,10 @@ export async function resetUserPassword(userId, newPassword) {
     return { error: '密碼至少需要 8 個字元' };
   }
 
+  // Verify user exists before updating
+  const target = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!target[0]) return { error: '使用者不存在' };
+
   const hash = await bcrypt.hash(newPassword, 12);
 
   await db

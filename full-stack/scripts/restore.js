@@ -87,6 +87,8 @@ async function main() {
     await db.transaction(async (tx) => {
       // Delete in reverse FK order
       console.log('  Clearing existing data...');
+      await tx.delete(schema.auditLog);
+      await tx.delete(schema.backupHistory);
       await tx.delete(schema.links);
       await tx.delete(schema.files);
       await tx.delete(schema.subtasks);
@@ -104,24 +106,42 @@ async function main() {
         console.log(`  Users: ${userRows.length} restored`);
       }
 
-      // Restore projects
+      // Build FK validation sets
+      const validUserIds = new Set(userRows.map(u => u.id));
+      const validProjectIds = new Set();
+      const validTaskIds = new Set();
+
+      // Restore projects (validate createdBy FK)
       if (backup.data.projects?.length > 0) {
+        let skipped = 0;
         for (const p of backup.data.projects) {
+          const createdBy = p.createdBy && validUserIds.has(p.createdBy) ? p.createdBy : null;
+          if (p.createdBy && !validUserIds.has(p.createdBy)) {
+            console.warn(`  [WARN] Project "${p.name}": createdBy ${p.createdBy} not found, set to null`);
+          }
           await tx.insert(schema.projects).values({
             id: p.id,
             name: p.name,
             sortOrder: p.sortOrder ?? 0,
-            createdBy: p.createdBy,
+            createdBy,
             createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
             updatedAt: p.updatedAt ? new Date(p.updatedAt) : new Date(),
           });
+          validProjectIds.add(p.id);
         }
         console.log(`  Projects: ${backup.data.projects.length} restored`);
       }
 
-      // Restore tasks
+      // Restore tasks (validate projectId + createdBy FK)
       if (backup.data.tasks?.length > 0) {
+        let skipped = 0;
         for (const t of backup.data.tasks) {
+          if (!validProjectIds.has(t.projectId)) {
+            console.warn(`  [WARN] Task "${t.task}": projectId ${t.projectId} not found, skipped`);
+            skipped++;
+            continue;
+          }
+          const createdBy = t.createdBy && validUserIds.has(t.createdBy) ? t.createdBy : null;
           await tx.insert(schema.tasks).values({
             id: t.id,
             projectId: t.projectId,
@@ -135,17 +155,24 @@ async function main() {
             priority: t.priority,
             notes: t.notes,
             sortOrder: t.sortOrder ?? 0,
-            createdBy: t.createdBy,
+            createdBy,
             createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
             updatedAt: t.updatedAt ? new Date(t.updatedAt) : new Date(),
           });
+          validTaskIds.add(t.id);
         }
-        console.log(`  Tasks: ${backup.data.tasks.length} restored`);
+        console.log(`  Tasks: ${backup.data.tasks.length - skipped} restored${skipped ? ` (${skipped} skipped)` : ''}`);
       }
 
-      // Restore subtasks
+      // Restore subtasks (validate taskId FK)
       if (backup.data.subtasks?.length > 0) {
+        let skipped = 0;
         for (const s of backup.data.subtasks) {
+          if (!validTaskIds.has(s.taskId)) {
+            console.warn(`  [WARN] Subtask "${s.name}": taskId ${s.taskId} not found, skipped`);
+            skipped++;
+            continue;
+          }
           await tx.insert(schema.subtasks).values({
             id: s.id,
             taskId: s.taskId,
@@ -158,27 +185,41 @@ async function main() {
             createdAt: s.createdAt ? new Date(s.createdAt) : new Date(),
           });
         }
-        console.log(`  Subtasks: ${backup.data.subtasks.length} restored`);
+        console.log(`  Subtasks: ${backup.data.subtasks.length - skipped} restored${skipped ? ` (${skipped} skipped)` : ''}`);
       }
 
-      // Restore links
+      // Restore links (validate taskId + createdBy FK)
       if (backup.data.links?.length > 0) {
+        let skipped = 0;
         for (const l of backup.data.links) {
+          if (!validTaskIds.has(l.taskId)) {
+            console.warn(`  [WARN] Link "${l.url}": taskId ${l.taskId} not found, skipped`);
+            skipped++;
+            continue;
+          }
+          const createdBy = l.createdBy && validUserIds.has(l.createdBy) ? l.createdBy : null;
           await tx.insert(schema.links).values({
             id: l.id,
             taskId: l.taskId,
             url: l.url,
             title: l.title,
-            createdBy: l.createdBy,
+            createdBy,
             createdAt: l.createdAt ? new Date(l.createdAt) : new Date(),
           });
         }
-        console.log(`  Links: ${backup.data.links.length} restored`);
+        console.log(`  Links: ${backup.data.links.length - skipped} restored${skipped ? ` (${skipped} skipped)` : ''}`);
       }
 
-      // Restore files (metadata only)
+      // Restore files (validate taskId + createdBy FK, metadata only)
       if (backup.data.files?.length > 0) {
+        let skipped = 0;
         for (const f of backup.data.files) {
+          if (!validTaskIds.has(f.taskId)) {
+            console.warn(`  [WARN] File "${f.name}": taskId ${f.taskId} not found, skipped`);
+            skipped++;
+            continue;
+          }
+          const createdBy = f.createdBy && validUserIds.has(f.createdBy) ? f.createdBy : null;
           await tx.insert(schema.files).values({
             id: f.id,
             taskId: f.taskId,
@@ -186,11 +227,11 @@ async function main() {
             size: f.size,
             mimeType: f.mimeType,
             r2Key: f.r2Key,
-            createdBy: f.createdBy,
+            createdBy,
             createdAt: f.createdAt ? new Date(f.createdAt) : new Date(),
           });
         }
-        console.log(`  Files: ${backup.data.files.length} restored (metadata only)`);
+        console.log(`  Files: ${backup.data.files.length - skipped} restored (metadata only)${skipped ? ` (${skipped} skipped)` : ''}`);
       }
 
       // Restore config
@@ -204,6 +245,41 @@ async function main() {
           });
         }
         console.log(`  Config: ${backup.data.config.length} restored`);
+      }
+
+      // Restore audit log (backward compatible — skip if not in backup, validate userId FK)
+      if (backup.data.auditLog?.length > 0) {
+        for (const a of backup.data.auditLog) {
+          const userId = a.userId && validUserIds.has(a.userId) ? a.userId : null;
+          await tx.insert(schema.auditLog).values({
+            id: a.id,
+            action: a.action,
+            userId,
+            resourceType: a.resourceType,
+            resourceId: a.resourceId,
+            detail: a.detail,
+            createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
+          });
+        }
+        console.log(`  Audit Log: ${backup.data.auditLog.length} restored`);
+      }
+
+      // Restore backup history (backward compatible)
+      if (backup.data.backupHistory?.length > 0) {
+        for (const b of backup.data.backupHistory) {
+          await tx.insert(schema.backupHistory).values({
+            id: b.id,
+            target: b.target,
+            fileName: b.fileName,
+            fileSize: b.fileSize,
+            status: b.status,
+            error: b.error,
+            durationMs: b.durationMs,
+            tableCounts: b.tableCounts,
+            createdAt: b.createdAt ? new Date(b.createdAt) : new Date(),
+          });
+        }
+        console.log(`  Backup History: ${backup.data.backupHistory.length} restored`);
       }
     });
 

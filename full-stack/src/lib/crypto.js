@@ -47,12 +47,16 @@ export function decrypt(encryptedBase64, secret = process.env.SESSION_SECRET) {
     return decipher.update(ciphertext) + decipher.final('utf8');
   } catch {
     // Fallback: legacy format iv(16) + authTag(16) + ciphertext (fixed salt)
-    const key = deriveKey(secret, LEGACY_SALT);
-    const iv = buf.subarray(0, IV_LENGTH);
-    const authTag = buf.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
-    const ciphertext = buf.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
-    const decipher = createDecipheriv(ALGORITHM, key, iv);
-    decipher.setAuthTag(authTag);
-    return decipher.update(ciphertext) + decipher.final('utf8');
+    try {
+      const key = deriveKey(secret, LEGACY_SALT);
+      const iv = buf.subarray(0, IV_LENGTH);
+      const authTag = buf.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+      const ciphertext = buf.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
+      const decipher = createDecipheriv(ALGORITHM, key, iv);
+      decipher.setAuthTag(authTag);
+      return decipher.update(ciphertext) + decipher.final('utf8');
+    } catch {
+      throw new Error('Decryption failed: invalid format or corrupted data');
+    }
   }
 }

@@ -1,12 +1,12 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
 
-export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5 }) {
+function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5 }) {
   const { X, SC } = useTheme();
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
@@ -201,3 +201,5 @@ export default function OverviewTab({ filtered, twp, allS, isMobile, pcMap, gant
     </div>
   </>);
 }
+
+export default memo(OverviewTab);

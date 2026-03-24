@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toISO, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
@@ -14,7 +14,7 @@ const SUB_EDITABLE_COLS = ["name","owner","notes"];
 const COL_POS = { project: 0, task: 1, name: 1, owner: 2, status: 3, priority: 4, category: 6, start: 7, end: 8, notes: 9 };
 const getEditableCols = (type) => type === "sub" ? SUB_EDITABLE_COLS : EDITABLE_COLS;
 
-export default function DataTab({
+function DataTab({
   filtered, allS, allT, twp, projects,
   updateTask, deleteTask, addTask, toggleSub, updateSub, addSub, deleteSub,
   configCats, configOwners,
@@ -128,12 +128,14 @@ export default function DataTab({
     initialTypedChar: activeCell?.rowId === rowId && activeCell?.colKey === colKey ? initialTypedChar : null,
   }), [activeCell, editingCell, initialTypedChar, navigate]);
 
+  const activeCellRef = useRef(activeCell);
+  useEffect(() => { activeCellRef.current = activeCell; }, [activeCell]);
+
   useEffect(() => {
-    if (!activeCell) return;
-    const h = (e) => { if (tableRef.current && !tableRef.current.contains(e.target)) { setActiveCell(null); setEditingCell(false); setInitialTypedChar(null); } };
+    const h = (e) => { if (activeCellRef.current && tableRef.current && !tableRef.current.contains(e.target)) { setActiveCell(null); setEditingCell(false); setInitialTypedChar(null); } };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, [activeCell]);
+  }, []);
 
   useEffect(() => {
     if (activeCell && !editingCell) tableRef.current?.focus();
@@ -354,3 +356,5 @@ export default function DataTab({
     </>
   );
 }
+
+export default memo(DataTab);

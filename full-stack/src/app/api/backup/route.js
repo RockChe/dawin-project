@@ -3,14 +3,19 @@ import { getSession } from '@/lib/auth';
 import { cronBackup } from '@/server/actions/backup';
 import { exportAllTables } from '@/lib/backup';
 import { db } from '@/server/db';
+import { timingSafeEqual } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for backup
 
 // POST — Vercel Cron trigger
 export async function POST(request) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const authHeader = request.headers.get('authorization') || '';
+  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  // Timing-safe comparison to prevent timing attacks
+  const authBuf = Buffer.from(authHeader);
+  const expectedBuf = Buffer.from(expected);
+  if (authBuf.length !== expectedBuf.length || !timingSafeEqual(authBuf, expectedBuf)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
