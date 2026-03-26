@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { users, projects, tasks, subtasks, links, files, configTable } from '@/server/db/schema';
+import { users, projects, tasks, subtasks, links, files, configTable, auditLog, backupHistory } from '@/server/db/schema';
 import { asc, desc } from 'drizzle-orm';
 
 const BACKUP_VERSION = '1.0';
@@ -16,6 +16,8 @@ export async function exportAllTables(db) {
     allLinks,
     allFiles,
     allConfig,
+    allAuditLog,
+    allBackupHistory,
   ] = await Promise.all([
     db.select({
       id: users.id,
@@ -32,13 +34,15 @@ export async function exportAllTables(db) {
     db.select().from(links).orderBy(desc(links.createdAt)),
     db.select().from(files).orderBy(desc(files.createdAt)),
     db.select().from(configTable),
+    db.select().from(auditLog).orderBy(desc(auditLog.createdAt)),
+    db.select().from(backupHistory).orderBy(desc(backupHistory.createdAt)),
   ]);
 
   return {
     meta: {
       version: BACKUP_VERSION,
       createdAt: new Date().toISOString(),
-      tables: ['users', 'projects', 'tasks', 'subtasks', 'links', 'files', 'config'],
+      tables: ['users', 'projects', 'tasks', 'subtasks', 'links', 'files', 'config', 'auditLog', 'backupHistory'],
       counts: {
         users: allUsers.length,
         projects: allProjects.length,
@@ -47,6 +51,8 @@ export async function exportAllTables(db) {
         links: allLinks.length,
         files: allFiles.length,
         config: allConfig.length,
+        auditLog: allAuditLog.length,
+        backupHistory: allBackupHistory.length,
       },
     },
     data: {
@@ -57,6 +63,8 @@ export async function exportAllTables(db) {
       links: allLinks,
       files: allFiles,
       config: allConfig,
+      auditLog: allAuditLog,
+      backupHistory: allBackupHistory,
     },
   };
 }

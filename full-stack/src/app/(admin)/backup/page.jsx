@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { downloadCSV } from '@/lib/utils';
 import {
   getBackupSettings,
   saveBackupSettings,
@@ -31,6 +32,8 @@ export default function BackupPage() {
   });
   const [history, setHistory] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [auditFilter, setAuditFilter] = useState({ action: '', keyword: '', dateFrom: '', dateTo: '' });
+  const [auditSearching, setAuditSearching] = useState(false);
   const [activeTab, setActiveTab] = useState('backup'); // 'backup' | 'audit'
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -182,6 +185,58 @@ export default function BackupPage() {
         ? prev.targets.filter(t => t !== target)
         : [...prev.targets, target],
     }));
+  };
+
+  // ── Audit Log Search ──
+  const searchAuditLogs = async (filters) => {
+    setAuditSearching(true);
+    const res = await getAuditLogs(filters);
+    setAuditSearching(false);
+    if (res.error) { showMsg(res.error, true); return; }
+    setAuditLogs(res.data || []);
+  };
+
+  const handleAuditSearch = () => {
+    searchAuditLogs(auditFilter);
+  };
+
+  const handleAuditClear = () => {
+    const empty = { action: '', keyword: '', dateFrom: '', dateTo: '' };
+    setAuditFilter(empty);
+    searchAuditLogs(empty);
+  };
+
+  const handleExportCSV = () => {
+    if (auditLogs.length === 0) return;
+    const header = ['時間', '操作者', '動作', '對象', '備註'];
+    const rows = auditLogs.map(r => [
+      formatTime(r.createdAt),
+      r.userName || r.userEmail || '',
+      actionLabel(r.action),
+      r.resourceType || '',
+      (r.detail || '').replace(/"/g, '""'),
+    ]);
+    const csv = [header.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+    downloadCSV(csv, `audit-log-${new Date().toISOString().slice(0, 10)}.csv`);
+  };
+
+  const handleExportJSON = () => {
+    if (auditLogs.length === 0) return;
+    const data = auditLogs.map(r => ({
+      time: r.createdAt,
+      user: r.userName || r.userEmail || null,
+      action: r.action,
+      resourceType: r.resourceType,
+      resourceId: r.resourceId,
+      detail: r.detail,
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ── Styles ──
@@ -473,6 +528,65 @@ export default function BackupPage() {
       {activeTab === 'audit' && (
         <div style={sectionStyle}>
           <h3 style={sectionTitle}>操作記錄</h3>
+
+          {/* ── Search Bar ── */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
+            <div>
+              <label style={labelStyle}>操作類型</label>
+              <select
+                value={auditFilter.action}
+                onChange={e => setAuditFilter(f => ({ ...f, action: e.target.value }))}
+                style={{ ...inputStyle, width: 140, fontFamily: 'inherit' }}
+              >
+                <option value="">全部</option>
+                {Object.entries(ACTION_MAP).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>關鍵字</label>
+              <input
+                value={auditFilter.keyword}
+                onChange={e => setAuditFilter(f => ({ ...f, keyword: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && handleAuditSearch()}
+                style={{ ...inputStyle, width: 160 }}
+                placeholder="操作者 / 備註"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>起始日期</label>
+              <input
+                type="date"
+                value={auditFilter.dateFrom}
+                onChange={e => setAuditFilter(f => ({ ...f, dateFrom: e.target.value }))}
+                style={{ ...inputStyle, width: 140, fontFamily: 'inherit' }}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>結束日期</label>
+              <input
+                type="date"
+                value={auditFilter.dateTo}
+                onChange={e => setAuditFilter(f => ({ ...f, dateTo: e.target.value }))}
+                style={{ ...inputStyle, width: 140, fontFamily: 'inherit' }}
+              />
+            </div>
+            <button onClick={handleAuditSearch} disabled={auditSearching} style={btnPrimary}>
+              {auditSearching ? '搜尋中...' : '搜尋'}
+            </button>
+            <button onClick={handleAuditClear} style={btnSecondary}>清除</button>
+            <div style={{ flex: 1 }} />
+            <button onClick={handleExportCSV} disabled={auditLogs.length === 0} style={{ ...btnSecondary, opacity: auditLogs.length === 0 ? 0.5 : 1 }}>
+              CSV
+            </button>
+            <button onClick={handleExportJSON} disabled={auditLogs.length === 0} style={{ ...btnSecondary, opacity: auditLogs.length === 0 ? 0.5 : 1 }}>
+              JSON
+            </button>
+          </div>
+
+          {/* ── Results ── */}
+          <div style={{ fontSize: 12, color: '#9B9A97', marginBottom: 8 }}>共 {auditLogs.length} 筆記錄</div>
           {auditLogs.length === 0 ? (
             <div style={{ color: '#9B9A97', fontSize: 14, padding: '20px 0', textAlign: 'center' }}>尚無操作記錄</div>
           ) : (
