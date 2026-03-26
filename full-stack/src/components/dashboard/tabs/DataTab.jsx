@@ -213,7 +213,7 @@ function DataTab({
                       <span style={{ fontSize: 13, color: X.textSec }}>{d.owner}</span>
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: pc.color }} />
                       <span style={{ fontSize: 13, color: pc.color, fontWeight: 500 }}>{d.priority}</span>
-                      <div style={{ flex: 1, marginLeft: 4 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} /></div>
+                      <div style={{ flex: 1, marginLeft: 4 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></div>
                     </div>
                     <div style={{ fontSize: 12, fontFamily: FM, color: X.textDim, paddingLeft: 14, display: "flex", alignItems: "center", gap: 6 }}>
                       {fD(d.start)} → {fD(d.end)}
@@ -275,7 +275,7 @@ function DataTab({
                       <td style={{ padding: "9px 4px", fontSize: 14 }}><select value={d.owner || ""} onChange={e => updateTask(d.id, "owner", e.target.value)} onClick={e => e.stopPropagation()} style={{ fontFamily: FM, fontSize: 13, padding: "2px 4px", borderRadius: 6, border: `1px solid ${X.border}`, background: X.surface, color: X.textSec, cursor: "pointer", outline: "none", maxWidth: 100 }}><option value="">—</option>{d.owner && !configOwners.includes(d.owner) && <option value={d.owner}>{d.owner}</option>}{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={["已完成", "進行中", "待辦", "提案中", "待確認"]} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /></td>
-                      <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} /></td>
+                      <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.category} onSave={v => updateTask(d.id, "category", v)} {...cellP(d.id, "category")} options={configCats} style={{ padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.start} onSave={v => updateTask(d.id, "start", v)} {...cellP(d.id, "start")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.end} onSave={v => updateTask(d.id, "end", v)} {...cellP(d.id, "end")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /></td>

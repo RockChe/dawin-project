@@ -11,12 +11,13 @@ export default function ProjectDetail({ initialData }) {
   const { project, tasks, subtasks } = initialData;
 
   const tasksWithProgress = tasks.map(t => {
-    const p = computeProgress(t.id, subtasks);
+    const p = computeProgress(t.id, subtasks, t);
     return {
       ...t,
       progress: t.status === '已完成' ? 100 : p.pct,
       sDone: p.done,
       sTotal: p.total,
+      timeBased: p.timeBased || false,
     };
   });
 
@@ -70,9 +71,9 @@ export default function ProjectDetail({ initialData }) {
                   {task.owner && <span style={{ fontSize: 12, color: X.textSec }}>{task.owner}</span>}
                   {task.startDate && <span style={{ fontSize: 12, color: X.textDim, fontFamily: FM }}>{fD(task.startDate)} → {fD(task.endDate)}</span>}
                 </div>
-                {tSubs.length > 0 && (
+                {(tSubs.length > 0 || task.timeBased) && (
                   <div style={{ marginTop: 6, maxWidth: 200 }}>
-                    <ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} />
+                    <ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} timeBased={task.timeBased} />
                   </div>
                 )}
               </div>

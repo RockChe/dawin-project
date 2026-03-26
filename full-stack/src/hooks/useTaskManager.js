@@ -470,7 +470,7 @@ export default function useTaskManager(initialData) {
 
   // ── Computed: tasks with progress ──
   const twp = useMemo(() => {
-    const progressMap = computeAllProgress(allS);
+    const progressMap = computeAllProgress(allS, allT);
     const projMap = new Map(projects.map(pr => [pr.id, pr.name]));
     return allT.map(t => {
       const p = progressMap.get(t.id) || { total: 0, done: 0, pct: 0 };
@@ -480,6 +480,7 @@ export default function useTaskManager(initialData) {
         progress: t.status === '已完成' ? 100 : p.pct,
         sDone: p.done,
         sTotal: p.total,
+        timeBased: p.timeBased || false,
         start: t.startDate,
         end: t.endDate,
       };

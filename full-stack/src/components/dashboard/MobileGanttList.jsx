@@ -32,7 +32,7 @@ export default function MobileGanttList({ tasks, subtasks, fp, fs, fpr, timeDim 
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {group.tasks.map(t => { const sc = SC[t.status] || {}; const pc = PC[t.priority] || {}; const bc = pcMap[t.project] || X.accent;
-              const prog = computeProgress(t.id, subtasks); const pct = t.status === "已完成" ? 100 : prog.pct;
+              const prog = computeProgress(t.id, subtasks, t); const pct = t.status === "已完成" ? 100 : prog.pct;
               return (
                 <div key={t.id} style={{ display: "flex", gap: 10, padding: "10px 12px", background: X.surface, borderRadius: 10, border: `1px solid ${X.border}` }}>
                   <div style={{ width: 4, borderRadius: 2, background: bc, flexShrink: 0, alignSelf: "stretch" }} />

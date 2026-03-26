@@ -72,7 +72,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
     const rows = []; Object.keys(pMap).forEach(proj => {
       rows.push({ type: "h", proj, n: pMap[proj].length });
       pMap[proj].forEach(task => { const s = pD(task.start), e = pD(task.end); const l = ((s - mn) / 864e5) / td * 100, w = Math.max(0.3, ((e - s) / 864e5 + 1) / td * 100);
-        const prog = computeProgress(task.id, subtasks);
+        const prog = computeProgress(task.id, subtasks, task);
         rows.push({ type: "t", task: { ...task, progress: task.status === "已完成" ? 100 : prog.pct }, proj, l, w });
       });
     });

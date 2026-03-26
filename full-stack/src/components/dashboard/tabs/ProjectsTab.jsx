@@ -256,7 +256,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
                 </div>
               </div>
               <span style={{ fontSize: 14, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600 }}>{task.status}</span>
-              <div style={{ width: 90 }}><ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} /></div>
+              <div style={{ width: 90 }}><ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} timeBased={task.timeBased} /></div>
               <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(task.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "4px 6px" }}>×</button>
             </div>
             {tSubs.length > 0 && (() => { const sortedSubs = [...tSubs].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); return <div style={{ paddingLeft: 32, paddingRight: 20, paddingBottom: sortedSubs.length > 0 ? 4 : 0 }}>

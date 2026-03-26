@@ -15,14 +15,34 @@ export function fD(s) { return s ? s.replace(/\//g, ".").replace(/-/g, ".") : "\
 export function toISO(s) { if (!s) return ""; const p = s.split(" "); return p[0].replace(/[\/\.]/g, "-"); }
 export function fromISO(s) { if (!s) return ""; const p = s.split(" "); return p[0].replace(/-/g, "/"); }
 
-export function computeProgress(tid, subs) {
-  const s = subs.filter(x => x.taskId === tid);
-  if (!s.length) return { total: 0, done: 0, pct: 0 };
-  const d = s.filter(x => x.done).length;
-  return { total: s.length, done: d, pct: Math.round(d / s.length * 100) };
+export function computeTimeProgress(startDate, endDate) {
+  if (!startDate || !endDate) return 0;
+  const start = pD(startDate), end = pD(endDate);
+  if (!start || !end) return 0;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const s0 = new Date(start); s0.setHours(0, 0, 0, 0);
+  const e0 = new Date(end); e0.setHours(0, 0, 0, 0);
+  if (today < s0) return 0;
+  if (today >= e0) return 100;
+  const total = (e0 - s0) / 864e5;
+  if (total <= 0) return 100;
+  return Math.round(((today - s0) / 864e5) / total * 100);
 }
 
-export function computeAllProgress(subs) {
+export function computeProgress(tid, subs, task = null) {
+  const s = subs.filter(x => x.taskId === tid);
+  if (s.length) {
+    const d = s.filter(x => x.done).length;
+    return { total: s.length, done: d, pct: Math.round(d / s.length * 100) };
+  }
+  if (task) {
+    const sd = task.startDate || task.start, ed = task.endDate || task.end;
+    if (sd && ed) return { total: 0, done: 0, pct: computeTimeProgress(sd, ed), timeBased: true };
+  }
+  return { total: 0, done: 0, pct: 0 };
+}
+
+export function computeAllProgress(subs, tasks = []) {
   const map = new Map();
   for (const s of subs) {
     let entry = map.get(s.taskId);
@@ -32,6 +52,12 @@ export function computeAllProgress(subs) {
   }
   for (const entry of map.values()) {
     entry.pct = entry.total ? Math.round(entry.done / entry.total * 100) : 0;
+  }
+  for (const t of tasks) {
+    if (!map.has(t.id)) {
+      const sd = t.startDate || t.start, ed = t.endDate || t.end;
+      if (sd && ed) map.set(t.id, { total: 0, done: 0, pct: computeTimeProgress(sd, ed), timeBased: true });
+    }
   }
   return map;
 }
