@@ -34,3 +34,5 @@ yarn-error.log*
 
 # Backup files
 **/backups/
+
+.vercel

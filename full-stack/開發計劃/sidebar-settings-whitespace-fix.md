@@ -28,7 +28,7 @@ After:  Header → UserInfo(border-b) → Nav(flex-1)
 
 新增兩組 localStorage state（跟隨既有 `ganttWidths` 模式）：
 
-- `ganttHeights` / `ganttHeightsDraft` — key: `dash-ganttHeights`，default: `{ header: 48, projectRow: 32, taskRow: 40, taskBarHeight: 20, taskBarTop: 10 }`
+- `timelineHeight` — key: `dash-timelineHeight`，default: `100`（單位 vh，控制 GanttTimeline 容器的 maxHeight）
 - `upcomingDays` — key: `dash-upcomingDays`，default: `30`
 - `upcomingLimit` — key: `dash-upcomingLimit`，default: `5`
 
@@ -38,21 +38,10 @@ Prop 傳遞：
 - `TimelineTab` 加傳 `ganttHeights`
 - `SettingsTab` 加傳 `ganttHeightsDraft`, `setGanttHeightsDraft`, `saveGanttHeights`, `upcomingDays`, `upcomingLimit`, `saveUpcomingSettings`
 
-### 2b. GanttTimeline.jsx — 接收 ganttHeights prop
+### 2b. GanttTimeline.jsx — 接收 timelineHeight prop
 
-Props 加入 `ganttHeights`，定義 fallback：
-```js
-const gh = ganttHeights || { header: 48, projectRow: 32, taskRow: 40, taskBarHeight: 20, taskBarTop: 10 };
-```
-
-替換所有硬編碼高度：
-| 原始值 | 替換為 |
-|--------|--------|
-| `height: 48` (header) | `height: gh.header` |
-| `height: 32` (project row) | `height: gh.projectRow` |
-| `height: 40` (task row) | `height: gh.taskRow` |
-| `top: 10, height: 20` (task bar) | `top: gh.taskBarTop, height: gh.taskBarHeight` |
-| `top: 13` (progress text) | `top: gh.taskBarTop + 3` |
+- Props 加入 `timelineHeight`
+- 容器 `maxHeight: "100vh"` → `maxHeight: \`${timelineHeight || 100}vh\``
 
 ### 2c. OverviewTab.jsx — 接收 upcomingDays + upcomingLimit props
 
@@ -74,7 +63,7 @@ const gh = ganttHeights || { header: 48, projectRow: 32, taskRow: 40, taskBarHei
 ### 2f. SettingsTab.jsx — 新增 Display Settings 卡片
 
 新增一張設定卡片，包含：
-1. **Timeline Row Height** — 4 個 number input (Header / Project Row / Task Row / Task Bar Height)
+1. **Timeline Height** — 1 個 number input（容器高度，單位 vh，預設 100）
 2. **Upcoming Deadlines** — 2 個 number input (Days ahead + 顯示筆數)
 
 跟隨既有 Timeline Width 卡片的 UI 風格（2x2 grid + Save 按鈕）。
