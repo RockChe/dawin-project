@@ -23,26 +23,34 @@
 src/
 ├── app/
 │   ├── (admin)/users/         # 使用者管理頁（super_admin 限定）
+│   ├── (admin)/backup/        # 備份管理頁（admin 限定）
 │   ├── (auth)/login/          # 登入頁
 │   ├── (auth)/set-password/   # 首次登入設定密碼
 │   ├── (dashboard)/dashboard/ # 主儀表板
 │   ├── (dashboard)/project/[id]/ # 專案詳情頁
-│   └── api/                   # API routes (upload, download, fetch-csv, health)
+│   └── api/                   # API routes (upload, upload-banner, download, backup, fetch-csv, health)
 ├── components/
 │   ├── ThemeProvider.jsx      # 主題 Context Provider + useTheme hook
 │   └── dashboard/             # 17 個元件 + tabs/ (6 個子元件)
 ├── hooks/useTaskManager.js    # 核心狀態管理 hook
 ├── lib/
 │   ├── auth.js                # Session 認證（7 天過期）
+│   ├── audit.js               # 審計日誌記錄（logAudit）
+│   ├── backup.js              # 備份導出/上傳/清理（R2 + Google Drive）
+│   ├── crypto.js              # AES-256-GCM 加密解密（敏感設定保護）
 │   ├── r2.js                  # R2 檔案操作
 │   ├── theme.js               # 主題常數與工廠函式（THEMES, F, FM, mkSC 等）
-│   └── utils.js               # 日期格式化、進度計算、CSV 工具
+│   └── utils.js               # 日期格式化、進度計算（子任務/時間雙模式）、CSV 工具
 ├── server/
-│   ├── actions/               # Server Actions（auth, config, projects, tasks, users）
+│   ├── actions/               # Server Actions（auth, backup, config, projects, tasks, users）
 │   └── db/
 │       ├── index.js           # Neon 連線
 │       └── schema.js          # Drizzle schema 定義
 └── middleware.js               # 路由保護
+
+scripts/
+├── backup.js                  # CLI 手動備份指令
+└── restore.js                 # CLI 恢復指令（transaction + 臨時密碼）
 ```
 
 ## 資料庫 Schema
@@ -55,18 +63,20 @@ src/
 | statusEnum | `'task_status'` | `'已完成'`, `'進行中'`, `'待辦'`, `'提案中'`, `'待確認'` |
 | priorityEnum | `'priority'` | `'高'`, `'中'`, `'低'` |
 
-### Tables（8 張）
+### Tables（10 張）
 
 | 表 | 用途 | 關鍵欄位 |
 |----|------|---------|
 | users | 使用者帳號 | id, email, passwordHash, role, name, mustChangePassword |
 | sessions | 登入 session | id, userId→users, token, expiresAt |
-| projects | 專案 | id, name, sortOrder, createdBy→users |
+| projects | 專案 | id, name, sortOrder, bannerR2Key, createdBy→users |
 | tasks | 任務 | id, projectId→projects, task, status, category, startDate, endDate, duration, owner, priority, notes, sortOrder |
 | subtasks | 子任務 | id, taskId→tasks, name, owner, done, doneDate, notes, sortOrder |
 | links | 連結 | id, taskId→tasks, url, title, createdBy→users |
 | configTable | 系統設定 | id, key(unique), value |
 | files | 檔案記錄 | id, taskId→tasks, name, size, mimeType, r2Key, createdBy→users |
+| audit_log | 操作審計 | id, action, userId→users, resourceType, resourceId, detail, createdAt |
+| backup_history | 備份記錄 | id, target, fileName, fileSize, status, error, durationMs, tableCounts, createdAt |
 
 定義在 `src/server/db/schema.js`（Drizzle schema）。
 
@@ -95,6 +105,8 @@ export async function actionName(params) {
 - **樂觀更新**：先更新本地狀態，失敗時 rollback
 - **sessionStorage 快取**：key = `'dash_cache'`
 - **Auth 錯誤處理**：偵測到未授權時自動跳轉 `/login`
+- **Owner 來源**：純粹以 Users 表為唯一來源，UI 使用下拉選單（非自由輸入）
+- **進度計算**（`twp`）：有子任務 → 完成率；無子任務 → 時間進度（`computeTimeProgress`）；`timeBased` 旗標區分顯示模式
 - 預設分類：`['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展']`
 
 ### UI 慣例
@@ -114,6 +126,8 @@ export async function actionName(params) {
 - **configTable 命名**：schema 中 export 名為 `configTable`（非 `config`），因為 `config` 與 Next.js 保留名衝突。在 `actions/config.js` 中用 `import { configTable as config }` 別名使用
 - **bcryptjs**：必須在 `next.config.js` 設定 `serverExternalPackages: ['bcryptjs']`，防止打包到 client
 - **middleware 限制**：`middleware.js` 只檢查 cookie 是否存在，不驗證 session 有效性。實際驗證在各 Server Action 中進行
+- **SESSION_SECRET**：用於 AES-256-GCM 加密 configTable 中的敏感設定（備份 API Key 等），至少 32 字元隨機字串
+- **CRON_SECRET**：Vercel Cron 觸發 `/api/backup` POST 時的 Bearer token 驗證，防止未授權存取。需在 Vercel 環境變數中設定
 
 ## 關鍵參考檔案
 
@@ -125,6 +139,9 @@ export async function actionName(params) {
 - `src/lib/theme.js` — 主題常數與工廠函式
 - `src/components/dashboard/Dashboard.jsx` — 主元件（187 行）
 - `src/components/dashboard/tabs/` — 6 個 tab 子元件
+- `src/lib/backup.js` — 備份核心函式庫（導出/上傳/清理）
+- `src/server/actions/backup.js` — 備份 Server Actions（設定/觸發/歷史/審計）
+- `src/app/(admin)/backup/page.jsx` — 備份管理 UI
 
 ---
 

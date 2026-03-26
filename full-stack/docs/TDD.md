@@ -173,6 +173,137 @@ xhr.upload.onprogress = (ev) => {
 
 ---
 
+### 功能：資料庫自動備份機制
+
+- **套件**：`@aws-sdk/client-s3`（R2）+ `googleapis`（Google Drive）+ Node.js `crypto`（AES-256-GCM）
+- **實作**：
+
+**三種觸發方式**：
+1. **手動觸發**：管理員在 `/backup` 頁面點擊「立即備份」→ `triggerBackup()` Server Action
+2. **Cron 排程**：Vercel Cron `POST /api/backup`（Bearer CRON_SECRET）→ `cronBackup()`（檢查頻率間隔）
+3. **CLI 指令**：`node scripts/backup.js [--r2] [--gdrive]`（開發環境）
+
+**備份流程**：
+```
+exportAllTables(db)          → 導出 7 張表（users, projects, tasks, subtasks, links, files, config）
+  ↓
+generateBackupFileName()     → dawin-backup-{timestamp}.json
+  ↓
+┌── uploadToR2()             → S3 PutObjectCommand（分離帳戶 credentials）
+└── uploadToGoogleDrive()    → JWT Service Account + files.create
+  ↓
+cleanupR2Backups() / cleanupGDriveBackups()  → 保留 N 份，刪除最舊
+  ↓
+backupHistory 表              → 記錄成功/失敗、耗時、各表計數
+auditLog 表                   → 記錄 BACKUP_TRIGGER 操作
+```
+
+**備份格式**：
+```json
+{
+  "meta": { "version": "1.0", "createdAt": "...", "tables": [...], "counts": {...} },
+  "data": { "users": [...], "projects": [...], ... }
+}
+```
+
+**加密設定**（`crypto.js`）：
+- 演算法：AES-256-GCM（Galois/Counter Mode，含認證）
+- 流程：randomBytes(salt 16) + randomBytes(iv 16) → scryptSync(secret, salt) → createCipheriv → Base64 輸出
+- 加密欄位：`backup_r2_access_key`、`backup_r2_secret_key`、`backup_gdrive_key`
+- 向下相容：decrypt 優先嘗試新格式（隨機 salt），失敗 fallback 舊格式（固定 salt）
+
+**恢復流程**（`scripts/restore.js`）：
+- Neon WebSocket Pool（支援 transaction）
+- 驗證備份格式 → 預計算 bcrypt 密碼 → transaction 內清除舊資料（倒序 FK）→ transaction 內恢復新資料（正序）
+- 失敗自動 rollback，無中間狀態
+- 為所有用戶生成臨時密碼 + mustChangePassword = true
+
+**Cron 頻率控制**：
+```javascript
+const hoursSince = (now - lastSuccessBackup) / 3600000;
+if (hoursSince < frequency) return { skipped: true };
+```
+
+- **關鍵檔案**：
+  - `src/lib/backup.js` — 核心導出/上傳/清理函式
+  - `src/lib/crypto.js` — AES-256-GCM 加密解密
+  - `src/lib/audit.js` — 審計日誌記錄
+  - `src/server/actions/backup.js` — Server Actions（設定、觸發、歷史、審計查詢）
+  - `src/app/api/backup/route.js` — Cron POST + 下載 GET
+  - `src/app/(admin)/backup/page.jsx` — 管理 UI（設定 + 歷史 + 審計日誌）
+  - `scripts/backup.js` — CLI 備份指令
+  - `scripts/restore.js` — CLI 恢復指令（transaction + 臨時密碼）
+
+- **效能考量**：
+  - 雙目標並行上傳（Promise.allSettled）
+  - Cron 每日觸發但只在間隔足夠時執行，避免浪費資源
+  - `maxDuration = 60` 秒防止 Vercel 超時
+
+- **邊界處理**：
+  - 單一目標失敗不影響另一目標（獨立 try-catch）
+  - 清理失敗僅 log 不中斷主流程
+  - 恢復失敗完整 rollback
+  - 憑證不完整時提前返回錯誤
+
+---
+
+### 功能：專案圖示持久化
+
+- **套件**：`@aws-sdk/client-s3`（R2 上傳）+ 原生 `FormData`
+- **實作**：
+
+**上傳流程**：
+```
+ProjectsTab: 點擊圖示區域 → <input type="file" accept="image/*">
+  → 樂觀更新（FileReader data URL 預覽）
+  → POST /api/upload-banner (FormData: file + projectId)
+  → 驗證：session + UUID + 5MB 限制 + image/* MIME + 副檔名白名單
+  → 權限：createdBy === userId || super_admin
+  → uploadToR2(key, buffer, contentType)   key = projects/{id}/banner-{ts}.{ext}
+  → UPDATE projects SET bannerR2Key = key
+  → 刪除舊 banner（若存在）
+  → 回傳 { url: getDownloadUrl(key) }
+  → 失敗時 rollback 本地預覽
+```
+
+**刪除流程**：
+```
+SortableProjectCard: hover × 按鈕 → handleIconRemove(projectId)
+  → 樂觀更新（移除本地 banner）
+  → deleteProjectBanner(projectId) Server Action
+  → deleteFromR2(bannerR2Key)
+  → UPDATE projects SET bannerR2Key = null
+  → 失敗時恢復舊 banner URL
+```
+
+**初始載入**：
+- `getInitialData()` 在載入專案列表時，並行解析所有 `bannerR2Key` → `getDownloadUrl()`
+- 返回 `projBanners: { [projectId]: url }` 物件
+
+**顯示位置**：
+- SortableProjectCard（72×72 px，無圖示時顯示首字 + 虛線邊框）
+- OverviewTab（20×20 px，專案名稱旁）
+
+- **關鍵檔案**：
+  - `src/app/api/upload-banner/route.js` — 上傳 API（驗證 + 權限 + R2 + DB）
+  - `src/server/actions/projects.js` — `deleteProjectBanner()`、`deleteProject()` 含 banner 清理
+  - `src/server/actions/dashboard.js` — `getInitialData()` 含 banner URL 並行解析
+  - `src/components/dashboard/SortableProjectCard.jsx` — 卡片圖示顯示 + 刪除按鈕
+  - `src/components/dashboard/tabs/ProjectsTab.jsx` — 上傳 UI + 樂觀更新
+
+- **效能考量**：
+  - 樂觀更新避免等待 R2 上傳完成
+  - `getInitialData` 並行解析所有 banner URL（`Promise.all`），避免前端逐一請求
+  - 副檔名 + MIME 雙重驗證防止惡意檔案
+
+- **邊界處理**：
+  - 舊 banner 上傳新檔時自動刪除（防止 R2 孤檔）
+  - 專案刪除時連帶清理 banner
+  - R2 刪除失敗僅 log 不阻斷
+  - banner URL 解析失敗時該專案靜默跳過（不影響其他專案）
+
+---
+
 ### 功能：Dashboard Tab 架構
 
 - **套件**：React 19 條件渲染（無路由切換）
@@ -241,3 +372,53 @@ Dashboard.jsx
   - 行動版（768px breakpoint）：甘特圖切換為列表模式
   - localStorage 損壞：fallback 預設值
   - 搜尋跨多欄位（task, project, owner, notes）大小寫不敏感
+
+---
+
+### 功能：進度計算雙模式（子任務 vs 時間進度）
+
+- **套件**：無外部依賴，純 JavaScript 實作
+- **實作**：
+
+**雙模式邏輯**：
+```
+任務有子任務？
+├─ YES → 子任務完成率 = (已完成數 / 總數) × 100%
+└─ NO  → 有日期？
+         ├─ YES → 時間進度 = (已過天數 / 總天數) × 100%
+         └─ NO  → 0%
+最終：任務狀態 === '已完成' → 強制 100%
+```
+
+**核心函數** — `computeTimeProgress(startDate, endDate)`：
+- 用 `pD()` 解析日期，正規化為 00:00:00 比較
+- 今天 < start → 0%；今天 ≥ end → 100%；中間 → `(elapsed / total) × 100`
+- start = end（同一天）→ 100%
+
+**批量計算** — `computeAllProgress(subs, tasks)`：
+- 第一遍：遍歷子任務建立 `Map<taskId, {total, done, pct}>`
+- 第二遍：遍歷任務，無子任務者用 `computeTimeProgress` fallback
+- 結果物件含 `timeBased: true` 旗標，讓 UI 切換顯示格式
+
+**ProgressBar 顯示切換**：
+- 有子任務 → 顯示 `3/5`（完成數/總數）
+- 時間進度 → 顯示 `42%`（百分比）
+- 色彩邏輯不變：100% 綠 / ≥50% 琥珀 / >0% 強調色 / 0% 邊框色
+
+- **關鍵檔案**：
+  - `src/lib/utils.js:18-50` — `computeTimeProgress`、`computeProgress`、`computeAllProgress`
+  - `src/hooks/useTaskManager.js` — `twp` 計算（傳入 allT 啟用時間 fallback）
+  - `src/components/dashboard/ProgressBar.jsx` — `timeBased` prop 切換顯示
+  - `src/components/dashboard/GanttTimeline.jsx` — 甘特圖進度條
+  - `src/components/dashboard/MobileGanttList.jsx` — 行動版進度條
+
+- **效能考量**：
+  - `computeAllProgress` 單次遍歷所有子任務（O(n)），避免 per-task filter
+  - `computeTimeProgress` 純計算無 I/O，開銷極低
+  - 向後相容：第二參數 `tasks` 預設空陣列，不傳時行為不變
+
+- **邊界處理**：
+  - 無子任務 + 無日期 → pct=0，不顯示 ProgressBar
+  - 無子任務 + 同一天 start=end → 100%
+  - 今天超過 endDate → 100%（不會超過 100%）
+  - 任務狀態「已完成」→ 強制 100%，無視子任務或時間
