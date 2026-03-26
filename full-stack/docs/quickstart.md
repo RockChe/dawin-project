@@ -27,6 +27,8 @@ npm install
 | `R2_SECRET_ACCESS_KEY` | R2 Secret Key |
 | `R2_BUCKET_NAME` | R2 Bucket 名稱 |
 | `R2_PUBLIC_URL` | R2 公開存取 URL（選填） |
+| `SESSION_SECRET` | 加密備份設定用的密鑰，至少 32 字元隨機字串（必填） |
+| `CRON_SECRET` | Vercel Cron 驗證密鑰，防止未授權觸發備份（必填） |
 | `NEXT_PUBLIC_BASE_URL` | 應用程式 URL（如 `http://localhost:3000`） |
 
 ## 資料庫初始化
@@ -63,6 +65,8 @@ npm run dev
 | `npm run db:push` | 直接推送 schema 到資料庫（開發用） |
 | `npm run db:studio` | 開啟 Drizzle Studio（資料庫 GUI） |
 | `npm run seed` | 執行 seed 腳本建立預設帳號 |
+| `node scripts/backup.js [--r2] [--gdrive]` | CLI 手動備份（預設本地，可指定 R2 / Google Drive） |
+| `node scripts/restore.js <file> [--dry-run] [--confirm]` | CLI 恢復備份（支援乾跑模式） |
 
 ## 部署
 

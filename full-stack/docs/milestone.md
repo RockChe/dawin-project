@@ -23,11 +23,11 @@
 ## v0.3.0 — 功能擴展
 
 - 通知系統（任務到期提醒）
-- 活動紀錄 / Audit Log
+- ✅ 活動紀錄 / Audit Log
 - 報表 / 統計儀表板
 - Settings：上傳公司 Logo + 設定 Dashboard 標題
 - Settings：顯示 R2 儲存空間容量
-- 專案卡片：支援上傳 Profile 圖並顯示
+- ✅ 專案卡片：支援上傳 Profile 圖並顯示
 - ✅ 專案卡片排序順序可拖曳設定
 - REST API：`/api/mcp/*` endpoints 供外部服務存取（詳見 `docs/api-spec.md`）
 - MCP Server：本地 Claude Desktop 專用包裝，呼叫 REST API

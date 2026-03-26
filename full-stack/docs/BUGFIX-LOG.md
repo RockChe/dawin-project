@@ -89,3 +89,14 @@
 - **根因**：BUG-002 的 ThemeProvider 遷移中，主元件 `Sidebar` 有加 `useTheme()`，但子元件 `NavItem`（同一個檔案中的另一個 function component）被遺漏。NavItem 仍直接引用全域 `X`，但 mutable export 已被移除
 - **解法**：在 `NavItem` function component 開頭加入 `const { X } = useTheme()`
 - **教訓**：大規模重構時，用 `grep` 檢查所有使用位置（如 `grep -r "X\." src/`）。特別注意同一檔案中的多個 function component — 容易只改主元件而遺漏子元件。測試時要覆蓋所有路徑，不只測主路徑
+
+---
+
+### [BUG-009] GanttTimeline gw 變數作用域錯誤導致 webpack crash
+
+- **日期**：2026-03-22
+- **Commit**：`edbd2ca`
+- **症狀**：Dashboard 載入時 webpack 編譯失敗，GanttTimeline 元件 crash
+- **根因**：`gw` 變數定義在 `useMemo()` 回呼函式內部，但在 JSX return 中直接引用 `gw`，超出 `useMemo` 的區域作用域。webpack 在靜態分析時偵測到未定義的變數，導致編譯中斷
+- **解法**：移除 `useMemo` 內部的 `gw` 中間變數，改用 `ganttWidths` prop 直接存取（搭配 fallback 預設值）
+- **教訓**：`useMemo` / `useCallback` 內部的 `const` / `let` 變數只存在於回呼函式作用域中，不會暴露到元件的 JSX。若需要在 JSX 中使用計算結果，應作為 `useMemo` 的回傳值，或直接使用 props/state

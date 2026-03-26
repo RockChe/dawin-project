@@ -34,11 +34,11 @@
 - [ ] DashboardHeader 改為動態顯示 Logo 和標題
 - [ ] getInitialData() 擴展載入 dashboard_title, company_logo config
 
-### Feature 2: 專案卡片 Profile 圖
-- [ ] schema.js projects 表新增 imageR2Key 欄位
-- [ ] 執行 Drizzle migration
-- [ ] ProjectsTab 圖片上傳改為 R2 持久化（取代現有 data URL）
-- [ ] 移除 Dashboard.jsx 的 projIcons state
+### Feature 2: 專案卡片 Profile 圖 ✅
+- [x] schema.js projects 表新增 imageR2Key 欄位（實作為 bannerR2Key）
+- [x] 執行 Drizzle migration（0001_certain_ben_grimm.sql）
+- [x] ProjectsTab 圖片上傳改為 R2 持久化（/api/upload-banner + deleteProjectBanner）
+- [x] 移除 Dashboard.jsx 的 projIcons state（改用 getInitialData 並行解析 bannerUrl）
 
 ### Feature 3: Settings — R2 儲存空間容量
 - [ ] 新增 storage.js server action（查詢 files 表 SUM + 系統資產）
