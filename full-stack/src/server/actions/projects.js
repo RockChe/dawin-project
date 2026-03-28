@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/server/db';
-import { projects, tasks, subtasks } from '@/server/db/schema';
+import { projects, tasks, subtasks, users } from '@/server/db/schema';
 import { eq, asc, inArray, sql } from 'drizzle-orm';
 import { safeRequireAuth } from '@/lib/auth';
 import { isValidUUID } from '@/lib/utils';
@@ -11,7 +11,13 @@ import { logAudit } from '@/lib/audit';
 export async function getProjects() {
   const { error } = await safeRequireAuth();
   if (error) return { error };
-  return db.select().from(projects).orderBy(asc(projects.sortOrder), asc(projects.createdAt));
+  return db.select({
+    id: projects.id, name: projects.name, bannerR2Key: projects.bannerR2Key,
+    sortOrder: projects.sortOrder, source: projects.source,
+    createdBy: projects.createdBy, createdAt: projects.createdAt,
+    updatedAt: projects.updatedAt, creatorName: users.name,
+  }).from(projects).leftJoin(users, eq(projects.createdBy, users.id))
+    .orderBy(asc(projects.sortOrder), asc(projects.createdAt));
 }
 
 export async function createProject(formData) {
@@ -26,6 +32,7 @@ export async function createProject(formData) {
     const result = await db.insert(projects).values({
       name,
       sortOrder: sql`COALESCE((SELECT MAX(sort_order) FROM projects), 0) + 1`,
+      source: 'manual',
       createdBy: session.userId,
     }).returning();
 

@@ -8,6 +8,7 @@ import InlineNote from "../InlineNote";
 import CalendarPicker from "../CalendarPicker";
 import TagInput from "../TagInput";
 import ProgressBar from "../ProgressBar";
+import OwnerTags from "../OwnerTags";
 
 const EDITABLE_COLS = ["project","task","owner","status","priority","category","start","end","notes"];
 const SUB_EDITABLE_COLS = ["name","owner","notes"];
@@ -210,7 +211,7 @@ function DataTab({
                       <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{d.status}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 14, marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, color: X.textSec }}>{d.owner}</span>
+                      <OwnerTags value={d.owner} configOwners={configOwners} />
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: pc.color }} />
                       <span style={{ fontSize: 13, color: pc.color, fontWeight: 500 }}>{d.priority}</span>
                       <div style={{ flex: 1, marginLeft: 4 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></div>
@@ -229,14 +230,14 @@ function DataTab({
                           <span onClick={e => { e.stopPropagation(); toggleSub(sub.id); }} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: "pointer" }}>{sub.done ? "✓" : ""}</span>
                           <span style={{ flexShrink: 0 }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
                           <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
-                          <span><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} options={configOwners} style={{ fontSize: 12, color: X.textDim }} /></span>
+                          <span><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} style={{ fontSize: 12, color: X.textDim }} /></span>
                           <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.6 }}>×</button>
                         </div>
                       ))}
                       {showSubAdd === d.id
                         ? <div onClick={e => e.stopPropagation()} style={{ padding: "8px 14px", background: X.surfaceLight, borderTop: `1px solid ${X.border}22`, display: "flex", flexWrap: "wrap", gap: 6 }}>
                           <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px", minWidth: 120 }} />
-                          <select value={subDraft.owner} onChange={e => setSubDraft(p => ({ ...p, owner: e.target.value }))} style={{ ...iS2, width: 80, fontSize: 13, padding: "5px 10px", cursor: "pointer" }}><option value="">Owner</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>
+                          <div style={{ flex: "0 0 140px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
                           <button onClick={() => { if (subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Add</button>
                           <button onClick={() => setShowSubAdd(null)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "4px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>Cancel</button>
                         </div>
@@ -259,7 +260,7 @@ function DataTab({
                 <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}`, textAlign: "center" }}>
                   <input type="checkbox" checked={paged.length > 0 && paged.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(paged.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />
                 </th>
-                {[{ k: "project", l: "Project" }, { k: "task", l: "Task" }, { k: "owner", l: "Owner" }, { k: "status", l: "Status" }, { k: "priority", l: "Pri" }, { k: "progress", l: "Progress" }, { k: "category", l: "Category" }, { k: "start", l: "Start" }, { k: "end", l: "End" }, { k: "notes", l: "Notes" }].map(col => (
+                {[{ k: "project", l: "Project" }, { k: "task", l: "Task" }, { k: "owner", l: "Owner" }, { k: "status", l: "Status" }, { k: "priority", l: "Pri" }, { k: "progress", l: "Progress" }, { k: "category", l: "Category" }, { k: "start", l: "Start" }, { k: "end", l: "End" }, { k: "notes", l: "Notes" }, { k: "creatorName", l: "Creator" }].map(col => (
                   <th key={col.k} onClick={() => handleSort(col.k)} style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: X.textDim, fontSize: 13, borderBottom: `1px solid ${X.border}`, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>{col.l}<SI col={col.k} /></th>
                 ))}
                 <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}` }} />
@@ -272,7 +273,7 @@ function DataTab({
                       <td style={{ padding: "9px 6px", textAlign: "center" }}><input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} /></td>
                       <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.project} onSave={v => updateTask(d.id, "project", v)} {...cellP(d.id, "project")} /></div></div></td>
                       <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /></div></div></td>
-                      <td style={{ padding: "9px 4px", fontSize: 14 }}><select value={d.owner || ""} onChange={e => updateTask(d.id, "owner", e.target.value)} onClick={e => e.stopPropagation()} style={{ fontFamily: FM, fontSize: 13, padding: "2px 4px", borderRadius: 6, border: `1px solid ${X.border}`, background: X.surface, color: X.textSec, cursor: "pointer", outline: "none", maxWidth: 100 }}><option value="">—</option>{d.owner && !configOwners.includes(d.owner) && <option value={d.owner}>{d.owner}</option>}{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
+                      <td style={{ padding: "9px 8px", fontSize: 14 }}><EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={["已完成", "進行中", "待辦", "提案中", "待確認"]} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /></td>
                       <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></td>
@@ -280,6 +281,7 @@ function DataTab({
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.start} onSave={v => updateTask(d.id, "start", v)} {...cellP(d.id, "start")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.end} onSave={v => updateTask(d.id, "end", v)} {...cellP(d.id, "end")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /></td>
                       <td style={{ padding: "9px 8px", maxWidth: 180 }}><EditableCell value={d.notes} onSave={v => updateTask(d.id, "notes", v)} {...cellP(d.id, "notes")} style={{ fontSize: 14, color: X.textSec }} /></td>
+                      <td style={{ padding: "9px 8px", fontSize: 12, color: X.textDim, whiteSpace: "nowrap" }}>{d.creatorName || "—"}{d.source && <span style={{ marginLeft: 4, padding: "0 4px", borderRadius: 4, background: d.source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: d.source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{d.source === 'csv_import' ? 'CSV' : '手動'}</span>}</td>
                       <td style={{ padding: "6px", textAlign: "center" }}><button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(d.id); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: X.red, fontSize: 14, padding: "2px 6px" }}>×</button></td>
                     </tr>,
                     ...(isE ? [...tSubs.map(sub => (
@@ -292,20 +294,20 @@ function DataTab({
                             <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} {...cellP(sub.id, "name")} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />
                           </label>
                         </td>
-                        <td style={{ padding: "7px 8px", fontSize: 14 }}><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} {...cellP(sub.id, "owner")} options={configOwners} style={{ color: X.textDim }} /></td>
+                        <td style={{ padding: "7px 8px", fontSize: 14 }}><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} {...cellP(sub.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} style={{ color: X.textDim }} /></td>
                         <td colSpan={2} style={{ padding: "7px 8px" }}>{sub.done ? <span style={{ fontSize: 14, color: X.green, fontWeight: 600 }}>Done</span> : <span style={{ fontSize: 14, color: X.textDim }}>Pending</span>}</td>
                         <td style={{ padding: "7px 8px", fontFamily: FM, fontSize: 14, color: sub.done ? X.green : X.textDim }}>{sub.done_date ? fD(sub.done_date) : "\u2014"}</td>
-                        <td colSpan={4} style={{ padding: "7px 8px", fontSize: 14 }}><EditableCell value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} {...cellP(sub.id, "notes")} style={{ color: X.textDim }} /></td>
+                        <td colSpan={5} style={{ padding: "7px 8px", fontSize: 14 }}><EditableCell value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} {...cellP(sub.id, "notes")} style={{ color: X.textDim }} /></td>
                         <td style={{ padding: "4px", textAlign: "center" }}><button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button></td>
                       </tr>)),
                       <tr key={d.id + "_addsub"} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
                         <td />
                         <td />
-                        <td colSpan={10} style={{ padding: "6px 8px 6px 30px" }}>
+                        <td colSpan={11} style={{ padding: "6px 8px 6px 30px" }}>
                           {showSubAdd === d.id
                             ? <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "4px 10px" }} />
-                              <select value={subDraft.owner} onChange={e => setSubDraft(p => ({ ...p, owner: e.target.value }))} style={{ ...iS2, width: 100, fontSize: 13, padding: "4px 10px", cursor: "pointer" }}><option value="">Owner</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>
+                              <div style={{ flex: "0 0 160px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
                               <button onClick={() => { if (subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "3px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Add</button>
                               <button onClick={() => setShowSubAdd(null)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "3px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>Cancel</button>
                             </div>

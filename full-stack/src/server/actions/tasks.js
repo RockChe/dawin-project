@@ -49,6 +49,7 @@ export async function createTask(data) {
       priority: data.priority || '中',
       notes: data.notes || null,
       sortOrder: data.sortOrder || 0,
+      source: 'manual',
       createdBy: session.userId,
     }).returning();
 
@@ -358,6 +359,7 @@ export async function upsertTasks(importedTasks) {
         const newProj = await db.insert(projects).values({
           name: projName,
           sortOrder: maxOrder,
+          source: 'csv_import',
           createdBy: session.userId,
         }).returning();
         projectId = newProj[0].id;
@@ -390,6 +392,7 @@ export async function upsertTasks(importedTasks) {
           projectId,
           task: t.task,
           ...data,
+          source: 'csv_import',
           createdBy: session.userId,
         });
         inserted++;
@@ -496,12 +499,22 @@ export async function deleteAllTasks() {
 export async function getDashboardData() {
   const { error } = await safeRequireAuth();
   if (error) return { error };
-  const [allTasks, allSubtasks, allLinks, allFiles] = await Promise.all([
-    db.select().from(tasks).orderBy(asc(tasks.sortOrder)),
+  const [taskRows, allSubtasks, allLinks, allFiles] = await Promise.all([
+    db.select({
+      id: tasks.id, projectId: tasks.projectId, task: tasks.task,
+      status: tasks.status, category: tasks.category,
+      startDate: tasks.startDate, endDate: tasks.endDate,
+      duration: tasks.duration, owner: tasks.owner,
+      priority: tasks.priority, notes: tasks.notes,
+      sortOrder: tasks.sortOrder, source: tasks.source,
+      createdBy: tasks.createdBy, createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt, creatorName: users.name,
+    }).from(tasks).leftJoin(users, eq(tasks.createdBy, users.id))
+      .orderBy(asc(tasks.sortOrder)),
     db.select().from(subtasks).orderBy(asc(subtasks.sortOrder)),
     db.select().from(links).orderBy(desc(links.createdAt)),
     db.select().from(files).orderBy(desc(files.createdAt)),
   ]);
 
-  return { tasks: allTasks, subtasks: allSubtasks, links: allLinks, files: allFiles };
+  return { tasks: taskRows, subtasks: allSubtasks, links: allLinks, files: allFiles };
 }

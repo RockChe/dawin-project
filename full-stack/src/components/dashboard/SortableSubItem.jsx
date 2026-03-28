@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import EditableCell from "./EditableCell";
 import InlineNote from "./InlineNote";
+import OwnerTags from "./OwnerTags";
 
 export default function SortableSubItem({ sub, toggleSub, updateSub, deleteSub, configOwners }) {
   const { X } = useTheme();
@@ -16,7 +17,7 @@ export default function SortableSubItem({ sub, toggleSub, updateSub, deleteSub, 
         <span onClick={e => { e.stopPropagation(); toggleSub(sub.id); }} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: "pointer" }}>{sub.done ? "✓" : ""}</span>
         <span style={{ flexShrink: 0, maxWidth: "40%" }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
         <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
-        <span><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} options={configOwners} style={{ fontSize: 12, color: X.textDim }} /></span>
+        <span><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} style={{ fontSize: 12, color: X.textDim }} /></span>
         <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.5 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>×</button>
       </div>
     </div>

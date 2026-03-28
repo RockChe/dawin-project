@@ -6,6 +6,7 @@ import { pD, fD } from "@/lib/utils";
 import EditableCell from "../EditableCell";
 import InlineNote from "../InlineNote";
 import OwnerTags from "../OwnerTags";
+import TagInput from "../TagInput";
 import ProgressBar from "../ProgressBar";
 import SortableSubItem from "../SortableSubItem";
 import GanttTimeline, { TimeScaleToggle } from "../GanttTimeline";
@@ -16,6 +17,7 @@ import { deleteProjectBanner } from "@/server/actions/projects";
 
 function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
   const { X, SC, inputStyle } = useTheme();
+  const projMeta = useMemo(() => { const m = {}; projects.forEach(p => { m[p.name] = { creatorName: p.creatorName || null, source: p.source || null }; }); return m; }, [projects]);
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
   const [newProjName, setNewProjName] = useState("");
@@ -211,14 +213,14 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
             title="刪除圖示">×</button>
         )}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}><h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /></h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div></div>
+      <div style={{ flex: 1, minWidth: 0 }}><h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /></h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div>{projMeta[selProj]?.creatorName && <div style={{ fontSize: 12, color: X.textDim, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>{projMeta[selProj].creatorName} · <span style={{ padding: "0 5px", borderRadius: 6, background: projMeta[selProj].source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: projMeta[selProj].source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{projMeta[selProj].source === 'csv_import' ? 'CSV匯入' : '手動'}</span></div>}</div>
       <button onClick={() => setShowFileManager(selProj)} style={{ background: "transparent", border: `1px solid ${X.accent}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.accent, cursor: "pointer", fontWeight: 600 }}>📁 檔案管理</button>
       <button onClick={() => archiveProj(selProj)} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>
       <button onClick={() => { if (confirm("Delete?")) deleteProj(selProj); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>
     </div>
     {pt.some(t => t.start) && (<div style={{ marginBottom: 20 }}>
       <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={setTimeDim} /></div>
-      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={"全部"} fpr={"全部"} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} />
+      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={"全部"} fpr={"全部"} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} configOwners={configOwners} />
     </div>)}
     <div className="dash-detail-grid" style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -251,7 +253,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.task}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3 }}>
-                  <OwnerTags value={task.owner} /><span style={{ fontSize: 14, color: X.textDim }}>·</span>
+                  <OwnerTags value={task.owner} configOwners={configOwners} /><span style={{ fontSize: 14, color: X.textDim }}>·</span>
                   <span style={{ fontFamily: FM, fontSize: 14, color: X.textSec }}>{fD(task.start)} → {fD(task.end)}</span>
                 </div>
               </div>
@@ -272,7 +274,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
               {showSubAdd === task.id
                 ? <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", padding: "4px 0" }}>
                   <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(task.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px", minWidth: 120 }} />
-                  <select value={subDraft.owner} onChange={e => setSubDraft(p => ({ ...p, owner: e.target.value }))} style={{ ...iS2, width: 80, fontSize: 13, padding: "5px 10px", cursor: "pointer" }}><option value="">Owner</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>
+                  <div style={{ flex: "0 0 140px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
                   <button onClick={() => { if (subDraft.name.trim()) { addSub(task.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Add</button>
                   <button onClick={() => setShowSubAdd(null)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "4px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>Cancel</button>
                 </div>

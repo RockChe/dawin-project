@@ -172,13 +172,13 @@ export default function Dashboard({ initialData }) {
         </div>
 
         {/* OVERVIEW */}
-        {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidths.overview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} />}
+        {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidths.overview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
 
         {/* PROJECTS */}
         {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={setModalTask} setShowFileManager={setShowFileManager} ganttWidths={ganttWidths.project} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={(oldName, newName) => { setFPSet(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); setCustomProjects(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); }} onProjectDeleted={(name) => { setCustomProjects(p => { const n = new Set(p); n.delete(name); return n; }); }} />}
 
         {/* TIMELINE */}
-        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidths.timeline} timelineHeight={timelineHeight} />}
+        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidths.timeline} timelineHeight={timelineHeight} configOwners={configOwners} />}
 
         {/* DATA TABLE */}
         {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={setModalTask} />}

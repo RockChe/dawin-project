@@ -3,10 +3,12 @@ import { useState, useMemo, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
+import { getOwnerColor } from "@/lib/theme";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
+import OwnerTags from "../OwnerTags";
 
-function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5 }) {
+function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5, configOwners = [] }) {
   const { X, SC } = useTheme();
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
@@ -95,7 +97,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[t.project] || X.accent, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.task}</div>
-                <div style={{ fontSize: 12, color: X.textSec }}>{t.project} · {t.owner}</div>
+                <div style={{ fontSize: 12, color: X.textSec, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>{t.project} · <OwnerTags value={t.owner} configOwners={configOwners} /></div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, fontFamily: FM, color: X.red }}>-{days}d</div>
@@ -115,7 +117,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[t.project] || X.accent, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.task}</div>
-                <div style={{ fontSize: 12, color: X.textSec }}>{t.project} · {t.owner}</div>
+                <div style={{ fontSize: 12, color: X.textSec, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>{t.project} · <OwnerTags value={t.owner} configOwners={configOwners} /></div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, fontFamily: FM, color: urgent ? X.red : X.amber }}>{days}d</div>
@@ -166,16 +168,15 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
     {/* Team Workload + Tasks per Project */}
     <div className="dash-grid-2col" style={{ marginTop: 16 }}>
       {(() => {
-        const ownerMap = {}; filtered.forEach(t => { ownerMap[t.owner] = (ownerMap[t.owner] || 0) + 1; });
+        const ownerMap = {}; filtered.forEach(t => { (t.owner || '').split(',').map(o => o.trim()).filter(Boolean).forEach(o => { ownerMap[o] = (ownerMap[o] || 0) + 1; }); });
         const owners = Object.entries(ownerMap).map(([n, c]) => ({ name: n, count: c })).sort((a, b) => b.count - a.count);
-        const ownerColors = [X.accent, X.purple, X.amber, X.red, X.green, X.cyan || "#06B6D4", X.pink, X.accentDark, X.textDim, X.purpleLight || "#D2A8FF"];
         const gm = Math.ceil(Math.max(...owners.map(o => o.count), 1) / 2) * 2;
         return (<div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.purple, borderRadius: 2 }} />Team Workload</h3>
           {owners.map((o, i) => (<div key={o.name} style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
             <div style={{ width: 80, minWidth: 80, textAlign: "right", paddingRight: 10, fontSize: 14, color: X.textSec, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
             <div style={{ flex: 1, height: 20, position: "relative" }}>
-              <div style={{ height: "100%", width: `${(o.count / gm) * 100}%`, background: ownerColors[i % ownerColors.length], borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6, minWidth: o.count > 0 ? 24 : 0 }}>
+              <div style={{ height: "100%", width: `${(o.count / gm) * 100}%`, background: getOwnerColor(X, o.name, configOwners).color, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6, minWidth: o.count > 0 ? 24 : 0 }}>
                 <span style={{ fontFamily: FM, fontSize: 14, fontWeight: 600, color: "#fff" }}>{o.count}</span>
               </div>
             </div>

@@ -153,7 +153,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           </div>
           <div>
             <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>負責人</div>
-            <TagInput value={form.owner} onChange={v => setForm(p => ({ ...p, owner: v }))} suggestions={configOwners} placeholder="新增負責人..." />
+            <TagInput value={form.owner} onChange={v => setForm(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="新增負責人..." />
           </div>
           {!isNew && <div>
             <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>狀態</div>
@@ -179,7 +179,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
             {showSubInput
               ? <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
                 <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="子任務名稱" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(task.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubInput(false); } if (e.key === "Escape") setShowSubInput(false); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px", minWidth: 120 }} />
-                <select value={subDraft.owner} onChange={e => setSubDraft(p => ({ ...p, owner: e.target.value }))} style={{ ...iS2, width: 100, fontSize: 13, padding: "5px 10px", cursor: "pointer" }}><option value="">負責人</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>
+                <div style={{ flex: "0 0 140px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
                 <button onClick={() => { if (subDraft.name.trim()) { addSub(task.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubInput(false); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>新增</button>
                 <button onClick={() => setShowSubInput(false)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "4px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>取消</button>
               </div>

@@ -56,9 +56,9 @@ export function TimeScaleToggle({ value, onChange }) {
 
 export { computeScaleDivisions };
 
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight }) {
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [] }) {
   const { X, SC, PC, PJC } = useTheme();
-  if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} />;
+  if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} />;
   const ganttData = useMemo(() => {
     const fil = tasks.filter(d => { if (!d.start) return false; if (fp instanceof Set) { if (fp.size > 0 && !fp.has(d.project)) return false; } else if (typeof fp === "string" && fp !== "全部" && d.project !== fp) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; return true; });
     if (!fil.length) return null;
