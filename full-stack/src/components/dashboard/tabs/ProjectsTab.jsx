@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useMemo, memo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
@@ -15,7 +15,9 @@ import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } fro
 import SortableProjectCard from "../SortableProjectCard";
 import { deleteProjectBanner } from "@/server/actions/projects";
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
+const STATUS_OPTIONS = ["已完成", "進行中", "待辦", "提案中", "待確認"];
+
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
   const { X, SC, inputStyle } = useTheme();
   const projMeta = useMemo(() => { const m = {}; projects.forEach(p => { m[p.name] = { creatorName: p.creatorName || null, source: p.source || null }; }); return m; }, [projects]);
   const [selProj, setSelProj] = useState(null);
@@ -29,7 +31,18 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
   const [timeDim, setTimeDim] = useState("月");
   const [sortMode, setSortMode] = useState("manual");
   const [detailIconHover, setDetailIconHover] = useState(false);
+  const [openStatusId, setOpenStatusId] = useState(null);
+  const statusDropRef = useRef(null);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (!openStatusId) return;
+    const handler = (e) => { if (statusDropRef.current && !statusDropRef.current.contains(e.target)) setOpenStatusId(null); };
+    const keyHandler = (e) => { if (e.key === "Escape") setOpenStatusId(null); };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => { document.removeEventListener("mousedown", handler); document.removeEventListener("keydown", keyHandler); };
+  }, [openStatusId]);
   const iS2 = inputStyle;
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -257,7 +270,18 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
                   <span style={{ fontFamily: FM, fontSize: 14, color: X.textSec }}>{fD(task.start)} → {fD(task.end)}</span>
                 </div>
               </div>
-              <span style={{ fontSize: 14, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600 }}>{task.status}</span>
+              <div ref={openStatusId === task.id ? statusDropRef : null} style={{ position: "relative" }}>
+                <span onClick={e => { e.stopPropagation(); setOpenStatusId(openStatusId === task.id ? null : task.id); }} style={{ fontSize: 14, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, cursor: "pointer", userSelect: "none" }}>{task.status}</span>
+                {openStatusId === task.id && (
+                  <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 50, background: X.surface, border: `1px solid ${X.border}`, borderRadius: 10, boxShadow: `0 4px 16px ${X.shadowHeavy}`, padding: "4px 0", minWidth: 120 }}>
+                    {STATUS_OPTIONS.map(st => { const s = SC[st] || {}; return (
+                      <div key={st} onClick={e => { e.stopPropagation(); updateTask(task.id, "status", st); setOpenStatusId(null); }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"} style={{ padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                        <span style={{ padding: "1px 8px", borderRadius: 8, background: s.bg, color: s.color, fontWeight: 600, fontSize: 12 }}>{st}</span>
+                        {task.status === st && <span style={{ color: s.color, fontSize: 12, marginLeft: "auto" }}>✓</span>}
+                      </div>); })}
+                  </div>
+                )}
+              </div>
               <div style={{ width: 90 }}><ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} timeBased={task.timeBased} /></div>
               <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(task.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "4px 6px" }}>×</button>
             </div>
