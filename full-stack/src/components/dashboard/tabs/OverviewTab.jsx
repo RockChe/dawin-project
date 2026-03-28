@@ -13,7 +13,32 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
 
-  const projStats = useMemo(() => { const p = {}; filtered.forEach(d => { if (!p[d.project]) p[d.project] = { total: 0, pSum: 0 }; p[d.project].total++; p[d.project].pSum += d.progress; }); return p; }, [filtered]);
+  const { projStats, projBarsData } = useMemo(() => {
+    const stats = {};
+    const barsMap = {};
+    twp.forEach(d => {
+      // projBars: accumulate date ranges and progress per project (from twp)
+      if (!barsMap[d.project]) barsMap[d.project] = { dates: [], progressSum: 0, count: 0 };
+      barsMap[d.project].progressSum += d.progress;
+      barsMap[d.project].count++;
+      if (d.start && d.end) {
+        barsMap[d.project].dates.push(pD(d.start), pD(d.end));
+      }
+    });
+    filtered.forEach(d => {
+      // projStats: from filtered data only
+      if (!stats[d.project]) stats[d.project] = { total: 0, pSum: 0 };
+      stats[d.project].total++;
+      stats[d.project].pSum += d.progress;
+    });
+    const bars = Object.entries(barsMap).map(([pn, info]) => {
+      if (!info.dates.length) return null;
+      const s = new Date(Math.min(...info.dates)), e = new Date(Math.max(...info.dates));
+      const avg = Math.round(info.progressSum / info.count);
+      return { name: pn, start: s, end: e, avg };
+    }).filter(Boolean);
+    return { projStats: stats, projBarsData: bars };
+  }, [twp, filtered]);
 
   const pieData = useMemo(() => {
     const entries = Object.entries(SC).map(([k, c]) => ({ label: k, count: stats[k] || 0, color: c.color }));
@@ -34,15 +59,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
         <TimeScaleToggle value={timeDim} onChange={setTimeDim} />
       </div>
       {(() => {
-        const projList = [...new Set(twp.map(d => d.project))];
-        const projBars = projList.map(pn => {
-          const pt = twp.filter(d => d.project === pn && d.start && d.end);
-          if (!pt.length) return null;
-          const dates = pt.flatMap(t => [pD(t.start), pD(t.end)]);
-          const s = new Date(Math.min(...dates)), e = new Date(Math.max(...dates));
-          const avg = Math.round(twp.filter(d => d.project === pn).reduce((sum, t) => sum + t.progress, 0) / twp.filter(d => d.project === pn).length);
-          return { name: pn, start: s, end: e, avg, color: pcMap[pn] || X.accent };
-        }).filter(Boolean);
+        const projBars = projBarsData.map(p => ({ ...p, color: pcMap[p.name] || X.accent }));
         if (isMobile) return <MobileProjectTimeline projBars={projBars} />;
         if (!projBars.length) return (<div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 32, marginBottom: 8, opacity: 0.3 }}>📅</div><div style={{ fontSize: 14 }}>No timeline data available</div></div>);
         const allDates = projBars.flatMap(p => [p.start, p.end]);

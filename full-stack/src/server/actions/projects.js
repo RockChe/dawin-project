@@ -151,11 +151,15 @@ export async function reorderProjects(orderedIds) {
       }
     }
 
-    await Promise.all(
-      orderedIds.map((id, i) =>
-        db.update(projects).set({ sortOrder: i + 1, updatedAt: new Date() }).where(eq(projects.id, id))
-      )
-    );
+    // Build SQL CASE for batch update
+    const sqlChunks = [sql`UPDATE projects SET sort_order = CASE`];
+    orderedIds.forEach((id, i) => {
+      sqlChunks.push(sql` WHEN id = ${id} THEN ${i + 1}`);
+    });
+    sqlChunks.push(sql` END, updated_at = NOW() WHERE id IN (`);
+    sqlChunks.push(sql.join(orderedIds.map(id => sql`${id}`), sql`, `));
+    sqlChunks.push(sql`)`);
+    await db.execute(sql.join(sqlChunks, sql.raw('')));
     return { success: true };
   } catch (err) {
     console.error("[reorderProjects] error:", err);

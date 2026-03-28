@@ -29,7 +29,7 @@ export default function Dashboard({ initialData }) {
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
   const [fpSet, setFPSet] = useState(new Set());
-  const toggleFP = p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; });
+  const toggleFP = useCallback(p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; }), []);
   const [fs, setFS] = useState("全部");
   const [fpr, setFPR] = useState("全部");
   const [tab, setTab] = useState("overview");
@@ -60,15 +60,33 @@ export default function Dashboard({ initialData }) {
     return { overview: { ...defaultGW }, project: { ...defaultGW }, timeline: { ...defaultGW } };
   });
   const [ganttDraft, setGanttDraft] = useState(() => JSON.parse(JSON.stringify(ganttWidths)));
-  const saveGanttWidths = () => { const filled = {}; for (const v of ["overview", "project", "timeline"]) { filled[v] = {}; for (const k of ["day", "week", "month", "quarter"]) { const val = ganttDraft[v]?.[k]; filled[v][k] = (val === '' || val == null) ? defaultGW[k] : Math.max(1, val); } } const deep = JSON.parse(JSON.stringify(filled)); setGanttWidths(deep); setGanttDraft(JSON.parse(JSON.stringify(deep))); localStorage.setItem("dash-ganttWidths", JSON.stringify(deep)); showToast("Timeline widths saved", "success"); };
+  const saveGanttWidths = useCallback(() => { const filled = {}; for (const v of ["overview", "project", "timeline"]) { filled[v] = {}; for (const k of ["day", "week", "month", "quarter"]) { const val = ganttDraft[v]?.[k]; filled[v][k] = (val === '' || val == null) ? defaultGW[k] : Math.max(1, val); } } const deep = JSON.parse(JSON.stringify(filled)); setGanttWidths(deep); setGanttDraft(JSON.parse(JSON.stringify(deep))); localStorage.setItem("dash-ganttWidths", JSON.stringify(deep)); showToast("Timeline widths saved", "success"); }, [ganttDraft, showToast]);
   const [timelineHeight, setTimelineHeight] = useState(() => { try { const s = localStorage.getItem("dash-timelineHeight"); if (s) return parseInt(s) || 100; } catch {} return 100; });
-  const saveTimelineHeight = (val) => { const v = Math.max(10, Math.min(200, parseInt(val) || 100)); setTimelineHeight(v); localStorage.setItem("dash-timelineHeight", JSON.stringify(v)); showToast("Timeline height saved", "success"); };
+  const saveTimelineHeight = useCallback((val) => { const v = Math.max(10, Math.min(200, parseInt(val) || 100)); setTimelineHeight(v); localStorage.setItem("dash-timelineHeight", JSON.stringify(v)); showToast("Timeline height saved", "success"); }, [showToast]);
   const [upcomingDays, setUpcomingDays] = useState(() => { try { const s = localStorage.getItem("dash-upcomingDays"); if (s) return parseInt(s) || 30; } catch {} return 30; });
   const [upcomingLimit, setUpcomingLimit] = useState(() => { try { const s = localStorage.getItem("dash-upcomingLimit"); if (s) return parseInt(s) || 5; } catch {} return 5; });
-  const saveUpcomingSettings = (days, limit) => { const d = Math.max(1, parseInt(days) || 30); const l = Math.max(1, parseInt(limit) || 5); setUpcomingDays(d); setUpcomingLimit(l); localStorage.setItem("dash-upcomingDays", JSON.stringify(d)); localStorage.setItem("dash-upcomingLimit", JSON.stringify(l)); showToast("Upcoming settings saved", "success"); };
+  const saveUpcomingSettings = useCallback((days, limit) => { const d = Math.max(1, parseInt(days) || 30); const l = Math.max(1, parseInt(limit) || 5); setUpcomingDays(d); setUpcomingLimit(l); localStorage.setItem("dash-upcomingDays", JSON.stringify(d)); localStorage.setItem("dash-upcomingLimit", JSON.stringify(l)); showToast("Upcoming settings saved", "success"); }, [showToast]);
   useEffect(() => { const h = () => setScrolled(window.scrollY > 10); window.addEventListener("scroll", h, { passive: true }); return () => window.removeEventListener("scroll", h); }, []);
   const [isMobile, setIsMobile] = useState(() => { try { return window.innerWidth <= 768; } catch { return false; } });
   useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+
+  // Memoize ganttWidths per-view to avoid cross-tab re-renders
+  const ganttWidthsOverview = useMemo(() => ganttWidths.overview, [ganttWidths.overview]);
+  const ganttWidthsProject = useMemo(() => ganttWidths.project, [ganttWidths.project]);
+  const ganttWidthsTimeline = useMemo(() => ganttWidths.timeline, [ganttWidths.timeline]);
+
+  // Callbacks for ProjectsTab
+  const handleSetModalTask = useCallback((t) => setModalTask(t), []);
+  const handleSetShowFileManager = useCallback((v) => setShowFileManager(v), []);
+  const handleCloseModal = useCallback(() => setModalTask(null), []);
+  const handleCloseFileManager = useCallback(() => setShowFileManager(null), []);
+  const handleProjectRenamed = useCallback((oldName, newName) => {
+    setFPSet(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; });
+    setCustomProjects(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; });
+  }, []);
+  const handleProjectDeleted = useCallback((name) => {
+    setCustomProjects(p => { const n = new Set(p); n.delete(name); return n; });
+  }, []);
 
   // Computed
   const filtered = useMemo(() => twp.filter(d => { if (fpSet.size > 0 && !fpSet.has(d.project)) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; if (searchQ) { const q = searchQ.toLowerCase(); if (!(d.task || "").toLowerCase().includes(q) && !(d.project || "").toLowerCase().includes(q) && !(d.owner || "").toLowerCase().includes(q) && !(d.notes || "").toLowerCase().includes(q)) return false; } return true; }), [fpSet, fs, fpr, twp, searchQ]);
@@ -172,21 +190,21 @@ export default function Dashboard({ initialData }) {
         </div>
 
         {/* OVERVIEW */}
-        {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidths.overview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
+        {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
 
         {/* PROJECTS */}
-        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={setModalTask} setShowFileManager={setShowFileManager} ganttWidths={ganttWidths.project} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={(oldName, newName) => { setFPSet(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); setCustomProjects(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; }); }} onProjectDeleted={(name) => { setCustomProjects(p => { const n = new Set(p); n.delete(name); return n; }); }} />}
+        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} />}
 
         {/* TIMELINE */}
-        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidths.timeline} timelineHeight={timelineHeight} configOwners={configOwners} />}
+        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} />}
 
         {/* DATA TABLE */}
-        {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={setModalTask} />}
+        {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={handleSetModalTask} />}
         {/* SETTINGS */}
         {tab === "settings" && <SettingsTab configCats={configCats} saveConfigCats={saveConfigCats} configOwners={configOwners} ganttDraft={ganttDraft} setGanttDraft={setGanttDraft} saveGanttWidths={saveGanttWidths} timelineHeight={timelineHeight} saveTimelineHeight={saveTimelineHeight} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} saveUpcomingSettings={saveUpcomingSettings} isMobile={isMobile} showToast={showToast} />}
       </div>
-      {modalTask && <TaskModal task={modalTask._isNew ? "new" : modalTask} projectId={modalTask._isNew ? modalTask.projectId : modalTask.projectId} projectName={modalTask._isNew ? modalTask.projectName : (modalTask.project || "")} onClose={() => setModalTask(null)} addTask={addTask} updateTask={updateTask} allS={allS} addSub={addSub} deleteSub={deleteSub} toggleSub={toggleSub} updateSub={updateSub} configCats={configCats} configOwners={configOwners} reorderSubs={reorderSubs} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} showToast={showToast} />}
-      {showFileManager && <FileManagerModal project={showFileManager} tasks={twp} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} onClose={() => setShowFileManager(null)} />}
+      {modalTask && <TaskModal task={modalTask._isNew ? "new" : modalTask} projectId={modalTask._isNew ? modalTask.projectId : modalTask.projectId} projectName={modalTask._isNew ? modalTask.projectName : (modalTask.project || "")} onClose={handleCloseModal} addTask={addTask} updateTask={updateTask} allS={allS} addSub={addSub} deleteSub={deleteSub} toggleSub={toggleSub} updateSub={updateSub} configCats={configCats} configOwners={configOwners} reorderSubs={reorderSubs} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} showToast={showToast} />}
+      {showFileManager && <FileManagerModal project={showFileManager} tasks={twp} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} onClose={handleCloseFileManager} />}
       {toast && <div style={{ position: "fixed", bottom: 32, left: "50%", transform: "translateX(-50%)", zIndex: 100, animation: toast.fading ? "toastOut 0.3s ease forwards" : "toastIn 0.3s ease", display: "flex", alignItems: "center", gap: 10, background: X.surface, borderRadius: 12, padding: "12px 20px", boxShadow: `0 4px 20px ${X.shadowHeavy}`, border: `1px solid ${X.border}`, maxWidth: "90vw" }}>
         <div style={{ width: 4, height: 24, borderRadius: 2, background: toast.type === "error" ? X.red : toast.type === "warn" ? X.amber : X.green }} />
         <span style={{ fontSize: 14, fontWeight: 500, color: X.text, whiteSpace: "nowrap" }}>{toast.msg}</span>

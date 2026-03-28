@@ -31,8 +31,15 @@ export async function getInitialData() {
     }).from(tasks).leftJoin(taskCreator, eq(tasks.createdBy, taskCreator.id))
       .orderBy(asc(tasks.sortOrder)),
     db.select().from(subtasks).orderBy(asc(subtasks.sortOrder)),
-    db.select().from(links).orderBy(desc(links.createdAt)),
-    db.select().from(files).orderBy(desc(files.createdAt)),
+    db.select({
+      id: links.id, taskId: links.taskId, url: links.url,
+      title: links.title, createdBy: links.createdBy, createdAt: links.createdAt,
+    }).from(links).orderBy(desc(links.createdAt)),
+    db.select({
+      id: files.id, taskId: files.taskId, name: files.name,
+      size: files.size, mimeType: files.mimeType, r2Key: files.r2Key,
+      createdBy: files.createdBy, createdAt: files.createdAt,
+    }).from(files).orderBy(desc(files.createdAt)),
     db.select({
       id: projects.id, name: projects.name, bannerR2Key: projects.bannerR2Key,
       sortOrder: projects.sortOrder, source: projects.source,
@@ -53,17 +60,26 @@ export async function getInitialData() {
   }
 
   // Resolve banner URLs server-side
-  const projectsWithBanners = await Promise.all(
-    allProjects.map(async (p) => {
-      if (p.bannerR2Key) {
-        try {
-          const bannerUrl = await getDownloadUrl(p.bannerR2Key);
-          return { ...p, bannerUrl };
-        } catch { return p; }
-      }
-      return p;
-    })
-  );
+  let projectsWithBanners;
+  if (process.env.R2_PUBLIC_URL) {
+    // Sync path — no async overhead
+    projectsWithBanners = allProjects.map(p =>
+      p.bannerR2Key ? { ...p, bannerUrl: `${process.env.R2_PUBLIC_URL}/${p.bannerR2Key}` } : p
+    );
+  } else {
+    // Fallback: generate presigned URLs
+    projectsWithBanners = await Promise.all(
+      allProjects.map(async (p) => {
+        if (p.bannerR2Key) {
+          try {
+            const bannerUrl = await getDownloadUrl(p.bannerR2Key);
+            return { ...p, bannerUrl };
+          } catch { return p; }
+        }
+        return p;
+      })
+    );
+  }
 
   return {
     tasks: allTasks,

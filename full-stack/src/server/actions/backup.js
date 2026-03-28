@@ -134,7 +134,6 @@ export async function saveBackupSettings(settings) {
     for (const [key, value] of Object.entries(settings)) {
       if (!BACKUP_CONFIG_KEYS.includes(key)) continue;
 
-      // Encrypt sensitive values
       let serialized;
       if (ENCRYPTED_KEYS.includes(key) && typeof value === 'string' && value.length > 0) {
         serialized = JSON.stringify(encrypt(value));
@@ -142,12 +141,11 @@ export async function saveBackupSettings(settings) {
         serialized = JSON.stringify(value);
       }
 
-      const existing = await db.select().from(config).where(eq(config.key, key)).limit(1);
-      if (existing.length > 0) {
-        await db.update(config).set({ value: serialized, updatedAt: new Date() }).where(eq(config.key, key));
-      } else {
-        await db.insert(config).values({ key, value: serialized });
-      }
+      await db.insert(config).values({ key, value: serialized, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: config.key,
+          set: { value: serialized, updatedAt: new Date() },
+        });
     }
 
     return { success: true, data: null };

@@ -32,6 +32,8 @@ function DataTab({
   const [draft, setDraft] = useState({ task: "", project: "", start: "", end: "", owner: "—", category: "活動", priority: "中", notes: "" });
   const [subDraft, setSubDraft] = useState({ name: "", owner: "" });
   const [showSubAdd, setShowSubAdd] = useState(null);
+  const [editingSubOwner, setEditingSubOwner] = useState(null);
+  const subOwnerRef = useRef(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlValue, setUrlValue] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
@@ -47,12 +49,22 @@ function DataTab({
 
   const toggle = id => setExpanded(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  useEffect(() => {
+    if (!editingSubOwner) return;
+    const handler = (e) => {
+      if (subOwnerRef.current && !subOwnerRef.current.contains(e.target)) setEditingSubOwner(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [editingSubOwner]);
+
   const iS2 = inputStyle;
 
   const sorted = useMemo(() => { if (!sortCol) return filtered; const po = { "高": 0, "中": 1, "低": 2 }; return [...filtered].sort((a, b) => { let va = a[sortCol], vb = b[sortCol]; if (sortCol === "start" || sortCol === "end") { va = va ? pD(va).getTime() : 0; vb = vb ? pD(vb).getTime() : 0; } if (sortCol === "duration" || sortCol === "progress") { va = va || 0; vb = vb || 0; } if (sortCol === "priority") { va = po[va] ?? 9; vb = po[vb] ?? 9; } if (typeof va === "string") { va = va.toLowerCase(); vb = (vb || "").toLowerCase(); } return sortDir === "asc" ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0); }); }, [filtered, sortCol, sortDir]);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const effectivePageSize = Math.min(pageSize, 100);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / effectivePageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const paged = useMemo(() => sorted.slice((safePage - 1) * pageSize, safePage * pageSize), [sorted, safePage, pageSize]);
+  const paged = useMemo(() => sorted.slice((safePage - 1) * effectivePageSize, safePage * effectivePageSize), [sorted, safePage, effectivePageSize]);
   useEffect(() => { setCurrentPage(1); }, [filtered, sortCol, sortDir, pageSize]);
   const subsByTaskId = useMemo(() => { const map = {}; allS.forEach(s => { if (!map[s.taskId]) map[s.taskId] = []; map[s.taskId].push(s); }); return map; }, [allS]);
   const flatRows = useMemo(() => { const rows = []; paged.forEach(d => { rows.push({ type: "task", id: d.id, data: d }); if (expanded.has(d.id)) { (subsByTaskId[d.id] || []).forEach(sub => { rows.push({ type: "sub", id: sub.id, data: sub }); }); } }); return rows; }, [paged, expanded, subsByTaskId]);
@@ -200,7 +212,7 @@ function DataTab({
         {isMobile ? (
           <div style={{ padding: 12 }}>
             {paged.length === 0 && <div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></div>}
-            {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
+            {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = subsByTaskId[d.id] || [];
               return (
                 <div key={d.id} style={{ background: selectedRows.has(d.id) ? `${X.accent}10` : X.surface, borderRadius: 12, border: `1px solid ${selectedRows.has(d.id) ? X.accent + "40" : X.border}`, overflow: "hidden", marginBottom: 8 }}>
                   <div onClick={() => toggle(d.id)} style={{ padding: "12px 14px", cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -230,7 +242,12 @@ function DataTab({
                           <span onClick={e => { e.stopPropagation(); toggleSub(sub.id); }} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: "pointer" }}>{sub.done ? "✓" : ""}</span>
                           <span style={{ flexShrink: 0 }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
                           <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
-                          <span><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} style={{ fontSize: 12, color: X.textDim }} /></span>
+                          <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
+                            {editingSubOwner === sub.id
+                              ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 12, minWidth: 140 }} />
+                              : <span onClick={() => setEditingSubOwner(sub.id)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
+                            }
+                          </span>
                           <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.6 }}>×</button>
                         </div>
                       ))}
@@ -267,7 +284,7 @@ function DataTab({
               </tr></thead>
               <tbody>
                 {paged.length === 0 && <tr><td colSpan={12} style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></td></tr>}
-                {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = allS.filter(s => s.taskId === d.id);
+                {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = subsByTaskId[d.id] || [];
                   return [
                     <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}`, background: selectedRows.has(d.id) ? `${X.accent}10` : "transparent" }} onMouseEnter={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = X.surfaceHover; }} onMouseLeave={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = "transparent"; }}>
                       <td style={{ padding: "9px 6px", textAlign: "center" }}><input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} /></td>
@@ -294,7 +311,14 @@ function DataTab({
                             <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} {...cellP(sub.id, "name")} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />
                           </label>
                         </td>
-                        <td style={{ padding: "7px 8px", fontSize: 14 }}><EditableCell value={sub.owner} onSave={v => updateSub(sub.id, "owner", v)} {...cellP(sub.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} style={{ color: X.textDim }} /></td>
+                        <td style={{ padding: "7px 8px", fontSize: 14 }}>
+                          <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative", display: "inline-block" }}>
+                            {editingSubOwner === sub.id
+                              ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13, minWidth: 140 }} />
+                              : <span onClick={() => setEditingSubOwner(sub.id)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
+                            }
+                          </span>
+                        </td>
                         <td colSpan={2} style={{ padding: "7px 8px" }}>{sub.done ? <span style={{ fontSize: 14, color: X.green, fontWeight: 600 }}>Done</span> : <span style={{ fontSize: 14, color: X.textDim }}>Pending</span>}</td>
                         <td style={{ padding: "7px 8px", fontFamily: FM, fontSize: 14, color: sub.done ? X.green : X.textDim }}>{sub.done_date ? fD(sub.done_date) : "\u2014"}</td>
                         <td colSpan={5} style={{ padding: "7px 8px", fontSize: 14 }}><EditableCell value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} {...cellP(sub.id, "notes")} style={{ color: X.textDim }} /></td>

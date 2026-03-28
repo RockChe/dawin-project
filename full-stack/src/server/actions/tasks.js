@@ -112,10 +112,10 @@ export async function deleteTask(id) {
     // 2. Delete task (cascade deletes subtasks, links, files)
     await db.delete(tasks).where(eq(tasks.id, id));
 
-    // 3. Best-effort R2 cleanup
-    for (const key of r2Keys) {
-      try { await deleteFromR2(key); } catch (e) { console.error('[deleteTask] R2 cleanup failed (orphan):', key, e); }
-    }
+    // 3. Best-effort R2 cleanup (parallel)
+    await Promise.allSettled(
+      r2Keys.map(key => deleteFromR2(key).catch(e => console.error('[deleteTask] R2 cleanup failed (orphan):', key, e)))
+    );
 
     return { success: true };
   } catch (err) {
@@ -471,10 +471,10 @@ export async function deleteManyTasks(ids) {
     // 2. Batch delete tasks (cascade)
     await db.delete(tasks).where(inArray(tasks.id, ids));
 
-    // 3. Best-effort R2 cleanup
-    for (const key of r2Keys) {
-      try { await deleteFromR2(key); } catch (e) { console.error('[deleteManyTasks] R2 cleanup failed (orphan):', key, e); }
-    }
+    // 3. Best-effort R2 cleanup (parallel)
+    await Promise.allSettled(
+      r2Keys.map(key => deleteFromR2(key).catch(e => console.error('[deleteManyTasks] R2 cleanup failed (orphan):', key, e)))
+    );
 
     return { success: true, deleted: ids.length };
   } catch (err) {
@@ -497,10 +497,10 @@ export async function deleteAllTasks() {
     // 2. Delete all tasks (cascade deletes subtasks, links, files)
     await db.delete(tasks);
 
-    // 3. Best-effort R2 cleanup
-    for (const key of r2Keys) {
-      try { await deleteFromR2(key); } catch (e) { console.error('[deleteAllTasks] R2 cleanup failed (orphan):', key, e); }
-    }
+    // 3. Best-effort R2 cleanup (parallel)
+    await Promise.allSettled(
+      r2Keys.map(key => deleteFromR2(key).catch(e => console.error('[deleteAllTasks] R2 cleanup failed (orphan):', key, e)))
+    );
 
     return { success: true };
   } catch (err) {
