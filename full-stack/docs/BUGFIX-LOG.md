@@ -92,6 +92,17 @@
 
 ---
 
+### [BUG-010] 多人負責人 owner 驗證失敗
+
+- **日期**：2026-03-27
+- **Commit**：`b30f38a`
+- **症狀**：指派多人負責人（如「張三, 李四」）時，Server Action 回傳驗證錯誤
+- **根因**：`createTask` / `updateTask` 的 owner 驗證邏輯未考慮逗號分隔的多人格式，將整個字串作為單一名稱查詢 users 表
+- **解法**：owner 字串以逗號 split 後逐一驗證：`data.owner.split(',').map(s => s.trim()).filter(Boolean)`，使用 `inArray()` 批次查詢
+- **教訓**：欄位支援多值格式時，驗證邏輯也必須配合拆分。新增功能（多人指派）後要回頭檢查所有使用該欄位的驗證/查詢邏輯
+
+---
+
 ### [BUG-009] GanttTimeline gw 變數作用域錯誤導致 webpack crash
 
 - **日期**：2026-03-22

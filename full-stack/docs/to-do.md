@@ -1,7 +1,7 @@
 # 待辦事項
 
 對應版本：v0.2.0（程式碼品質）+ v0.3.0（功能擴展）
-更新日期：2026-03-22
+更新日期：2026-03-28
 
 ---
 
@@ -9,6 +9,7 @@
 
 - [x] Dashboard.jsx 拆分 — 已完成（945→187 行，6 個 tab 子元件於 `tabs/` 目錄）
 - [x] 主題系統重構 — 已完成，ThemeProvider（React Context）+ useTheme hook 取代 mutable export（Code Review C8）
+- [x] 全站效能優化 — R2 singleton、DB index、re-render 減量（v0.4.0）
 - [ ] middleware.js 安全性 — 只檢查 cookie 存在不驗證有效性，有安全隱患
 
 ## 中優先
@@ -91,3 +92,17 @@
 - [ ] REST API reports endpoints（已含在 Feature 5）
 - [ ] Chatbot 定時排程發送（已含在 Feature 7）
 - [ ] 手動觸發：用戶在 LINE/TG 說「給我日報」即時生成
+
+### Feature 9: 負責人彩色標籤 + 多人指派 ✅
+- [x] OwnerTags 元件 — 每位負責人以彩色標籤顯示，自動分配顏色
+- [x] Subtask 多人指派 — 子任務支援逗號分隔多人 owner
+- [x] 建立者/來源追蹤 — 顯示任務建立者與來源
+- [x] Owner 驗證修復 — split 逗號分隔後逐一驗證（BUG-010）
+
+### Feature 10: 任務狀態快速切換 ✅
+- [x] Projects Tab 狀態標籤點擊即出現下拉選單
+- [x] 支援五種狀態直接切換（已完成/進行中/待辦/提案中/待確認）
+
+### Feature 11: 備份功能增強 ✅
+- [x] 完整導出所有表資料
+- [x] 審計日誌搜尋匯出功能

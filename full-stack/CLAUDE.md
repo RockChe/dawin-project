@@ -105,7 +105,7 @@ export async function actionName(params) {
 - **樂觀更新**：先更新本地狀態，失敗時 rollback
 - **sessionStorage 快取**：key = `'dash_cache'`
 - **Auth 錯誤處理**：偵測到未授權時自動跳轉 `/login`
-- **Owner 來源**：純粹以 Users 表為唯一來源，UI 使用下拉選單（非自由輸入）
+- **Owner 來源**：純粹以 Users 表為唯一來源，UI 使用下拉選單（非自由輸入）。支援逗號分隔多人格式，驗證時 split 後逐一查詢 Users 表（`inArray` 批次查詢）
 - **進度計算**（`twp`）：有子任務 → 完成率；無子任務 → 時間進度（`computeTimeProgress`）；`timeBased` 旗標區分顯示模式
 - 預設分類：`['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展']`
 

@@ -29,6 +29,9 @@
 - Settings：顯示 R2 儲存空間容量
 - ✅ 專案卡片：支援上傳 Profile 圖並顯示
 - ✅ 專案卡片排序順序可拖曳設定
+- ✅ 負責人彩色標籤 + 多人指派 + 建立者追蹤
+- ✅ 任務狀態快速切換下拉選單
+- ✅ 備份功能增強（完整導出 + 審計日誌搜尋匯出）
 - REST API：`/api/mcp/*` endpoints 供外部服務存取（詳見 `docs/api-spec.md`）
 - MCP Server：本地 Claude Desktop 專用包裝，呼叫 REST API
 - Python Chatbot：LINE + Telegram AI 對話 Bot（詳見 `chatbot/README.md`、`chatbot/docs/architecture.md`）
@@ -38,7 +41,7 @@
 
 - 加入測試（至少 Server Actions 單元測試）
 - middleware session 驗證強化
-- 效能優化（大量任務渲染）
+- ✅ 效能優化（R2 singleton、DB index、前端 re-render 減量 — 14 檔案 18 項優化）
 
 ## v1.0.0 — 正式版
 

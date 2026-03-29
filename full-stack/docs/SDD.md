@@ -191,3 +191,15 @@
   - C) Axios interceptor 或 middleware 自動處理
 - **決策**：B — `useTaskManager` 中定義 `checkAuthError()`，所有 Server Action 呼叫後統一檢查
 - **理由**：統一入口，不遺漏任何操作。使用 `window.location.href`（hard redirect）而非 `useRouter().push()`，確保完整清除客戶端狀態。error code 統一為 `'UNAUTHORIZED'` / `'FORBIDDEN'`
+
+---
+
+### 決策：Owner 支援多人指派（逗號分隔）
+
+- **背景**：原系統 owner 欄位為單人字串，無法表達多人協作場景
+- **選項**：
+  - A) 關聯表 — 建立 task_owners many-to-many 表
+  - B) JSON 陣列 — owner 欄位改為 JSON 陣列
+  - C) 逗號分隔字串 — 維持 text 欄位，用逗號分隔多人
+- **決策**：C — 最小變動原則
+- **理由**：現有 schema 不需 migration、前端 OwnerTags 元件直接 split 渲染彩色標籤、Server Action 驗證配合 split + inArray 批次查詢。缺點是搜尋效率差，但任務量級（<10,000）下可接受
