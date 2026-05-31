@@ -32,9 +32,12 @@ src/
 ├── components/
 │   ├── ThemeProvider.jsx      # 主題 Context Provider + useTheme hook
 │   └── dashboard/             # 17 個元件 + tabs/ (6 個子元件)
-├── hooks/useTaskManager.js    # 核心狀態管理 hook
+├── hooks/
+│   ├── useTaskManager.js      # 核心狀態管理 hook
+│   └── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）
 ├── lib/
 │   ├── auth.js                # Session 認證（7 天過期）
+│   ├── constants.js           # 全域常數（STATUSES 狀態順序、STATUS_FILTERS 篩選選項）
 │   ├── audit.js               # 審計日誌記錄（logAudit）
 │   ├── backup.js              # 備份導出/上傳/清理（R2 + Google Drive）
 │   ├── crypto.js              # AES-256-GCM 加密解密（敏感設定保護）
@@ -42,7 +45,7 @@ src/
 │   ├── theme.js               # 主題常數與工廠函式（THEMES, F, FM, mkSC 等）
 │   └── utils.js               # 日期格式化、進度計算（子任務/時間雙模式）、CSV 工具
 ├── server/
-│   ├── actions/               # Server Actions（auth, backup, config, projects, tasks, users）
+│   ├── actions/               # Server Actions（auth, backup, config, projects, tasks, users, userSettings）
 │   └── db/
 │       ├── index.js           # Neon 連線
 │       └── schema.js          # Drizzle schema 定義
@@ -60,10 +63,10 @@ scripts/
 | Enum | 名稱 | 值 |
 |------|------|-----|
 | roleEnum | `'role'` | `'super_admin'`, `'admin'` |
-| statusEnum | `'task_status'` | `'已完成'`, `'進行中'`, `'待辦'`, `'提案中'`, `'待確認'` |
+| statusEnum | `'task_status'` | `'已完成'`, `'進行中'`, `'待辦'`, `'暫緩'`, `'提案中'`, `'待確認'` |
 | priorityEnum | `'priority'` | `'高'`, `'中'`, `'低'` |
 
-### Tables（10 張）
+### Tables（11 張）
 
 | 表 | 用途 | 關鍵欄位 |
 |----|------|---------|
@@ -77,6 +80,7 @@ scripts/
 | files | 檔案記錄 | id, taskId→tasks, name, size, mimeType, r2Key, createdBy→users |
 | audit_log | 操作審計 | id, action, userId→users, resourceType, resourceId, detail, createdAt |
 | backup_history | 備份記錄 | id, target, fileName, fileSize, status, error, durationMs, tableCounts, createdAt |
+| user_settings | 個人設定（per-account） | id, userId→users(cascade), key(varchar100), value(JSON text), updatedAt；UNIQUE(userId, key)。**Migration 0003 已合併程式碼，production apply 待執行** |
 
 定義在 `src/server/db/schema.js`（Drizzle schema）。
 
@@ -128,6 +132,8 @@ export async function actionName(params) {
 - **middleware 限制**：`middleware.js` 只檢查 cookie 是否存在，不驗證 session 有效性。實際驗證在各 Server Action 中進行
 - **SESSION_SECRET**：用於 AES-256-GCM 加密 configTable 中的敏感設定（備份 API Key 等），至少 32 字元隨機字串
 - **CRON_SECRET**：Vercel Cron 觸發 `/api/backup` POST 時的 Bearer token 驗證，防止未授權存取。需在 Vercel 環境變數中設定
+- **Migration 0003/0004**：Wave 1 新增 `user_settings` 表（0003）及 `task_status` enum 新增「暫緩」值（0004）的 migration 已合併至程式碼，**production apply 尚未執行**，須由 Rock 手動 `npm run db:migrate` 完成（0003 含 journal-drift 補建 index，正式環境若曾 `db:push` 過需先核對）
+- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom），Wave 1 後共 34 個測試全綠
 
 ## 關鍵參考檔案
 

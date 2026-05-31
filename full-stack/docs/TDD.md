@@ -375,6 +375,82 @@ Dashboard.jsx
 
 ---
 
+### 功能：per-account 個人設定層（user_settings）
+
+- **套件**：Drizzle ORM `onConflictDoUpdate`（upsert），無外部依賴
+- **實作**：
+
+**資料層**：
+- 表：`user_settings`（id uuid PK, userId uuid FK→users cascade, key varchar(100), value text, updatedAt; UNIQUE(userId,key)）
+- Migration：`drizzle/migrations/0003_*.sql`（CREATE TABLE + 補建 5 個既有表索引，非破壞性）。**注意：migration 已合併至程式碼，production apply 待 Rock 手動執行**
+
+**Server Actions**（`src/server/actions/userSettings.js`）：
+```javascript
+getUserSettings()             → 回傳當前用戶全部設定 { key: value }
+setUserSetting(key, value)    → upsert 單筆（onConflictDoUpdate target: [userId,key]）
+```
+兩個 action 均透過 `safeRequireAuth()` auth-gate，回傳 `{ error }` 或 `{ success, data }`
+
+**Hook**（`src/hooks/useUserSettings.js`）：
+- 接受 `defaults` 物件（如 `{ zoom: 150 }`），回傳 `{ settings, updateSetting }`
+- `settings` state = defaults merge server 回傳值
+- `updateSetting(key, value)` 樂觀更新（先更新本地），失敗時 rollback 僅該 key（key-scoped rollback，不影響其他設定）
+- 獨立於 `useTaskManager`，任何元件可直接引入
+
+- **關鍵檔案**：
+  - `src/server/actions/userSettings.js` — getUserSettings, setUserSetting
+  - `src/hooks/useUserSettings.js` — 樂觀更新 hook
+  - `src/server/db/schema.js` — userSettings 表定義
+  - `drizzle/migrations/0003_*.sql` — 建表 migration
+
+---
+
+### 功能：個人化全站放大設定（#03）
+
+- **套件**：CSS `zoom` 屬性（原生，無額外依賴），`useUserSettings` hook
+- **實作**：
+
+**掛載點**：`Dashboard.jsx` 外層 wrapper div 套用 `style={{ zoom: zoom / 100 }}`（loading skeleton 與主 render 皆套用，避免骨架屏/正文間的 layout jump）
+
+**預設值**：150%（`useUserSettings({ zoom: 150 })`）
+
+**UI 控制**：SettingsTab 新增 range input
+- 範圍：50–200，step 10，aria-label `全站放大`
+- 即時預覽（onChange 直接 updateSetting）
+- 顯示目前百分比數值
+
+**持久化**：每次調整呼叫 `setUserSetting('zoom', value)` 寫入 `user_settings`，跨 session 記憶。登入頁不受影響（Dashboard 外）
+
+- **關鍵檔案**：
+  - `src/components/dashboard/Dashboard.jsx` — zoom wrapper
+  - `src/components/dashboard/tabs/SettingsTab.jsx` — range 控制 UI
+
+---
+
+### 功能：拖移排序快照修復（BUG01）
+
+- **問題**：`useTaskManager.reorderProjects` 原本在 `setProjects(prev => { orderedIds = ...; reorderProjectsAction(orderedIds); return newArr; })` 中，在 setState updater 內計算 orderedIds 並同步呼叫 persist。React 不保證 updater 只執行一次，且 side-effect 在 updater 內的執行時機不確定，導致 persist 實際接收空陣列或舊順序
+- **修法**：
+```javascript
+// 修前（wrong）
+setProjects(prev => {
+  const newArr = arrayMove(prev, oldIdx, newIdx);
+  const orderedIds = newArr.map(p => p.id);  // side-effect inside updater
+  reorderProjectsAction(orderedIds);           // ← 問題根源
+  return newArr;
+});
+
+// 修後（correct）
+const snapshot = projects;                      // 取當前狀態快照（同步）
+const newArr = arrayMove(snapshot, oldIdx, newIdx);
+const orderedIds = newArr.map(p => p.id);      // 從快照計算，確定性
+setProjects(newArr);                            // 單純更新 UI
+reorderProjectsAction(orderedIds);             // 完全解耦的 async persist
+```
+- **關鍵檔案**：`src/hooks/useTaskManager.js`（reorderProjects 函式）
+
+---
+
 ### 功能：進度計算雙模式（子任務 vs 時間進度）
 
 - **套件**：無外部依賴，純 JavaScript 實作

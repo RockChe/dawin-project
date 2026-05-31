@@ -34,6 +34,14 @@
 - Python Chatbot：LINE + Telegram AI 對話 Bot（詳見 `chatbot/README.md`、`chatbot/docs/architecture.md`）
 - 日報 / 週報系統：定時 + 手動觸發，透過 LINE / Telegram 發送
 
+## Wave 1 工單 0531（2026-05-31 合併）
+
+- ✅ BUG01：Projects 拖移排序無法持久化 — orderedIds 改由同步快照計算，不依賴 setState updater 副作用
+- ✅ BUG02：任務狀態新增「暫緩」— task_status enum 擴充 + `src/lib/constants.js` 統一 STATUSES 常數（單一真相來源）
+- ✅ #03：個人化全站放大設定 — CSS zoom（50–200%，預設 150%），SettingsTab range 控制，持久化於 user_settings
+- ✅ T1 設定層：新增 `user_settings` 表 + Server Actions + 獨立 `useUserSettings` hook（樂觀更新 + key-scoped rollback）
+- ✅ 測試基建：vitest（config + @/ alias + jsdom），`npm test` 執行，Wave 1 合併後 34 綠
+
 ## v0.4.0 — 穩定性
 
 - 加入測試（至少 Server Actions 單元測試）
