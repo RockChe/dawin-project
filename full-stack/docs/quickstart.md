@@ -65,6 +65,7 @@ npm run dev
 | `npm run db:push` | 直接推送 schema 到資料庫（開發用） |
 | `npm run db:studio` | 開啟 Drizzle Studio（資料庫 GUI） |
 | `npm run seed` | 執行 seed 腳本建立預設帳號 |
+| `npm test` | 執行所有單元測試（vitest） |
 | `node scripts/backup.js [--r2] [--gdrive]` | CLI 手動備份（預設本地，可指定 R2 / Google Drive） |
 | `node scripts/restore.js <file> [--dry-run] [--confirm]` | CLI 恢復備份（支援乾跑模式） |
 

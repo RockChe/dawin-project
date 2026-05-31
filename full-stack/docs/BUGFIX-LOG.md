@@ -100,3 +100,14 @@
 - **根因**：`gw` 變數定義在 `useMemo()` 回呼函式內部，但在 JSX return 中直接引用 `gw`，超出 `useMemo` 的區域作用域。webpack 在靜態分析時偵測到未定義的變數，導致編譯中斷
 - **解法**：移除 `useMemo` 內部的 `gw` 中間變數，改用 `ganttWidths` prop 直接存取（搭配 fallback 預設值）
 - **教訓**：`useMemo` / `useCallback` 內部的 `const` / `let` 變數只存在於回呼函式作用域中，不會暴露到元件的 JSX。若需要在 JSX 中使用計算結果，應作為 `useMemo` 的回傳值，或直接使用 props/state
+
+---
+
+### [BUG-010] Projects 拖移排序無法持久化（orderedIds 從 setState 副作用取得）
+
+- **日期**：2026-05-31
+- **Commit**：`8a65abc`（merge T2 BUG01）
+- **症狀**：在 ProjectsTab 拖曳卡片重新排序後，重新整理頁面排序回到原狀。UI 短暫顯示新順序（樂觀更新），但 server 端 `reorderProjectsAction` 實際上接收到空陣列或舊的 orderedIds，未真正寫入 DB
+- **根因**：`useTaskManager.js` 的 `reorderProjects` 函式在 `setProjects(prev => { ... })` 的 updater callback 內部計算 `orderedIds`（以 `arrayMove` 結果為基礎），並在同一個 callback 中以 side-effect 方式呼叫 `reorderProjectsAction(orderedIds)`。React 在 Concurrent Mode 下不保證 updater callback 只執行一次，且 side-effect 不應放在 setState updater 內。結果：persist 呼叫有時拿到的是尚未更新的 `prev` 狀態，導致 orderedIds 為空或順序錯誤，server action 靜默忽略
+- **解法**：將 `orderedIds` 的計算移到 `setProjects` 呼叫之前，從 `projects`（當前狀態快照）同步計算出 `arrayMove` 結果再取 id。persist 呼叫改在 `setState` 外部非同步執行，orderedIds 從快照取得，與 updater 完全解耦
+- **教訓**：React setState updater callback 不應有 side-effect（網路請求、持久化、log 等）。Updater 函式可能被執行多次（StrictMode / Concurrent）且執行時機不確定。需要在狀態更新後做非同步操作時，應先同步計算所需數值，再分開呼叫 setState 和 async function

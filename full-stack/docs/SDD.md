@@ -182,6 +182,18 @@
 
 ---
 
+### 決策：per-account 設定層（獨立 user_settings 表 + useUserSettings hook）
+
+- **背景**：Wave 1 需為每位使用者儲存個人化設定（如全站放大比例），原有 `configTable` 為全系統共用設定（無 userId 欄位），`useTaskManager` 為任務資料管理主 hook
+- **選項**：
+  - A) 擴充 `configTable` 加入 userId 欄位 — 修改現有表與 hook，耦合風險高
+  - B) 在 `useTaskManager` 內新增個人設定管理 — 讓已很龐大的 hook 承擔更多責任
+  - C) 新增獨立 `user_settings` 表 + 獨立 `useUserSettings` hook — 職責分離，互不干擾
+- **決策**：C — 新增 `user_settings`（id, userId→users cascade, key varchar100, value text/JSON, updatedAt；UNIQUE(userId,key)），`useUserSettings` 獨立 hook，不觸碰 `useTaskManager`
+- **理由**：per-user 與 per-system 設定語意不同，不應共用資料表。`useTaskManager` 已有大量任務 CRUD 職責，再混入用戶設定會降低可維護性。獨立 hook 可 key-scoped 樂觀更新 + rollback，且任何元件可直接引入不須穿透 props。`onConflictDoUpdate` upsert 模式確保 idempotent 寫入
+
+---
+
 ### 決策：Auth 錯誤自動跳轉 /login
 
 - **背景**：用戶在操作途中 session 可能過期（7 天到期、管理員撤銷），需統一處理

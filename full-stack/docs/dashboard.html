@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dawin Dash (Full-Stack) · Dashboard</title>
+<style>
+:root{
+  --bg:#000;
+  --bg-card:#0a0a0a;
+  --bg-hover:#111;
+  --bg-deep:#050505;
+  --border:#1f1f1f;
+  --border-hi:#2a2a2a;
+  --fg:#fafafa;
+  --fg-2:#a0a0a0;
+  --fg-3:#6b6b6b;
+  --accent:#3b82f6;
+  --accent-soft:rgba(59,130,246,.3);
+  --success:#10b981;
+  --success-soft:rgba(16,185,129,.3);
+  --warn:#f59e0b;
+  --warn-soft:rgba(245,158,11,.3);
+  --mono:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;
+  --sans:'Inter','-apple-system',BlinkMacSystemFont,'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.6;letter-spacing:-.005em}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accent);color:#000}
+
+.container{max-width:1100px;margin:0 auto;padding:0 32px}
+
+/* TOPNAV */
+nav.topnav{position:sticky;top:0;z-index:100;background:rgba(0,0,0,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+nav.topnav .row{display:flex;align-items:center;gap:24px;height:56px}
+nav.topnav .brand{font-weight:600;letter-spacing:-.015em;font-size:14px;margin-right:auto;flex-shrink:0}
+nav.topnav a.link{color:var(--fg-2);font-size:13px;letter-spacing:-.01em;transition:color .15s ease;flex-shrink:0}
+nav.topnav a.link:hover{color:var(--fg)}
+nav.topnav a.link.active{color:var(--fg)}
+
+/* HERO */
+.hero{padding:96px 0 72px;border-bottom:1px solid var(--border)}
+.hero h1{font-size:clamp(40px,6vw,64px);font-weight:700;letter-spacing:-.035em;line-height:1.05;margin-bottom:20px}
+.hero .tagline{font-size:clamp(16px,1.7vw,20px);color:var(--fg-2);letter-spacing:-.012em;margin-bottom:36px;max-width:720px;line-height:1.55}
+.hero .badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;padding:5px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:999px;font-size:12.5px;color:var(--fg-2);letter-spacing:-.005em;font-weight:500}
+.badge.accent{color:var(--accent);border-color:var(--accent-soft)}
+.badge.success{color:var(--success);border-color:var(--success-soft)}
+.badge.warn{color:var(--warn);border-color:var(--warn-soft)}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:8px;opacity:.7}
+
+/* SECTIONS */
+section.block{padding:88px 0;border-bottom:1px solid var(--border)}
+section.block:last-of-type{border:none}
+section.block h2{font-size:clamp(24px,3vw,34px);font-weight:700;letter-spacing:-.025em;margin-bottom:8px;line-height:1.2}
+section.block .section-sub{color:var(--fg-2);font-size:15px;margin-bottom:36px;letter-spacing:-.005em}
+section.block.empty{display:none}
+
+/* PILLARS */
+.pillar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.pillar-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:22px 24px;transition:border-color .15s ease,background .15s ease}
+.pillar-card:hover{border-color:var(--border-hi);background:var(--bg-hover)}
+.pillar-card .pillar-name{font-weight:600;font-size:15px;margin-bottom:10px;letter-spacing:-.012em;color:var(--fg)}
+.pillar-card .pillar-flow{color:var(--fg-2);font-size:13px;font-family:var(--mono);line-height:1.6;word-break:break-word}
+
+/* MERMAID */
+.mermaid-frame{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:36px 24px;overflow-x:auto;text-align:center}
+.mermaid-frame pre.mermaid{background:transparent;text-align:center;font-size:14px}
+.mermaid-frame svg{max-width:100%;height:auto !important}
+
+/* QUICKSTART */
+.quickstart-list{list-style:none;display:flex;flex-direction:column;gap:14px;counter-reset:step}
+.quickstart-step{display:grid;grid-template-columns:36px 1fr;gap:18px;align-items:start;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:22px 24px}
+.quickstart-step::before{content:counter(step);counter-increment:step;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--bg-hover);border:1px solid var(--border);color:var(--fg-2);font-size:12px;font-weight:600;font-family:var(--mono);margin-top:2px}
+.quickstart-step .step-body{min-width:0}
+.quickstart-step h3{font-size:15px;font-weight:600;margin-bottom:10px;letter-spacing:-.012em;color:var(--fg)}
+.quickstart-step pre{background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-family:var(--mono);font-size:12.5px;color:var(--fg);overflow-x:auto;line-height:1.65;white-space:pre}
+.quickstart-step pre .prompt{color:var(--fg-3);user-select:none;margin-right:8px}
+.quickstart-step pre .comment{color:var(--fg-3)}
+
+/* SUBPROJECTS */
+.subproject-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.subproject-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:22px 24px;transition:border-color .15s ease,background .15s ease}
+.subproject-card:hover{border-color:var(--border-hi);background:var(--bg-hover)}
+.subproject-card .sp-name{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--fg);margin-bottom:10px;word-break:break-all;letter-spacing:-.005em}
+.subproject-card .sp-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.subproject-card .sp-tag{font-size:11px;padding:2px 8px;background:var(--bg-hover);border:1px solid var(--border);border-radius:999px;color:var(--fg-2);letter-spacing:-.005em;font-weight:500}
+.subproject-card .sp-role{color:var(--fg-2);font-size:13px;line-height:1.55;letter-spacing:-.005em}
+
+/* STATUS */
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:32px}
+.status-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:24px}
+.status-card .status-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-3);margin-bottom:14px;font-weight:600}
+.status-card .status-value{font-size:36px;font-weight:700;letter-spacing:-.025em;line-height:1;margin-bottom:6px}
+.status-card .status-sub{color:var(--fg-2);font-size:13px;letter-spacing:-.005em;margin-bottom:14px}
+.progress{height:4px;background:var(--bg-hover);border-radius:999px;overflow:hidden}
+.progress-bar{height:100%;background:var(--accent);border-radius:999px;transition:width .9s cubic-bezier(.4,0,.2,1);width:0}
+
+.phase-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.phase-item{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.phase-item .phase-name{font-size:13.5px;font-weight:600;color:var(--fg);margin-bottom:4px;letter-spacing:-.01em}
+.phase-item .phase-status{font-size:12px;color:var(--fg-2);font-family:var(--mono)}
+.phase-item.done{border-color:var(--success-soft)}
+.phase-item.done .phase-name{color:var(--success)}
+.phase-item.wip{border-color:var(--warn-soft)}
+.phase-item.wip .phase-name{color:var(--warn)}
+
+/* TIMELINE */
+.timeline{display:flex;flex-direction:column}
+.tl-row{display:grid;grid-template-columns:80px 70px 1fr;gap:16px;padding:11px 0;border-bottom:1px solid var(--border);font-size:13.5px;align-items:center}
+.tl-row:last-child{border:none}
+.tl-row .tl-date{color:var(--fg-3);font-family:var(--mono);font-size:12.5px}
+.tl-row .tl-hash{color:var(--fg-3);font-family:var(--mono);font-size:12px}
+.tl-row .tl-msg{color:var(--fg);letter-spacing:-.005em;line-height:1.5;word-break:break-word}
+.tl-type{display:inline-block;padding:1px 7px;margin-right:8px;font-family:var(--mono);font-size:10.5px;border-radius:3px;background:var(--bg-card);border:1px solid var(--border);color:var(--fg-2);font-weight:600;letter-spacing:.02em;text-transform:lowercase;vertical-align:1px}
+.tl-type.feat{color:var(--accent);border-color:var(--accent-soft)}
+.tl-type.fix{color:var(--warn);border-color:var(--warn-soft)}
+.tl-type.docs{color:var(--success);border-color:var(--success-soft)}
+.tl-type.refactor,.tl-type.chore{color:var(--fg-2)}
+
+/* DOCS */
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.doc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:22px 24px;display:block;transition:all .15s ease}
+.doc-card:hover{border-color:var(--border-hi);background:var(--bg-hover)}
+.doc-card .doc-name{font-family:var(--mono);font-weight:600;font-size:13px;margin-bottom:10px;color:var(--fg);display:flex;align-items:center;justify-content:space-between;gap:8px;letter-spacing:-.005em}
+.doc-card .doc-arrow{color:var(--fg-3);transition:transform .15s ease,color .15s ease;font-size:14px}
+.doc-card:hover .doc-arrow{color:var(--accent);transform:translate(2px,-2px)}
+.doc-card .doc-summary{color:var(--fg-2);font-size:13px;line-height:1.55;margin-bottom:12px;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.doc-card .doc-meta{font-size:11px;color:var(--fg-3);letter-spacing:.04em;text-transform:uppercase;font-weight:500;font-family:var(--mono)}
+
+/* FOOTER */
+footer{padding:36px 0;border-top:1px solid var(--border);color:var(--fg-3);font-size:12.5px;text-align:center;letter-spacing:.01em}
+footer .container{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+footer code{font-family:var(--mono);background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--fg-2)}
+
+/* MOBILE */
+@media (max-width:768px){
+  .container{padding:0 20px}
+  nav.topnav .row{gap:14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  nav.topnav .row::-webkit-scrollbar{display:none}
+  nav.topnav a.link{font-size:12.5px}
+  nav.topnav .brand{font-size:13px}
+  .hero{padding:64px 0 52px}
+  section.block{padding:56px 0}
+  .pillar-grid,.subproject-grid,.doc-grid{grid-template-columns:1fr}
+  .quickstart-step{grid-template-columns:30px 1fr;gap:14px;padding:18px 18px}
+  .tl-row{grid-template-columns:64px 1fr;gap:10px}
+  .tl-row .tl-hash{display:none}
+}
+
+/* mermaid theme tweak */
+.mermaid svg{background:transparent !important}
+.mermaid .node rect,.mermaid .node circle,.mermaid .node polygon{fill:#0a0a0a !important;stroke:#3b82f6 !important;stroke-width:1px !important}
+.mermaid .edgePath path{stroke:#6b6b6b !important;stroke-width:1.2px !important}
+.mermaid .edgeLabel{background:#000 !important;color:#a0a0a0 !important}
+.mermaid .nodeLabel,.mermaid .label{color:#fafafa !important;fill:#fafafa !important;font-family:var(--sans) !important}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="container row">
+    <span class="brand">Dawin Dash (Full-Stack)</span>
+    <a class="link" href="#pillars">Pillars</a>
+    <a class="link" href="#architecture">Architecture</a>
+    <a class="link" href="#quickstart">Quickstart</a>
+    <a class="link" href="#subprojects">Subprojects</a>
+    <a class="link" href="#status">Status</a>
+    <a class="link" href="#docs">Docs</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <h1>Dawin Dash (Full-Stack)</h1>
+    <p class="tagline">影視 IP 專案管理儀表板，供內部團隊追蹤多個影視專案的任務進度、時程、檔案與人員分工</p>
+    <div class="badges"></div>
+  </div>
+</header>
+
+<section class="block empty" id="pillars">
+  <div class="container">
+    <h2>系統做什麼</h2>
+    <p class="section-sub">每一層的職責與資料流</p>
+    <div class="pillar-grid"></div>
+  </div>
+</section>
+
+<section class="block" id="architecture">
+  <div class="container">
+    <h2>架構</h2>
+    <p class="section-sub">資料流向與元件連結</p>
+    <div class="mermaid-frame">
+      <pre class="mermaid">graph LR
+  A[資料] --> B[處理] --> C[輸出]</pre>
+    </div>
+  </div>
+</section>
+
+<section class="block empty" id="quickstart">
+  <div class="container">
+    <h2>快速開始</h2>
+    <p class="section-sub">本機常用指令</p>
+    <ol class="quickstart-list"></ol>
+  </div>
+</section>
+
+<section class="block empty" id="subprojects">
+  <div class="container">
+    <h2>子專案</h2>
+    <p class="section-sub">0 個元件構成這個系統</p>
+    <div class="subproject-grid"></div>
+  </div>
+</section>
+
+<section class="block" id="status">
+  <div class="container">
+    <h2>進度狀態</h2>
+    <p class="section-sub">milestone / to-do / 各 Phase 進度</p>
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-label">Milestone</div>
+        <div class="status-value">0%</div>
+        <div class="status-sub">0 / 0 項目完成</div>
+        <div class="progress"><div class="progress-bar" data-pct="0"></div></div>
+      </div>
+      <div class="status-card">
+        <div class="status-label">To-do</div>
+        <div class="status-value">0%</div>
+        <div class="status-sub">0 / 0 項完成</div>
+        <div class="progress"><div class="progress-bar" data-pct="0"></div></div>
+      </div>
+      <div class="status-card">
+        <div class="status-label">BUGFIX</div>
+        <div class="status-value">0</div>
+        <div class="status-sub">累積條目</div>
+      </div>
+    </div>
+    <div class="phase-list"></div>
+  </div>
+</section>
+
+<section class="block " id="recent">
+  <div class="container">
+    <h2>最近變動</h2>
+    <p class="section-sub">過去 7 天的 commits</p>
+    <div class="timeline"><div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">8a65abc</span><span class="tl-msg"><span class="tl-type ">merge</span>修復 Projects 拖移排序無法儲存 (BUG01) — orderedIds 改由快照同步計算 (34 綠)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">827b635</span><span class="tl-msg"><span class="tl-type fix">fix</span>對齊 Slice0 測試基建 — reorderProjects 改 .js + 測試 port 到 vitest (BUG01)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">77766a3</span><span class="tl-msg"><span class="tl-type chore">chore</span>merge master 取得 vitest 測試基建 (Slice0)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">315a014</span><span class="tl-msg"><span class="tl-type ">merge</span>個人化全站放大設定 (#03) — CSS zoom default 150%, 持久化於 user_settings (27 綠)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">370c9f4</span><span class="tl-msg"><span class="tl-type feat">feat</span>新增個人化全站放大設定 (#03) — CSS zoom, default 150%</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">013ab08</span><span class="tl-msg"><span class="tl-type ">merge</span>設定層 user_settings + 暫緩狀態 enum/STATUSES 收斂 (Task A+C, 23 綠)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">3939b27</span><span class="tl-msg"><span class="tl-type feat">feat</span>任務狀態新增「暫緩」+ 收斂狀態清單為單一常數 (BUG02)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">50ac7e0</span><span class="tl-msg"><span class="tl-type fix">fix</span>userSettings 改用 onConflictDoUpdate 上鎖避免 upsert 競態 + hook key-scoped rollback (code review)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">24c2850</span><span class="tl-msg"><span class="tl-type fix">fix</span>修復 Projects 拖移排序無法儲存 (BUG01) — orderedIds 取自 updater 副作用、React 未同步執行時遺失致 persist 未呼叫</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">55f29fc</span><span class="tl-msg"><span class="tl-type feat">feat</span>新增 user_settings 個人設定儲存層 (表/server actions/hook)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">7adea78</span><span class="tl-msg"><span class="tl-type ">merge</span>vitest 測試基建供 Wave1 共用 (config+alias+jsdom+smoke 3綠)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">6d43571</span><span class="tl-msg"><span class="tl-type ">test</span>建立 vitest 測試基建 (config + @/ alias + jsdom + smoke test)</span></div>
+<div class="tl-row"><span class="tl-date">2026-05-31</span><span class="tl-hash">e847b14</span><span class="tl-msg"><span class="tl-type chore">chore</span>gitignore 加入 .worktrees/ (cc-fleet 隔離 worktree)</span></div></div>
+  </div>
+</section>
+
+<section class="block " id="docs">
+  <div class="container">
+    <h2>文件索引</h2>
+    <p class="section-sub">點 ↗ 開啟原 .md 檔</p>
+    <div class="doc-grid"><a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/CLAUDE.md" target="_blank" rel="noopener"><div class="doc-name"><span>CLAUDE.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">影視 IP 專案管理儀表板，供內部團隊追蹤多個影視專案的任務進度、時程、檔案與人員分工。</div><div class="doc-meta">6,696 字 · AI 開發指引</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/README.md" target="_blank" rel="noopener"><div class="doc-name"><span>README.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">影視 IP 專案管理儀表板 — 追蹤多個影視專案的任務進度、時程與檔案。</div><div class="doc-meta">1,487 字 · 專案概覽</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/api-spec.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/api-spec.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">供外部服務（n8n、Cloudflare Workers、Python Chatbot）存取 Dawin Dash 專案資料的 REST API。</div><div class="doc-meta">7,016 字</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/BUGFIX-LOG.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/BUGFIX-LOG.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">收錄具診斷與教學價值的 bug 修復紀錄。每筆包含根因分析與教訓，避免重複犯錯。</div><div class="doc-meta">5,797 字 · 踩坑知識庫</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/code-review.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/code-review.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">&gt; 審查日期：2026-03-22</div><div class="doc-meta">7,340 字</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/guide.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/guide.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">本指南適用於行銷團隊成員，說明如何操作 Dawin Dash 專案管理系統。</div><div class="doc-meta">3,302 字 · 使用手冊</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/milestone.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/milestone.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">- 多專案任務管理（CRUD）</div><div class="doc-meta">1,346 字 · 版本藍圖</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/quickstart.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/quickstart.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">- Node.js 18+</div><div class="doc-meta">1,551 字 · 快速開始</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/SDD.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/SDD.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">記錄架構決策的「為什麼這樣設計」，每個決策含背景、選項比較、決策與理由。</div><div class="doc-meta">7,435 字 · 架構設計</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/TDD.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/TDD.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">記錄複雜功能的「怎麼做的」，每個功能含實作方案、程式碼結構、關鍵檔案、效能考量與邊界處理。</div><div class="doc-meta">14,667 字 · 技術實作</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/to-do.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/to-do.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">對應版本：v0.2.0（程式碼品質）+ v0.3.0（功能擴展）</div><div class="doc-meta">3,438 字 · 待辦清單</div></a>
+<a class="doc-card" href="file:///C:/Users/Rock/Desktop/development/dawin-dash/.worktrees/T4-docs/full-stack/docs/%E5%B0%88%E6%A1%88%E9%80%B2%E5%BA%A6.md" target="_blank" rel="noopener"><div class="doc-name"><span>docs/專案進度.md</span><span class="doc-arrow">↗</span></div><div class="doc-summary">開發歷史紀錄，按日期倒序排列。</div><div class="doc-meta">4,483 字 · 開發日誌</div></a></div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <span>Generated by</span><code>/docs</code><span>·</span><span>2026-05-31</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  if(window.mermaid){
+    mermaid.initialize({startOnLoad:true,theme:'dark',securityLevel:'loose',
+      themeVariables:{
+        background:'transparent',
+        primaryColor:'#0a0a0a',
+        primaryTextColor:'#fafafa',
+        primaryBorderColor:'#3b82f6',
+        lineColor:'#6b6b6b',
+        edgeLabelBackground:'#000',
+        clusterBkg:'#050505',
+        clusterBorder:'#1f1f1f'
+      }
+    });
+  }
+  // Animate progress bars on load
+  document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('.progress-bar').forEach(function(b){
+      var p=parseFloat(b.getAttribute('data-pct'))||0;
+      requestAnimationFrame(function(){ b.style.width=p+'%'; });
+    });
+  });
+  // Scroll spy for top nav
+  var sections=Array.from(document.querySelectorAll('section.block, header.hero'));
+  var links=Array.from(document.querySelectorAll('nav.topnav a.link'));
+  function setActive(){
+    var y=window.scrollY+120;
+    var cur=null;
+    for(var i=0;i<sections.length;i++){
+      var s=sections[i];
+      if(s.offsetTop<=y) cur=s.id;
+    }
+    links.forEach(function(a){
+      a.classList.toggle('active', a.getAttribute('href')==='#'+cur);
+    });
+  }
+  window.addEventListener('scroll',setActive,{passive:true});
+  setActive();
+})();
+</script>
+</body>
+</html>
