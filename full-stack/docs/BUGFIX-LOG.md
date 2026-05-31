@@ -122,3 +122,14 @@
 - **根因**：`useTaskManager.js` 的 `reorderProjects` 函式在 `setProjects(prev => { ... })` 的 updater callback 內部計算 `orderedIds`（以 `arrayMove` 結果為基礎），並在同一個 callback 中以 side-effect 方式呼叫 `reorderProjectsAction(orderedIds)`。React 在 Concurrent Mode 下不保證 updater callback 只執行一次，且 side-effect 不應放在 setState updater 內。結果：persist 呼叫有時拿到的是尚未更新的 `prev` 狀態，導致 orderedIds 為空或順序錯誤，server action 靜默忽略
 - **解法**：將 `orderedIds` 的計算移到 `setProjects` 呼叫之前，從 `projects`（當前狀態快照）同步計算出 `arrayMove` 結果再取 id。persist 呼叫改在 `setState` 外部非同步執行，orderedIds 從快照取得，與 updater 完全解耦
 - **教訓**：React setState updater callback 不應有 side-effect（網路請求、持久化、log 等）。Updater 函式可能被執行多次（StrictMode / Concurrent）且執行時機不確定。需要在狀態更新後做非同步操作時，應先同步計算所需數值，再分開呼叫 setState 和 async function
+
+---
+
+### [BUG-011] GanttTimeline 條件式 early return 在 hooks 之前（rules-of-hooks）
+
+- **日期**：2026-05-31
+- **Commit**：`fb1040b` / `350f20b`（T6 Timeline 收折/排序整合）
+- **症狀**：為 Timeline 加入收折/排序/隱藏過濾後，GanttTimeline 在不同 props 下（如 `isMobile`、無資料）渲染路徑改變時，React 報 "Rendered fewer/more hooks than during the previous render"，元件崩潰
+- **根因**：元件在 `useMemo`（計算 ganttData）等 hooks **之前**就有 `if (isMobile) return <MobileGanttList .../>` 與 `if (!ganttData) return ...` 的 early return。當條件改變時，被略過的後續 hooks 數量不一致，違反 React rules-of-hooks（hooks 必須無條件、固定順序呼叫）
+- **解法**：把所有 hooks（`useMemo` / `useState` 收折狀態等）集中到元件頂部無條件呼叫，所有 early return 一律移到 hooks 之後（程式碼以「── Early returns AFTER all hooks ──」註解標記）
+- **教訓**：hooks 必須在每次 render 以相同順序、無條件執行。任何 `if (...) return` 都要排在全部 hooks 之後；新增功能往既有元件塞 hook 時，先確認沒有任何提早 return 夾在 hooks 中間。純運算邏輯抽成可測純函式（filterVisibleTasks/sortProjectNames/toggleCollapsed）放元件外，可同時降低此風險並利於 TDD
