@@ -224,15 +224,28 @@ export function TimeScaleToggle({ value, onChange }) {
 
 export { computeScaleDivisions };
 
-// GanttTimeline no longer owns collapse state.
-// collapsed and onToggleCollapse are lifted to TimelineTab.
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed = [], onToggleCollapse }) {
+// GanttTimeline is a controlled/uncontrolled hybrid for collapse state.
+// - Uncontrolled (Overview/Projects): owns internal state + persists to localStorage.
+// - Controlled (TimelineTab): collapsed + onToggleCollapse props are supplied.
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed, onToggleCollapse }) {
   const { X, SC, PC, PJC } = useTheme();
 
   // ── ALL hooks unconditionally at top (fix rules-of-hooks) ─────────────────
   const [hI, setHI] = useState(null);
   const [leftHidden, setLeftHidden] = useState(false);
   const lR = useRef(null), rR = useRef(null), sy = useRef(false);
+
+  // ── Controlled/uncontrolled collapse state ────────────────────────────────
+  const [internalCollapsed, setInternalCollapsed] = useState(() => readCollapsedLS() ?? []);
+  const isControlled = collapsed !== undefined;
+  const collapsedState = isControlled ? collapsed : internalCollapsed;
+
+  // Uncontrolled-only: persist internal collapse state to localStorage.
+  useEffect(() => {
+    if (isControlled) return;
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem("dash-timelineCollapsed", JSON.stringify(internalCollapsed)); } catch { /* ignore */ }
+  }, [internalCollapsed, isControlled]);
 
   const ganttData = useMemo(() => {
     // A. Apply hidden-project filter FIRST
@@ -276,7 +289,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
       const avg = computeProjectProgress(tasks.filter(t => t.project === proj));
       rows.push({ type: "h", proj, projId, n: pMap[proj].length, avg });
       // C. Skip task rows when project is collapsed
-      if (!isCollapsed(collapsed, projId)) {
+      if (!isCollapsed(collapsedState, projId)) {
         pMap[proj].forEach(task => {
           const s = pD(task.start), e = pD(task.end);
           const l = ((s - mn) / 864e5) / td * 100, w = Math.max(0.3, ((e - s) / 864e5 + 1) / td * 100);
@@ -287,7 +300,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
     });
     const todayPct = ((new Date() - mn) / 864e5) / td * 100;
     return { months, ganttMinW, pcMap, rows, todayPct };
-  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsed]);
+  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsedState, isControlled]);
 
   // ── Early returns AFTER all hooks ─────────────────────────────────────────
   if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} />;
@@ -304,8 +317,8 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
           <div>{rows.map((r, i) => {
             if (r.type === "h") {
               const c = pcMap[r.proj] || X.accent;
-              const coll = isCollapsed(collapsed, r.projId);
-              const toggle = () => onToggleCollapse && onToggleCollapse(r.projId);
+              const coll = isCollapsed(collapsedState, r.projId);
+              const toggle = () => { if (isControlled) onToggleCollapse(r.projId); else setInternalCollapsed(prev => toggleCollapsed(prev, r.projId)); };
               return (<div key={`h-${r.proj}`} role="button" tabIndex={0} aria-expanded={!coll} onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); toggle(); } }} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
                 <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
                 <span style={{ fontSize: 12, color: c, flexShrink: 0, userSelect: "none" }}>{coll ? "▸" : "▾"}</span>

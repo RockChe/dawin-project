@@ -46,11 +46,9 @@ function TimelineTab({
     typeof window !== "undefined" && localStorage.getItem(LS_KEY) !== null
   );
 
-  // Persist collapse state to localStorage on every change.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(collapsed)); } catch { /* ignore */ }
-  }, [collapsed]);
+  // NOTE: no blanket persist effect — writing LS on mount would freeze a record
+  // even without user interaction, defeating the per-account default fallback.
+  // localStorage is written explicitly only inside onToggleCollapse / handleCollapseExpandAll.
 
   // All project ids visible on this timeline (excludes hidden projects).
   const allProjectIds = useMemo(
