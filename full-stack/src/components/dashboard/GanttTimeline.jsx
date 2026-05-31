@@ -145,7 +145,10 @@ const LS_KEY = "dash-timelineCollapsed";
 
 function readCollapsedFromLS() {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; }
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LS_KEY));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
 }
 
 export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [] }) {
@@ -232,7 +235,8 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
             if (r.type === "h") {
               const c = pcMap[r.proj] || X.accent;
               const coll = isCollapsed(collapsed, r.projId);
-              return (<div key={`h-${r.proj}`} onClick={() => setCollapsed(prev => toggleCollapsed(prev, r.projId))} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
+              const toggle = () => setCollapsed(prev => toggleCollapsed(prev, r.projId));
+              return (<div key={`h-${r.proj}`} role="button" tabIndex={0} aria-expanded={!coll} onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); toggle(); } }} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
                 <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
                 <span style={{ fontSize: 12, color: c, flexShrink: 0, userSelect: "none" }}>{coll ? "▸" : "▾"}</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.proj}</span>
@@ -258,7 +262,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
             {rows.map((r, i) => {
               if (r.type === "h") {
                 const c = pcMap[r.proj] || X.accent;
-                return (<div key={`rh-${r.proj}`} onClick={() => setCollapsed(prev => toggleCollapsed(prev, r.projId))} style={{ height: 32, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }} />);
+                return (<div key={`rh-${r.proj}`} style={{ height: 32, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }} />);
               }
               const bc = pcMap[r.proj], hv = hI === i, dn = r.task.status === "已完成", pp = r.task.status === "提案中" || r.task.status === "待確認";
               return (<div key={`rt-${r.task.id}`} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ position: "relative", height: 40, background: hv ? X.surfaceHover : "transparent", zIndex: hv ? 10 : 1, borderBottom: `1px solid ${X.border}22` }}>

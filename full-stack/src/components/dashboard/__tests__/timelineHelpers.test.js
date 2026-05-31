@@ -79,6 +79,10 @@ describe('computeProjectProgress', () => {
     expect(computeProjectProgress([])).toBe(0);
   });
 
+  it('returns 0 for null input', () => {
+    expect(computeProjectProgress(null)).toBe(0);
+  });
+
   it('returns correct average for single task', () => {
     expect(computeProjectProgress([{ progress: 50 }])).toBe(50);
   });
