@@ -15,6 +15,9 @@ import {
   toggleCollapsed,
   isCollapsed,
   uniqueProjectIds,
+  computeProgressByProject,
+  collapseAllIds,
+  resolveInitialCollapsed,
 } from '@/components/dashboard/GanttTimeline';
 
 // ── filterVisibleTasks ────────────────────────────────────────────────────────
@@ -363,5 +366,194 @@ describe('uniqueProjectIds', () => {
 
   it('hiddenProjects with unknown id does not filter anything', () => {
     expect(uniqueProjectIds(tasks, ['pXYZ'])).toEqual(['p1', 'p2', 'p3']);
+  });
+});
+
+// ── computeProgressByProject ──────────────────────────────────────────────────
+
+describe('computeProgressByProject', () => {
+  it('returns {} for undefined input', () => {
+    expect(computeProgressByProject(undefined)).toEqual({});
+  });
+
+  it('returns {} for null input', () => {
+    expect(computeProgressByProject(null)).toEqual({});
+  });
+
+  it('returns {} for empty array', () => {
+    expect(computeProgressByProject([])).toEqual({});
+  });
+
+  it('returns correct avg for single project with one task', () => {
+    const tasks = [{ project: 'Alpha', progress: 60 }];
+    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 60 });
+  });
+
+  it('returns correct rounded avg for single project with multiple tasks', () => {
+    const tasks = [
+      { project: 'Alpha', progress: 30 },
+      { project: 'Alpha', progress: 40 },
+      { project: 'Alpha', progress: 51 },
+    ];
+    // (30 + 40 + 51) / 3 = 40.33... → 40
+    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 40 });
+  });
+
+  it('handles multiple projects', () => {
+    const tasks = [
+      { project: 'Alpha', progress: 100 },
+      { project: 'Beta', progress: 50 },
+      { project: 'Alpha', progress: 0 },
+      { project: 'Beta', progress: 50 },
+    ];
+    // Alpha: (100+0)/2=50, Beta: (50+50)/2=50
+    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 50, Beta: 50 });
+  });
+
+  it('treats missing .progress as 0', () => {
+    const tasks = [{ project: 'Alpha' }, { project: 'Alpha', progress: 100 }];
+    // (0 + 100) / 2 = 50
+    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 50 });
+  });
+
+  it('已完成 tasks with progress=100 are computed correctly (baked in by twp)', () => {
+    // Spec says .progress is already baked: 已完成→100. Just use .progress directly.
+    const tasks = [
+      { project: 'Alpha', progress: 100 }, // 已完成 — already baked
+      { project: 'Alpha', progress: 0 },
+    ];
+    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 50 });
+  });
+
+  it('rounds 0.5 up to 1', () => {
+    const tasks = [{ project: 'P', progress: 0 }, { project: 'P', progress: 1 }];
+    // (0+1)/2 = 0.5 → Math.round → 1
+    expect(computeProgressByProject(tasks)).toEqual({ P: 1 });
+  });
+
+  it('returns integer values (not floats)', () => {
+    const tasks = [{ project: 'P', progress: 33 }, { project: 'P', progress: 34 }];
+    const result = computeProgressByProject(tasks);
+    expect(Number.isInteger(result['P'])).toBe(true);
+  });
+
+  it('skips tasks with null or undefined project name', () => {
+    const tasks = [
+      { project: null, progress: 50 },
+      { project: undefined, progress: 80 },
+      { project: 'Alpha', progress: 40 },
+    ];
+    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 40 });
+  });
+
+  it('does not mutate the input array', () => {
+    const tasks = [{ project: 'A', progress: 60 }];
+    const orig = [...tasks];
+    computeProgressByProject(tasks);
+    expect(tasks).toEqual(orig);
+  });
+});
+
+// ── collapseAllIds ────────────────────────────────────────────────────────────
+
+describe('collapseAllIds', () => {
+  it('returns a copy of projIds when collapse=true', () => {
+    const ids = ['p1', 'p2', 'p3'];
+    expect(collapseAllIds(ids, true)).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('does not mutate input when collapse=true', () => {
+    const ids = ['p1', 'p2'];
+    const result = collapseAllIds(ids, true);
+    expect(result).not.toBe(ids);
+    expect(ids).toEqual(['p1', 'p2']); // unchanged
+  });
+
+  it('returns [] when collapse=false', () => {
+    expect(collapseAllIds(['p1', 'p2'], false)).toEqual([]);
+  });
+
+  it('returns [] for undefined projIds', () => {
+    expect(collapseAllIds(undefined, true)).toEqual([]);
+    expect(collapseAllIds(undefined, false)).toEqual([]);
+  });
+
+  it('returns [] for null projIds', () => {
+    expect(collapseAllIds(null, true)).toEqual([]);
+    expect(collapseAllIds(null, false)).toEqual([]);
+  });
+
+  it('returns [] for empty projIds with collapse=true', () => {
+    expect(collapseAllIds([], true)).toEqual([]);
+  });
+
+  it('returns [] for empty projIds with collapse=false', () => {
+    expect(collapseAllIds([], false)).toEqual([]);
+  });
+
+  it('always returns a new array reference', () => {
+    const ids = ['p1'];
+    expect(collapseAllIds(ids, false)).not.toBe(ids);
+    expect(collapseAllIds(ids, true)).not.toBe(ids);
+  });
+});
+
+// ── resolveInitialCollapsed ───────────────────────────────────────────────────
+
+describe('resolveInitialCollapsed', () => {
+  const projIds = ['p1', 'p2', 'p3'];
+
+  // ── lsValue present ────────────────────────────────────────────────────────
+  describe('when lsValue is a valid array (localStorage record exists)', () => {
+    it('returns a copy of lsValue, ignoring defaultCollapsed', () => {
+      const ls = ['p1', 'p2'];
+      expect(resolveInitialCollapsed(ls, false, projIds)).toEqual(['p1', 'p2']);
+    });
+
+    it('returns a copy of lsValue even when defaultCollapsed=true', () => {
+      const ls = ['p1'];
+      expect(resolveInitialCollapsed(ls, true, projIds)).toEqual(['p1']);
+    });
+
+    it('returns a new array reference (does not mutate lsValue)', () => {
+      const ls = ['p1'];
+      const result = resolveInitialCollapsed(ls, true, projIds);
+      expect(result).not.toBe(ls);
+      expect(ls).toEqual(['p1']); // unchanged
+    });
+
+    it('handles empty lsValue array (all expanded)', () => {
+      expect(resolveInitialCollapsed([], true, projIds)).toEqual([]);
+    });
+  });
+
+  // ── lsValue absent ─────────────────────────────────────────────────────────
+  describe('when lsValue is null (no localStorage record)', () => {
+    it('returns projIds copy when defaultCollapsed=true', () => {
+      expect(resolveInitialCollapsed(null, true, projIds)).toEqual(['p1', 'p2', 'p3']);
+    });
+
+    it('returns [] when defaultCollapsed=false', () => {
+      expect(resolveInitialCollapsed(null, false, projIds)).toEqual([]);
+    });
+
+    it('returns [] when defaultCollapsed is falsy (undefined)', () => {
+      expect(resolveInitialCollapsed(null, undefined, projIds)).toEqual([]);
+    });
+
+    it('returns [] when defaultCollapsed=false and projIds empty', () => {
+      expect(resolveInitialCollapsed(null, false, [])).toEqual([]);
+    });
+
+    it('returns [] when projIds is undefined and defaultCollapsed=true', () => {
+      expect(resolveInitialCollapsed(null, true, undefined)).toEqual([]);
+    });
+
+    it('does not mutate projIds when defaultCollapsed=true', () => {
+      const ids = ['p1', 'p2'];
+      const result = resolveInitialCollapsed(null, true, ids);
+      expect(result).not.toBe(ids);
+      expect(ids).toEqual(['p1', 'p2']); // unchanged
+    });
   });
 });

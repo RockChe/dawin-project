@@ -92,6 +92,67 @@ export function isCollapsed(collapsedIds, id) {
 }
 
 /**
+ * Compute average progress per project, grouped by t.project name.
+ * @param {Array} tasks — each item may have .project (string) and .progress (0-100)
+ * @returns {{ [projectName: string]: number }} map of project name → avg progress (integer)
+ */
+export function computeProgressByProject(tasks) {
+  if (!tasks || tasks.length === 0) return {};
+  const groups = {};
+  for (const t of tasks) {
+    const name = t.project;
+    if (name === undefined || name === null) continue;
+    if (!groups[name]) groups[name] = [];
+    groups[name].push(t.progress || 0);
+  }
+  const result = {};
+  for (const [name, progs] of Object.entries(groups)) {
+    result[name] = Math.round(progs.reduce((s, p) => s + p, 0) / progs.length);
+  }
+  return result;
+}
+
+/**
+ * Collapse or expand all project ids.
+ * @param {string[]|undefined} projIds
+ * @param {boolean} collapse  true → collapse all (return copy of projIds); false → expand all (return [])
+ * @returns {string[]} new array
+ */
+export function collapseAllIds(projIds, collapse) {
+  if (!projIds) return [];
+  return collapse ? projIds.slice() : [];
+}
+
+/**
+ * Resolve the initial collapsed state from localStorage value and server-persisted default.
+ * @param {string[]|null} lsValue  — parsed localStorage value, or null if absent/invalid
+ * @param {boolean} defaultCollapsed  — server-persisted per-account default
+ * @param {string[]} projIds  — all project ids to collapse when default is true
+ * @returns {string[]} array of collapsed project ids
+ */
+export function resolveInitialCollapsed(lsValue, defaultCollapsed, projIds) {
+  if (lsValue !== null && lsValue !== undefined && Array.isArray(lsValue)) {
+    return lsValue.slice();
+  }
+  const ids = projIds || [];
+  return defaultCollapsed === true ? ids.slice() : [];
+}
+
+/**
+ * Read the collapsed state from localStorage.
+ * @returns {string[]|null} parsed array, or null if absent or invalid
+ */
+export function readCollapsedLS() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("dash-timelineCollapsed");
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+}
+
+/**
  * Return de-duplicated projectId values from tasks, excluding any in hiddenProjects.
  * Preserves first-seen order.
  * @param {Array} tasks — each item has a .projectId

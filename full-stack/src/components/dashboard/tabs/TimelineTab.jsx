@@ -2,19 +2,16 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import useUserSettings from "@/hooks/useUserSettings";
-import GanttTimeline, { TimeScaleToggle, toggleCollapsed, uniqueProjectIds } from "../GanttTimeline";
+import GanttTimeline, {
+  TimeScaleToggle,
+  toggleCollapsed,
+  uniqueProjectIds,
+  collapseAllIds,
+  resolveInitialCollapsed,
+  readCollapsedLS,
+} from "../GanttTimeline";
 
 const LS_KEY = "dash-timelineCollapsed";
-
-function readCollapsedFromLS() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (raw === null) return null;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch { return null; }
-}
 
 function TimelineTab({
   twp,
@@ -36,19 +33,18 @@ function TimelineTab({
   const { settings, updateSetting } = useUserSettings({ timelineSort: "manual" });
   const timelineSort = settings.timelineSort;
 
-  // ── Collapse state (lifted from GanttTimeline) ────────────────────────────
-  // Initialise from localStorage; if no record, start with [].
+  // ── Collapse state (lifted from GanttTimeline, controlled parent) ─────────
+  // Initialise from localStorage; if no LS record, start with [].
   const [collapsed, setCollapsed] = useState(() => {
-    const fromLS = readCollapsedFromLS();
+    const fromLS = readCollapsedLS();
     return fromLS !== null ? fromLS : [];
   });
 
-  // Track whether a localStorage record existed at mount time.
-  const hadLocalRecordRef = useRef(
+  // Track whether user has intentionally interacted with collapse state
+  // (either via LS record at mount, or by clicking toggle/button).
+  const userTouchedRef = useRef(
     typeof window !== "undefined" && localStorage.getItem(LS_KEY) !== null
   );
-  // Track whether the default has already been applied once (or the user clicked the button).
-  const defaultAppliedRef = useRef(false);
 
   // Persist collapse state to localStorage on every change.
   useEffect(() => {
@@ -56,37 +52,43 @@ function TimelineTab({
     try { localStorage.setItem(LS_KEY, JSON.stringify(collapsed)); } catch { /* ignore */ }
   }, [collapsed]);
 
-  const onToggleCollapse = useCallback(id => {
-    setCollapsed(prev => toggleCollapsed(prev, id));
-  }, []);
-
   // All project ids visible on this timeline (excludes hidden projects).
   const allProjectIds = useMemo(
     () => uniqueProjectIds(twp, hiddenProjects),
     [twp, hiddenProjects]
   );
 
-  // Apply server-persisted default once — only when no localStorage record exists.
+  // Apply server-persisted default — only when no localStorage record exists and user hasn't touched.
   useEffect(() => {
-    if (defaultAppliedRef.current || hadLocalRecordRef.current) return;
+    if (userTouchedRef.current) return;
     if (!allProjectIds.length) return;
-    defaultAppliedRef.current = true;
-    if (timelineDefaultCollapsed) setCollapsed(allProjectIds);
+    setCollapsed(resolveInitialCollapsed(null, timelineDefaultCollapsed, allProjectIds));
   }, [timelineDefaultCollapsed, allProjectIds]);
+
+  const effectiveCollapsed = collapsed ?? [];
+
+  // Individual project toggle (per-device via localStorage).
+  const onToggleCollapse = useCallback(id => {
+    userTouchedRef.current = true;
+    setCollapsed(prev => {
+      const next = toggleCollapsed(prev ?? [], id);
+      try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  // Derive allCollapsed from actual state (not from the default setting).
+  const allCollapsed = allProjectIds.length > 0 &&
+    allProjectIds.every(id => effectiveCollapsed.includes(id));
 
   // ── Collapse-all / Expand-all button ──────────────────────────────────────
   const handleCollapseExpandAll = useCallback(() => {
-    defaultAppliedRef.current = true;
-    if (timelineDefaultCollapsed) {
-      // Currently the default is "collapsed" → button label is "全部展開" → click expands all
-      setCollapsed([]);
-      if (setTimelineDefaultCollapsed) setTimelineDefaultCollapsed(false);
-    } else {
-      // Currently the default is "expanded" → button label is "全部收折" → click collapses all
-      setCollapsed(allProjectIds);
-      if (setTimelineDefaultCollapsed) setTimelineDefaultCollapsed(true);
-    }
-  }, [timelineDefaultCollapsed, setTimelineDefaultCollapsed, allProjectIds]);
+    userTouchedRef.current = true;
+    const next = collapseAllIds(allProjectIds, !allCollapsed);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    setCollapsed(next);
+    if (setTimelineDefaultCollapsed) setTimelineDefaultCollapsed(!allCollapsed);
+  }, [allCollapsed, allProjectIds, setTimelineDefaultCollapsed]);
 
   const pillStyle = {
     background: X.surface,
@@ -114,8 +116,12 @@ function TimelineTab({
             <option value="name">名稱</option>
             <option value="progress">進度</option>
           </select>
-          <button onClick={handleCollapseExpandAll} style={pillStyle}>
-            {timelineDefaultCollapsed ? "全部展開" : "全部收折"}
+          <button
+            onClick={handleCollapseExpandAll}
+            aria-label={allCollapsed ? "全部展開 Timeline 專案" : "全部收折 Timeline 專案"}
+            style={pillStyle}
+          >
+            {allCollapsed ? "全部展開" : "全部收折"}
           </button>
         </div>
         <TimeScaleToggle value={timeDim} onChange={setTimeDim} />
@@ -134,7 +140,7 @@ function TimelineTab({
         hiddenProjects={hiddenProjects}
         timelineSort={timelineSort}
         projects={projects}
-        collapsed={collapsed}
+        collapsed={effectiveCollapsed}
         onToggleCollapse={onToggleCollapse}
       />
     </>
