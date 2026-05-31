@@ -5,7 +5,42 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, onSelect, onArchive, onDelete, onIconClick, onIconRemove }) {
+/**
+ * Eye toggle for #4b — controls whether a project shows in the Timeline.
+ * `hidden` true → project is excluded from Timeline (struck-through eye).
+ * Shared by the card (this file) and the list row (ProjectsTab).
+ */
+export function EyeToggle({ hidden, onToggle, style }) {
+  const { X } = useTheme();
+  // title = dynamic action (sighted hover); aria-label stays static + aria-pressed
+  // encodes state (visible = pressed) so screen readers announce state coherently.
+  const action = hidden ? "在 Timeline 顯示" : "不在 Timeline 顯示";
+  return (
+    <button
+      type="button"
+      onClick={e => { e.stopPropagation(); onToggle(); }}
+      title={action}
+      aria-label="在 Timeline 顯示此專案"
+      aria-pressed={!hidden}
+      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 4, lineHeight: 0, color: hidden ? X.amber : X.textSec, display: "inline-flex", alignItems: "center", justifyContent: "center", ...style }}
+      onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover}
+      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+      {hidden ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+          <line x1="1" y1="1" x2="23" y2="23" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, hidden, onToggleHidden, onSelect, onArchive, onDelete, onIconClick, onIconRemove }) {
   const { X, SC } = useTheme();
   const [iconHover, setIconHover] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id });
@@ -17,6 +52,9 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
         {dragEnabled && (
           <span {...attributes} {...listeners} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 10, right: 12, cursor: "grab", fontSize: 16, color: X.textDim, userSelect: "none", zIndex: 2, padding: "2px 4px", borderRadius: 4 }}
             onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>⠿</span>
+        )}
+        {onToggleHidden && (
+          <EyeToggle hidden={hidden} onToggle={onToggleHidden} style={{ position: "absolute", top: 8, left: 10, zIndex: 2 }} />
         )}
         <div style={{ padding: "18px 20px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>

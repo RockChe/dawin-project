@@ -11,13 +11,62 @@ import ProgressBar from "../ProgressBar";
 import SortableSubItem from "../SortableSubItem";
 import GanttTimeline, { TimeScaleToggle } from "../GanttTimeline";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
-import SortableProjectCard from "../SortableProjectCard";
+import { SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import SortableProjectCard, { EyeToggle } from "../SortableProjectCard";
 import { deleteProjectBanner } from "@/server/actions/projects";
 
 const STATUS_OPTIONS = ["已完成", "進行中", "待辦", "提案中", "待確認"];
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
+/**
+ * Toggle a project id in the hiddenProjects list (immutable add/remove).
+ * Used by the #4b eye toggle — hiddenProjects stores project.id (stable across renames).
+ * @param {Array|null|undefined} hiddenIds
+ * @param {string} id
+ * @returns {Array} new array
+ */
+export function toggleHidden(hiddenIds, id) {
+  const list = hiddenIds || [];
+  return list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+}
+
+/**
+ * Compact one-line project row for the #4a list ("明細") view.
+ * Drag handle (manual sort) · icon · name/counts · progress · status stats · eye toggle.
+ */
+function SortableProjectRow({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, hidden, onToggleHidden, onSelect }) {
+  const { X, SC } = useTheme();
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id, disabled: !dragEnabled });
+  const sStyle = { transform: CSS.Transform.toString(transform), transition };
+  return (
+    <div ref={setNodeRef} style={sStyle}>
+      <div onClick={onSelect} style={{ display: "flex", alignItems: "center", gap: 12, background: X.surface, border: `1px solid ${X.border}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", boxShadow: X.surfaceShadow, transition: "border-color 0.2s" }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = c} onMouseLeave={e => e.currentTarget.style.borderColor = X.border}>
+        {dragEnabled && (
+          <span {...attributes} {...listeners} onClick={e => e.stopPropagation()} title="拖移排序" style={{ cursor: "grab", fontSize: 16, color: X.textDim, userSelect: "none", flexShrink: 0, padding: "2px 2px" }}>⠿</span>
+        )}
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: c, flexShrink: 0, overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
+          {icon ? <img src={icon} alt="" style={{ width: 32, height: 32, objectFit: "cover", borderRadius: 8 }} /> : pn[0]}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pn}</div>
+          <div style={{ fontSize: 12, color: X.textDim, fontFamily: FM }}>{pt.length} tasks · {ts.length} subtasks</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, width: 140, flexShrink: 0 }}>
+          <div style={{ flex: 1, height: 5, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}><div style={{ height: "100%", width: `${avg}%`, background: c, borderRadius: 2, opacity: 0.8 }} /></div>
+          <span style={{ fontFamily: FM, fontSize: 13, fontWeight: 600, color: avg === 100 ? X.green : X.text, width: 36, textAlign: "right" }}>{avg}%</span>
+        </div>
+        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          {Object.entries(stC).map(([st, cnt]) => { const sc = SC[st] || {}; return (<span key={st} style={{ fontSize: 12, fontWeight: 600, padding: "1px 6px", borderRadius: 8, background: sc.bg, color: sc.color }}>{cnt}</span>); })}
+        </div>
+        {onToggleHidden && <EyeToggle hidden={hidden} onToggle={onToggleHidden} />}
+        <span style={{ fontSize: 18, color: X.textDim, flexShrink: 0 }}>›</span>
+      </div>
+    </div>
+  );
+}
+
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden }) {
   const { X, SC, inputStyle } = useTheme();
   const projMeta = useMemo(() => { const m = {}; projects.forEach(p => { m[p.name] = { creatorName: p.creatorName || null, source: p.source || null }; }); return m; }, [projects]);
   const [selProj, setSelProj] = useState(null);
@@ -159,6 +208,15 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
             <option value="created">依建立時間</option>
             <option value="progress">依進度</option>
           </select>
+          {setProjectsView && (
+            <div role="group" aria-label="檢視模式" style={{ display: "flex", border: `1px solid ${X.border}`, borderRadius: 20, overflow: "hidden" }}>
+              {[{ k: "card", l: "卡片", icon: "▦" }, { k: "list", l: "明細", icon: "☰" }].map(v => { const a = projectsView === v.k; return (
+                <button key={v.k} onClick={() => setProjectsView(v.k)} title={`${v.l}檢視`} aria-label={`${v.l}檢視`} aria-pressed={a}
+                  style={{ background: a ? X.surfaceLight : X.surface, color: a ? X.accent : X.textSec, border: "none", padding: "6px 12px", fontSize: 14, fontWeight: a ? 700 : 400, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                  <span aria-hidden="true">{v.icon}</span>{v.l}
+                </button>); })}
+            </div>
+          )}
         </div>
         {!showCreateProj ? (<button onClick={() => setShowCreateProj(true)} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>
         ) : (<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -168,8 +226,8 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
         </div>)}
       </div>
       <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
-        <SortableContext items={sortedProjList.map(p => p.id)} strategy={rectSortingStrategy} disabled={sortMode !== "manual"}>
-          <div className="dash-grid-cards">
+        <SortableContext items={sortedProjList.map(p => p.id)} strategy={projectsView === "list" ? verticalListSortingStrategy : rectSortingStrategy} disabled={sortMode !== "manual"}>
+          <div className={projectsView === "list" ? undefined : "dash-grid-cards"} style={projectsView === "list" ? { display: "flex", flexDirection: "column", gap: 8 } : undefined}>
             {sortedProjList.map(proj => {
               const pn = proj.name;
               const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
@@ -177,9 +235,14 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
               const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
               const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
               const icn = projBanners[pn];
-              return (
+              const isHidden = hiddenProjects.includes(proj.id);
+              const onToggle = onToggleHidden ? () => onToggleHidden(proj.id) : undefined;
+              return projectsView === "list" ? (
+                <SortableProjectRow key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
+                  dragEnabled={sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} />
+              ) : (
                 <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
-                  dragEnabled={sortMode === "manual"} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
+                  dragEnabled={sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
                   onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} onIconRemove={() => handleIconRemove(pn)} />
               );
             })}

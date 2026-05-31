@@ -11,8 +11,10 @@ import SettingsTab from "./tabs/SettingsTab";
 import TimelineTab from "./tabs/TimelineTab";
 import DashboardHeader from "./tabs/DashboardHeader";
 import OverviewTab from "./tabs/OverviewTab";
-import ProjectsTab from "./tabs/ProjectsTab";
+import ProjectsTab, { toggleHidden } from "./tabs/ProjectsTab";
 import DataTab from "./tabs/DataTab";
+
+const TAB_KEYS = ["overview", "projects", "timeline", "table", "settings"];
 
 export default function Dashboard({ initialData }) {
   const { themeKey, cycleTheme, X, SC, PC, PJC } = useTheme();
@@ -30,14 +32,25 @@ export default function Dashboard({ initialData }) {
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
-  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150 });
+  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [] });
   const zoom = userSettings.zoom ?? 150;
   const onZoomChange = useCallback(v => updateSetting('zoom', v), [updateSetting]);
+  // #4a Projects card/list view (per-account)
+  const projectsView = userSettings.projectsView ?? 'card';
+  const setProjectsView = useCallback(v => updateSetting('projectsView', v), [updateSetting]);
+  // #4b Timeline hidden projects — stores project.id (per-account)
+  const hiddenProjects = useMemo(() => userSettings.hiddenProjects ?? [], [userSettings.hiddenProjects]);
+  const toggleHiddenProject = useCallback(id => updateSetting('hiddenProjects', toggleHidden(hiddenProjects, id)), [updateSetting, hiddenProjects]);
   const [fpSet, setFPSet] = useState(new Set());
   const toggleFP = useCallback(p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; }), []);
   const [fs, setFS] = useState("全部");
   const [fpr, setFPR] = useState("全部");
-  const [tab, setTab] = useState("overview");
+  // #5 persist active tab across refresh (per-device ephemeral → localStorage)
+  const [tab, setTab] = useState(() => {
+    try { const t = localStorage.getItem("dash-activeTab"); if (t && TAB_KEYS.includes(t)) return t; } catch {}
+    return "overview";
+  });
+  const changeTab = useCallback((t) => { setTab(t); try { localStorage.setItem("dash-activeTab", t); } catch {} }, []);
   const [customProjects, setCustomProjects] = useState(new Set());
   const [modalTask, setModalTask] = useState(null);
   const [showFileManager, setShowFileManager] = useState(null);
@@ -191,17 +204,17 @@ export default function Dashboard({ initialData }) {
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: `1px solid ${X.border}`, marginBottom: isMobile ? 12 : 20, ...(isMobile ? { overflowX: "auto" } : {}) }}>
           {[{ k: "overview", l: "Overview" }, { k: "projects", l: "Projects" }, { k: "timeline", l: "Timeline" }, { k: "table", l: "Data" }, { k: "settings", l: "Settings" }].map(t => (
-            <button key={t.k} onClick={() => setTab(t.k)} style={{ padding: isMobile ? "10px 14px" : "12px 20px", border: "none", background: "transparent", color: tab === t.k ? X.accent : X.textSec, fontSize: 14, fontWeight: tab === t.k ? 700 : 400, cursor: "pointer", borderBottom: tab === t.k ? `2px solid ${X.accent}` : "2px solid transparent", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0, transition: "color 0.2s, border-color 0.2s" }}>{t.l}</button>))}
+            <button key={t.k} onClick={() => changeTab(t.k)} style={{ padding: isMobile ? "10px 14px" : "12px 20px", border: "none", background: "transparent", color: tab === t.k ? X.accent : X.textSec, fontSize: 14, fontWeight: tab === t.k ? 700 : 400, cursor: "pointer", borderBottom: tab === t.k ? `2px solid ${X.accent}` : "2px solid transparent", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0, transition: "color 0.2s, border-color 0.2s" }}>{t.l}</button>))}
         </div>
 
         {/* OVERVIEW */}
         {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
 
         {/* PROJECTS */}
-        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} />}
+        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} />}
 
         {/* TIMELINE */}
-        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} />}
+        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} />}
 
         {/* DATA TABLE */}
         {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={handleSetModalTask} />}
