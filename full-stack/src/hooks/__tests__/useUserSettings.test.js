@@ -89,6 +89,34 @@ describe('updateSetting', () => {
     expect(result.current.settings.zoom).toBe(100);
   });
 
+  it('key-scoped rollback: a failed update for one key does not clobber another key', async () => {
+    // Server seeds both keys: zoom=100, theme='light'
+    mockGetUserSettings.mockResolvedValue({ success: true, data: { zoom: 100, theme: 'light' } });
+    // 'theme' update succeeds; 'zoom' update fails → only zoom should roll back
+    mockSetUserSetting.mockImplementation((key) =>
+      key === 'zoom'
+        ? Promise.resolve({ error: 'DB error' })
+        : Promise.resolve({ success: true })
+    );
+
+    const { result } = renderHook(() => useUserSettings({}));
+    await act(async () => {});
+    expect(result.current.settings).toMatchObject({ zoom: 100, theme: 'light' });
+
+    // Fire both updates concurrently within one act; zoom fails, theme succeeds
+    await act(async () => {
+      await Promise.all([
+        result.current.updateSetting('theme', 'dark'), // succeeds → keeps 'dark'
+        result.current.updateSetting('zoom', 999),      // fails → rolls back to 100
+      ]);
+    });
+
+    // Failed key rolled back to its prior value...
+    expect(result.current.settings.zoom).toBe(100);
+    // ...while the other key's successful optimistic update is preserved.
+    expect(result.current.settings.theme).toBe('dark');
+  });
+
   it('returns the result from setUserSetting', async () => {
     mockGetUserSettings.mockResolvedValue({ success: true, data: {} });
     mockSetUserSetting.mockResolvedValue({ success: true });

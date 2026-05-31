@@ -23,8 +23,9 @@ export default function useUserSettings(defaults = {}) {
     // Optimistic update
     setSettings(s => ({ ...s, [key]: value }));
     const res = await setUserSetting(key, value);
-    // Rollback on error
-    if (res?.error) setSettings(prev);
+    // Rollback on error — key-scoped so a failed update for one key doesn't
+    // clobber other keys' concurrent optimistic updates.
+    if (res?.error) setSettings(s => ({ ...s, [key]: prev[key] }));
     return res;
   }, []);
 

@@ -23,11 +23,53 @@ function makeId() {
 // Supports:
 //   db.select({...}).from(table).where(cond) → Promise<rows>
 //   db.select({...}).from(table).where(cond).limit(n) → Promise<rows>
-//   db.insert(table).values(data) → Promise<void>
-//   db.update(table).set(data).where(cond) → Promise<void>
+//   db.insert(table).values(data) → Promise<void>  (bare insert)
+//   db.insert(table).values(data).onConflictDoUpdate({ target, set }) → upsert
+//   db.update(table).set(data).where(cond) → Promise<void>  (kept for assertions)
 //
 // where() accepts a function (predicate) built by our eq/and helpers.
 // The helpers are exported from the mock so the actions can import them.
+
+// Push a fresh row into the store (used by bare insert + upsert-insert path).
+function insertRow(data) {
+  store.push({
+    id: data.id ?? makeId(),
+    userId: data.userId,
+    key: data.key,
+    value: data.value,
+    updatedAt: data.updatedAt ?? new Date(),
+  });
+}
+
+// Emulate ON CONFLICT (userId, key) DO UPDATE: if a row with the same
+// (userId, key) exists, apply `set` to it; otherwise insert a new row.
+function upsertRow(data, { target, set }) {
+  // target is an array of column-key strings, e.g. ['userId', 'key']
+  const idx = store.findIndex((row) => target.every((col) => row[col] === data[col]));
+  if (idx >= 0) {
+    store[idx] = { ...store[idx], ...set };
+  } else {
+    insertRow(data);
+  }
+  return Promise.resolve();
+}
+
+function makeValuesBuilder(data) {
+  // The thenable lets a bare `await db.insert(t).values(d)` resolve (no conflict
+  // clause), while `.onConflictDoUpdate(...)` drives the upsert path.
+  const builder = {
+    onConflictDoUpdate: vi.fn((opts) => upsertRow(data, opts)),
+    then: (resolve, reject) => {
+      try {
+        insertRow(data);
+        return Promise.resolve().then(resolve, reject);
+      } catch (err) {
+        return Promise.reject(err).then(resolve, reject);
+      }
+    },
+  };
+  return builder;
+}
 
 const mockDb = {
   select: vi.fn((_fields) => ({
@@ -44,16 +86,7 @@ const mockDb = {
   })),
 
   insert: vi.fn((_table) => ({
-    values: vi.fn((data) => {
-      store.push({
-        id: data.id ?? makeId(),
-        userId: data.userId,
-        key: data.key,
-        value: data.value,
-        updatedAt: data.updatedAt ?? new Date(),
-      });
-      return Promise.resolve();
-    }),
+    values: vi.fn((data) => makeValuesBuilder(data)),
   })),
 
   update: vi.fn((_table) => ({
@@ -121,44 +154,12 @@ function noAuth() {
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 beforeEach(() => {
+  // Only reset the in-memory store + id counter + call history.
+  // vi.clearAllMocks() clears call history but NOT mockImplementation, so the
+  // module-level db fake implementations above remain in effect.
   store = [];
   idCounter = 0;
   vi.clearAllMocks();
-
-  // Re-register mock implementations after clearAllMocks resets call counts
-  // (the mock *functions* remain; only call history is cleared)
-  mockDb.select.mockImplementation((_fields) => ({
-    from: vi.fn((_table) => ({
-      where: vi.fn((predFn) => {
-        const filteredRows = store.filter(predFn);
-        return Object.assign(Promise.resolve(filteredRows), {
-          limit: vi.fn((n) => Promise.resolve(filteredRows.slice(0, n))),
-        });
-      }),
-    })),
-  }));
-
-  mockDb.insert.mockImplementation((_table) => ({
-    values: vi.fn((data) => {
-      store.push({
-        id: data.id ?? makeId(),
-        userId: data.userId,
-        key: data.key,
-        value: data.value,
-        updatedAt: data.updatedAt ?? new Date(),
-      });
-      return Promise.resolve();
-    }),
-  }));
-
-  mockDb.update.mockImplementation((_table) => ({
-    set: vi.fn((data) => ({
-      where: vi.fn((predFn) => {
-        store = store.map((row) => (predFn(row) ? { ...row, ...data } : row));
-        return Promise.resolve();
-      }),
-    })),
-  }));
 });
 
 // ── 1. set→get round-trip ─────────────────────────────────────────────────
