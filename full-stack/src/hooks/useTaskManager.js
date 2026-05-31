@@ -25,6 +25,7 @@ import {
   reorderProjects as reorderProjectsAction,
 } from '@/server/actions/projects';
 import { saveConfig } from '@/server/actions/config';
+import { runReorder } from './reorderProjects';
 
 const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
 const CACHE_KEY = 'dash_cache';
@@ -444,29 +445,30 @@ export default function useTaskManager(initialData) {
   }, []);
 
   // ── Reorder projects ──
+  // orderedIds is computed purely from the current `projects` snapshot (via
+  // runReorder/planProjectReorder) BEFORE awaiting persistence — never read out
+  // of a setProjects updater side-effect. This is the BUG01 fix: the old code
+  // relied on React executing the updater synchronously, which React does not
+  // guarantee (updaters must be pure and run during render, twice in Strict
+  // Mode), so the persist call was sometimes skipped and the order reverted on
+  // refresh.
   const reorderProjects = useCallback(async (activeId, overId) => {
-    let prevProjects;
-    let orderedIds;
-    setProjects(p => {
-      prevProjects = [...p];
-      const sorted = [...p].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-      const oldIdx = sorted.findIndex(pr => pr.id === activeId);
-      const newIdx = sorted.findIndex(pr => pr.id === overId);
-      if (oldIdx === -1 || newIdx === -1) return p;
-      const [moved] = sorted.splice(oldIdx, 1);
-      sorted.splice(newIdx, 0, moved);
-      orderedIds = sorted.map(pr => pr.id);
-      return sorted.map((pr, i) => ({ ...pr, sortOrder: i + 1 }));
-    });
+    const prevProjects = projects;
     invalidateCache();
-    if (!orderedIds) return;
-    const result = await reorderProjectsAction(orderedIds);
-    if (checkAuthError(result)) return;
-    if (result?.error) {
+    const outcome = await runReorder({
+      projects,
+      activeId,
+      overId,
+      setProjects,
+      persist: reorderProjectsAction,
+    });
+    if (!outcome) return;
+    if (checkAuthError(outcome.result)) return;
+    if (outcome.result?.error) {
       setProjects(prevProjects);
-      showToast(result.error, 'error');
+      showToast(outcome.result.error, 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [projects, showToast, invalidateCache]);
 
   // ── Computed: tasks with progress ──
   const twp = useMemo(() => {
