@@ -14,6 +14,7 @@ import {
   sortProjectNames,
   toggleCollapsed,
   isCollapsed,
+  uniqueProjectIds,
 } from '@/components/dashboard/GanttTimeline';
 
 // ── filterVisibleTasks ────────────────────────────────────────────────────────
@@ -313,5 +314,54 @@ describe('isCollapsed', () => {
   it('returns a boolean (not a truthy/falsy value)', () => {
     expect(typeof isCollapsed(['p1'], 'p1')).toBe('boolean');
     expect(typeof isCollapsed(['p1'], 'p99')).toBe('boolean');
+  });
+});
+
+// ── uniqueProjectIds ──────────────────────────────────────────────────────────
+
+describe('uniqueProjectIds', () => {
+  const tasks = [
+    { id: '1', projectId: 'p1' },
+    { id: '2', projectId: 'p2' },
+    { id: '3', projectId: 'p1' }, // duplicate p1
+    { id: '4', projectId: 'p3' },
+    { id: '5', projectId: 'p2' }, // duplicate p2
+  ];
+
+  it('returns [] for empty tasks', () => {
+    expect(uniqueProjectIds([], [])).toEqual([]);
+  });
+
+  it('deduplicates projectIds preserving first-seen order', () => {
+    expect(uniqueProjectIds(tasks, [])).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('excludes ids in hiddenProjects', () => {
+    expect(uniqueProjectIds(tasks, ['p1'])).toEqual(['p2', 'p3']);
+  });
+
+  it('excludes multiple hidden ids', () => {
+    expect(uniqueProjectIds(tasks, ['p1', 'p3'])).toEqual(['p2']);
+  });
+
+  it('returns [] when all projects are hidden', () => {
+    expect(uniqueProjectIds(tasks, ['p1', 'p2', 'p3'])).toEqual([]);
+  });
+
+  it('treats undefined hiddenProjects as no exclusion', () => {
+    expect(uniqueProjectIds(tasks, undefined)).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('preserves first-seen order (not alphabetical)', () => {
+    const ordered = [
+      { id: 'a', projectId: 'zz' },
+      { id: 'b', projectId: 'aa' },
+      { id: 'c', projectId: 'mm' },
+    ];
+    expect(uniqueProjectIds(ordered, [])).toEqual(['zz', 'aa', 'mm']);
+  });
+
+  it('hiddenProjects with unknown id does not filter anything', () => {
+    expect(uniqueProjectIds(tasks, ['pXYZ'])).toEqual(['p1', 'p2', 'p3']);
   });
 });

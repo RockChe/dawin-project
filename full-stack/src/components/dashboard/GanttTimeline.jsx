@@ -4,6 +4,7 @@ import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeAllProgress } from "@/lib/utils";
 import MobileGanttList from "./MobileGanttList";
+import ProgressBar from "./ProgressBar";
 
 // ── Pure helper functions (exported for testing and reuse) ────────────────────
 
@@ -90,6 +91,27 @@ export function isCollapsed(collapsedIds, id) {
   return collapsedIds.includes(id);
 }
 
+/**
+ * Return de-duplicated projectId values from tasks, excluding any in hiddenProjects.
+ * Preserves first-seen order.
+ * @param {Array} tasks — each item has a .projectId
+ * @param {Array|null|undefined} hiddenProjects — projectIds to exclude
+ * @returns {string[]} ordered unique projectIds
+ */
+export function uniqueProjectIds(tasks, hiddenProjects) {
+  const hidden = hiddenProjects && hiddenProjects.length > 0 ? new Set(hiddenProjects) : null;
+  const seen = new Set();
+  const result = [];
+  for (const t of tasks) {
+    if (hidden && hidden.has(t.projectId)) continue;
+    if (!seen.has(t.projectId)) {
+      seen.add(t.projectId);
+      result.push(t.projectId);
+    }
+  }
+  return result;
+}
+
 function computeScaleDivisions(mn, mx, td, dim) {
   const divs = [];
   if (dim === "日") {
@@ -141,30 +163,15 @@ export function TimeScaleToggle({ value, onChange }) {
 
 export { computeScaleDivisions };
 
-const LS_KEY = "dash-timelineCollapsed";
-
-function readCollapsedFromLS() {
-  if (typeof window === "undefined") return [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(LS_KEY));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [] }) {
+// GanttTimeline no longer owns collapse state.
+// collapsed and onToggleCollapse are lifted to TimelineTab.
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed = [], onToggleCollapse }) {
   const { X, SC, PC, PJC } = useTheme();
 
   // ── ALL hooks unconditionally at top (fix rules-of-hooks) ─────────────────
   const [hI, setHI] = useState(null);
   const [leftHidden, setLeftHidden] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => readCollapsedFromLS());
   const lR = useRef(null), rR = useRef(null), sy = useRef(false);
-
-  // Persist collapse state to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(collapsed)); } catch { /* ignore */ }
-  }, [collapsed]);
 
   const ganttData = useMemo(() => {
     // A. Apply hidden-project filter FIRST
@@ -204,7 +211,9 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
     const rows = [];
     sortedNames.forEach(proj => {
       const projId = pMap[proj][0].projectId;
-      rows.push({ type: "h", proj, projId, n: pMap[proj].length });
+      // Compute avg from the FULL tasks prop (not date-filtered) to match Projects card value
+      const avg = computeProjectProgress(tasks.filter(t => t.project === proj));
+      rows.push({ type: "h", proj, projId, n: pMap[proj].length, avg });
       // C. Skip task rows when project is collapsed
       if (!isCollapsed(collapsed, projId)) {
         pMap[proj].forEach(task => {
@@ -235,12 +244,15 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
             if (r.type === "h") {
               const c = pcMap[r.proj] || X.accent;
               const coll = isCollapsed(collapsed, r.projId);
-              const toggle = () => setCollapsed(prev => toggleCollapsed(prev, r.projId));
+              const toggle = () => onToggleCollapse && onToggleCollapse(r.projId);
               return (<div key={`h-${r.proj}`} role="button" tabIndex={0} aria-expanded={!coll} onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); toggle(); } }} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
                 <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
                 <span style={{ fontSize: 12, color: c, flexShrink: 0, userSelect: "none" }}>{coll ? "▸" : "▾"}</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.proj}</span>
-                <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
+                {coll
+                  ? <div style={{ width: 100, flexShrink: 0 }}><ProgressBar pct={r.avg} timeBased /></div>
+                  : <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
+                }
               </div>);
             }
             const sc = SC[r.task.status] || {}, pc = PC[r.task.priority] || {};

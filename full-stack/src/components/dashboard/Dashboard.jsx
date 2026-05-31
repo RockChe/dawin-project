@@ -32,7 +32,7 @@ export default function Dashboard({ initialData }) {
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
-  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [] });
+  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: false });
   const zoom = userSettings.zoom ?? 150;
   const onZoomChange = useCallback(v => updateSetting('zoom', v), [updateSetting]);
   // #4a Projects card/list view (per-account)
@@ -41,6 +41,9 @@ export default function Dashboard({ initialData }) {
   // #4b Timeline hidden projects — stores project.id (per-account)
   const hiddenProjects = useMemo(() => userSettings.hiddenProjects ?? [], [userSettings.hiddenProjects]);
   const toggleHiddenProject = useCallback(id => updateSetting('hiddenProjects', toggleHidden(hiddenProjects, id)), [updateSetting, hiddenProjects]);
+  // #T8 Timeline default collapsed (per-account)
+  const timelineDefaultCollapsed = userSettings.timelineDefaultCollapsed ?? false;
+  const setTimelineDefaultCollapsed = useCallback(v => updateSetting('timelineDefaultCollapsed', v), [updateSetting]);
   const [fpSet, setFPSet] = useState(new Set());
   const toggleFP = useCallback(p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; }), []);
   const [fs, setFS] = useState("全部");
@@ -214,7 +217,7 @@ export default function Dashboard({ initialData }) {
         {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} />}
 
         {/* TIMELINE */}
-        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} />}
+        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} timelineDefaultCollapsed={timelineDefaultCollapsed} setTimelineDefaultCollapsed={setTimelineDefaultCollapsed} />}
 
         {/* DATA TABLE */}
         {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={handleSetModalTask} />}
