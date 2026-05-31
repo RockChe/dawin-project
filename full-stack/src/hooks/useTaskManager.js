@@ -25,7 +25,7 @@ import {
   reorderProjects as reorderProjectsAction,
 } from '@/server/actions/projects';
 import { saveConfig } from '@/server/actions/config';
-import { runReorder } from './reorderProjects.mjs';
+import { runReorder } from './reorderProjects';
 
 const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
 const CACHE_KEY = 'dash_cache';
