@@ -4,9 +4,9 @@ import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeProgress } from "@/lib/utils";
 import OwnerTags from "./OwnerTags";
 
-export default function MobileGanttList({ tasks, subtasks, fp, fs, fpr, timeDim = "月", configOwners = [] }) {
+export default function MobileGanttList({ tasks, subtasks, fp, fs, fpr, timeDim = "月", configOwners = [], hiddenProjects = [] }) {
   const { X, SC, PC, PJC } = useTheme();
-  const fil = tasks.filter(d => { if (!d.start) return false; if (fp instanceof Set) { if (fp.size > 0 && !fp.has(d.project)) return false; } else if (typeof fp === "string" && fp !== "全部" && d.project !== fp) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; return true; });
+  const fil = tasks.filter(d => { if (hiddenProjects.includes(d.projectId)) return false; if (!d.start) return false; if (fp instanceof Set) { if (fp.size > 0 && !fp.has(d.project)) return false; } else if (typeof fp === "string" && fp !== "全部" && d.project !== fp) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; return true; });
   if (!fil.length) return (<div style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📅</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No timeline data</div><div style={{ fontSize: 14 }}>Try adjusting filters or adding tasks with dates</div></div>);
   const pcMap = {}; [...new Set(tasks.map(d => d.project))].forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
   const sorted = [...fil].sort((a, b) => pD(a.start) - pD(b.start));
