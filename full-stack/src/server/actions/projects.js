@@ -151,12 +151,15 @@ export async function reorderProjects(orderedIds) {
       }
     }
 
-    // Build SQL CASE for batch update
-    const sqlChunks = [sql`UPDATE projects SET sort_order = CASE`];
+    // Build SQL CASE for batch update.
+    // 注意：CASE 的 THEN 值是綁定參數，Postgres 會把整個 CASE 推斷成 text，
+    // 直接寫入 integer 欄位 sort_order 會報「expression is of type text」。
+    // 故將 CASE 結果明確轉型為 int。
+    const sqlChunks = [sql`UPDATE projects SET sort_order = (CASE`];
     orderedIds.forEach((id, i) => {
       sqlChunks.push(sql` WHEN id = ${id} THEN ${i + 1}`);
     });
-    sqlChunks.push(sql` END, updated_at = NOW() WHERE id IN (`);
+    sqlChunks.push(sql` END)::int, updated_at = NOW() WHERE id IN (`);
     sqlChunks.push(sql.join(orderedIds.map(id => sql`${id}`), sql`, `));
     sqlChunks.push(sql`)`);
     await db.execute(sql.join(sqlChunks, sql.raw('')));
