@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
@@ -15,5 +15,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // 排除 cc-fleet 隔離 worktree——否則 vitest 會掃到 .worktrees/*/full-stack/src
+    // 內的測試副本，灌水測試數且可能誤報 in-progress worktree 的紅燈。
+    exclude: [...configDefaults.exclude, '**/.worktrees/**'],
   },
 });
