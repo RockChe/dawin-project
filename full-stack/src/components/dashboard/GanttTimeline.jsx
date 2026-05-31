@@ -4,6 +4,7 @@ import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeAllProgress } from "@/lib/utils";
 import MobileGanttList from "./MobileGanttList";
+import ProgressBar from "./ProgressBar";
 
 // ── Pure helper functions (exported for testing and reuse) ────────────────────
 
@@ -90,6 +91,67 @@ export function isCollapsed(collapsedIds, id) {
   return collapsedIds.includes(id);
 }
 
+/**
+ * Collapse or expand all project ids.
+ * @param {string[]|undefined} projIds
+ * @param {boolean} collapse  true → collapse all (return copy of projIds); false → expand all (return [])
+ * @returns {string[]} new array
+ */
+export function collapseAllIds(projIds, collapse) {
+  if (!projIds) return [];
+  return collapse ? projIds.slice() : [];
+}
+
+/**
+ * Resolve the initial collapsed state from localStorage value and server-persisted default.
+ * @param {string[]|null} lsValue  — parsed localStorage value, or null if absent/invalid
+ * @param {boolean} defaultCollapsed  — server-persisted per-account default
+ * @param {string[]} projIds  — all project ids to collapse when default is true
+ * @returns {string[]} array of collapsed project ids
+ */
+export function resolveInitialCollapsed(lsValue, defaultCollapsed, projIds) {
+  if (lsValue !== null && lsValue !== undefined && Array.isArray(lsValue)) {
+    return lsValue.slice();
+  }
+  const ids = projIds || [];
+  return defaultCollapsed === true ? ids.slice() : [];
+}
+
+/**
+ * Read the collapsed state from localStorage.
+ * @returns {string[]|null} parsed array, or null if absent or invalid
+ */
+export function readCollapsedLS() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("dash-timelineCollapsed");
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+}
+
+/**
+ * Return de-duplicated projectId values from tasks, excluding any in hiddenProjects.
+ * Preserves first-seen order.
+ * @param {Array} tasks — each item has a .projectId
+ * @param {Array|null|undefined} hiddenProjects — projectIds to exclude
+ * @returns {string[]} ordered unique projectIds
+ */
+export function uniqueProjectIds(tasks, hiddenProjects) {
+  const hidden = hiddenProjects && hiddenProjects.length > 0 ? new Set(hiddenProjects) : null;
+  const seen = new Set();
+  const result = [];
+  for (const t of tasks) {
+    if (hidden && hidden.has(t.projectId)) continue;
+    if (!seen.has(t.projectId)) {
+      seen.add(t.projectId);
+      result.push(t.projectId);
+    }
+  }
+  return result;
+}
+
 function computeScaleDivisions(mn, mx, td, dim) {
   const divs = [];
   if (dim === "日") {
@@ -141,30 +203,28 @@ export function TimeScaleToggle({ value, onChange }) {
 
 export { computeScaleDivisions };
 
-const LS_KEY = "dash-timelineCollapsed";
-
-function readCollapsedFromLS() {
-  if (typeof window === "undefined") return [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(LS_KEY));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [] }) {
+// GanttTimeline is a controlled/uncontrolled hybrid for collapse state.
+// - Uncontrolled (Overview/Projects): owns internal state + persists to localStorage.
+// - Controlled (TimelineTab): collapsed + onToggleCollapse props are supplied.
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed, onToggleCollapse }) {
   const { X, SC, PC, PJC } = useTheme();
 
   // ── ALL hooks unconditionally at top (fix rules-of-hooks) ─────────────────
   const [hI, setHI] = useState(null);
   const [leftHidden, setLeftHidden] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => readCollapsedFromLS());
   const lR = useRef(null), rR = useRef(null), sy = useRef(false);
 
-  // Persist collapse state to localStorage whenever it changes
+  // ── Controlled/uncontrolled collapse state ────────────────────────────────
+  const [internalCollapsed, setInternalCollapsed] = useState(() => readCollapsedLS() ?? []);
+  const isControlled = collapsed !== undefined;
+  const collapsedState = isControlled ? collapsed : internalCollapsed;
+
+  // Uncontrolled-only: persist internal collapse state to localStorage.
   useEffect(() => {
+    if (isControlled) return;
     if (typeof window === "undefined") return;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(collapsed)); } catch { /* ignore */ }
-  }, [collapsed]);
+    try { localStorage.setItem("dash-timelineCollapsed", JSON.stringify(internalCollapsed)); } catch { /* ignore */ }
+  }, [internalCollapsed, isControlled]);
 
   const ganttData = useMemo(() => {
     // A. Apply hidden-project filter FIRST
@@ -204,9 +264,11 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
     const rows = [];
     sortedNames.forEach(proj => {
       const projId = pMap[proj][0].projectId;
-      rows.push({ type: "h", proj, projId, n: pMap[proj].length });
+      // Compute avg from the FULL tasks prop (not date-filtered) to match Projects card value
+      const avg = computeProjectProgress(tasks.filter(t => t.project === proj));
+      rows.push({ type: "h", proj, projId, n: pMap[proj].length, avg });
       // C. Skip task rows when project is collapsed
-      if (!isCollapsed(collapsed, projId)) {
+      if (!isCollapsed(collapsedState, projId)) {
         pMap[proj].forEach(task => {
           const s = pD(task.start), e = pD(task.end);
           const l = ((s - mn) / 864e5) / td * 100, w = Math.max(0.3, ((e - s) / 864e5 + 1) / td * 100);
@@ -217,7 +279,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
     });
     const todayPct = ((new Date() - mn) / 864e5) / td * 100;
     return { months, ganttMinW, pcMap, rows, todayPct };
-  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsed]);
+  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsedState, isControlled]);
 
   // ── Early returns AFTER all hooks ─────────────────────────────────────────
   if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} />;
@@ -234,13 +296,16 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
           <div>{rows.map((r, i) => {
             if (r.type === "h") {
               const c = pcMap[r.proj] || X.accent;
-              const coll = isCollapsed(collapsed, r.projId);
-              const toggle = () => setCollapsed(prev => toggleCollapsed(prev, r.projId));
+              const coll = isCollapsed(collapsedState, r.projId);
+              const toggle = () => { if (isControlled) onToggleCollapse(r.projId); else setInternalCollapsed(prev => toggleCollapsed(prev, r.projId)); };
               return (<div key={`h-${r.proj}`} role="button" tabIndex={0} aria-expanded={!coll} onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); toggle(); } }} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
                 <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
                 <span style={{ fontSize: 12, color: c, flexShrink: 0, userSelect: "none" }}>{coll ? "▸" : "▾"}</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.proj}</span>
-                <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
+                {coll
+                  ? <div style={{ width: 100, flexShrink: 0 }}><ProgressBar pct={r.avg} timeBased /></div>
+                  : <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
+                }
               </div>);
             }
             const sc = SC[r.task.status] || {}, pc = PC[r.task.priority] || {};

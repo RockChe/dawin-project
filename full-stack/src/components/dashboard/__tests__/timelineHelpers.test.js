@@ -14,6 +14,9 @@ import {
   sortProjectNames,
   toggleCollapsed,
   isCollapsed,
+  uniqueProjectIds,
+  collapseAllIds,
+  resolveInitialCollapsed,
 } from '@/components/dashboard/GanttTimeline';
 
 // ── filterVisibleTasks ────────────────────────────────────────────────────────
@@ -313,5 +316,158 @@ describe('isCollapsed', () => {
   it('returns a boolean (not a truthy/falsy value)', () => {
     expect(typeof isCollapsed(['p1'], 'p1')).toBe('boolean');
     expect(typeof isCollapsed(['p1'], 'p99')).toBe('boolean');
+  });
+});
+
+// ── uniqueProjectIds ──────────────────────────────────────────────────────────
+
+describe('uniqueProjectIds', () => {
+  const tasks = [
+    { id: '1', projectId: 'p1' },
+    { id: '2', projectId: 'p2' },
+    { id: '3', projectId: 'p1' }, // duplicate p1
+    { id: '4', projectId: 'p3' },
+    { id: '5', projectId: 'p2' }, // duplicate p2
+  ];
+
+  it('returns [] for empty tasks', () => {
+    expect(uniqueProjectIds([], [])).toEqual([]);
+  });
+
+  it('deduplicates projectIds preserving first-seen order', () => {
+    expect(uniqueProjectIds(tasks, [])).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('excludes ids in hiddenProjects', () => {
+    expect(uniqueProjectIds(tasks, ['p1'])).toEqual(['p2', 'p3']);
+  });
+
+  it('excludes multiple hidden ids', () => {
+    expect(uniqueProjectIds(tasks, ['p1', 'p3'])).toEqual(['p2']);
+  });
+
+  it('returns [] when all projects are hidden', () => {
+    expect(uniqueProjectIds(tasks, ['p1', 'p2', 'p3'])).toEqual([]);
+  });
+
+  it('treats undefined hiddenProjects as no exclusion', () => {
+    expect(uniqueProjectIds(tasks, undefined)).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('preserves first-seen order (not alphabetical)', () => {
+    const ordered = [
+      { id: 'a', projectId: 'zz' },
+      { id: 'b', projectId: 'aa' },
+      { id: 'c', projectId: 'mm' },
+    ];
+    expect(uniqueProjectIds(ordered, [])).toEqual(['zz', 'aa', 'mm']);
+  });
+
+  it('hiddenProjects with unknown id does not filter anything', () => {
+    expect(uniqueProjectIds(tasks, ['pXYZ'])).toEqual(['p1', 'p2', 'p3']);
+  });
+});
+
+// ── collapseAllIds ────────────────────────────────────────────────────────────
+
+describe('collapseAllIds', () => {
+  it('returns a copy of projIds when collapse=true', () => {
+    const ids = ['p1', 'p2', 'p3'];
+    expect(collapseAllIds(ids, true)).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('does not mutate input when collapse=true', () => {
+    const ids = ['p1', 'p2'];
+    const result = collapseAllIds(ids, true);
+    expect(result).not.toBe(ids);
+    expect(ids).toEqual(['p1', 'p2']); // unchanged
+  });
+
+  it('returns [] when collapse=false', () => {
+    expect(collapseAllIds(['p1', 'p2'], false)).toEqual([]);
+  });
+
+  it('returns [] for undefined projIds', () => {
+    expect(collapseAllIds(undefined, true)).toEqual([]);
+    expect(collapseAllIds(undefined, false)).toEqual([]);
+  });
+
+  it('returns [] for null projIds', () => {
+    expect(collapseAllIds(null, true)).toEqual([]);
+    expect(collapseAllIds(null, false)).toEqual([]);
+  });
+
+  it('returns [] for empty projIds with collapse=true', () => {
+    expect(collapseAllIds([], true)).toEqual([]);
+  });
+
+  it('returns [] for empty projIds with collapse=false', () => {
+    expect(collapseAllIds([], false)).toEqual([]);
+  });
+
+  it('always returns a new array reference', () => {
+    const ids = ['p1'];
+    expect(collapseAllIds(ids, false)).not.toBe(ids);
+    expect(collapseAllIds(ids, true)).not.toBe(ids);
+  });
+});
+
+// ── resolveInitialCollapsed ───────────────────────────────────────────────────
+
+describe('resolveInitialCollapsed', () => {
+  const projIds = ['p1', 'p2', 'p3'];
+
+  // ── lsValue present ────────────────────────────────────────────────────────
+  describe('when lsValue is a valid array (localStorage record exists)', () => {
+    it('returns a copy of lsValue, ignoring defaultCollapsed', () => {
+      const ls = ['p1', 'p2'];
+      expect(resolveInitialCollapsed(ls, false, projIds)).toEqual(['p1', 'p2']);
+    });
+
+    it('returns a copy of lsValue even when defaultCollapsed=true', () => {
+      const ls = ['p1'];
+      expect(resolveInitialCollapsed(ls, true, projIds)).toEqual(['p1']);
+    });
+
+    it('returns a new array reference (does not mutate lsValue)', () => {
+      const ls = ['p1'];
+      const result = resolveInitialCollapsed(ls, true, projIds);
+      expect(result).not.toBe(ls);
+      expect(ls).toEqual(['p1']); // unchanged
+    });
+
+    it('handles empty lsValue array (all expanded)', () => {
+      expect(resolveInitialCollapsed([], true, projIds)).toEqual([]);
+    });
+  });
+
+  // ── lsValue absent ─────────────────────────────────────────────────────────
+  describe('when lsValue is null (no localStorage record)', () => {
+    it('returns projIds copy when defaultCollapsed=true', () => {
+      expect(resolveInitialCollapsed(null, true, projIds)).toEqual(['p1', 'p2', 'p3']);
+    });
+
+    it('returns [] when defaultCollapsed=false', () => {
+      expect(resolveInitialCollapsed(null, false, projIds)).toEqual([]);
+    });
+
+    it('returns [] when defaultCollapsed is falsy (undefined)', () => {
+      expect(resolveInitialCollapsed(null, undefined, projIds)).toEqual([]);
+    });
+
+    it('returns [] when defaultCollapsed=false and projIds empty', () => {
+      expect(resolveInitialCollapsed(null, false, [])).toEqual([]);
+    });
+
+    it('returns [] when projIds is undefined and defaultCollapsed=true', () => {
+      expect(resolveInitialCollapsed(null, true, undefined)).toEqual([]);
+    });
+
+    it('does not mutate projIds when defaultCollapsed=true', () => {
+      const ids = ['p1', 'p2'];
+      const result = resolveInitialCollapsed(null, true, ids);
+      expect(result).not.toBe(ids);
+      expect(ids).toEqual(['p1', 'p2']); // unchanged
+    });
   });
 });
