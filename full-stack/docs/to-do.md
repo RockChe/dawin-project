@@ -5,13 +5,19 @@
 
 ---
 
+## Wave 3 工單 0531 ✅（已完成）
+
+- [x] Timeline 收折列顯示整體進度條（avg% 與專案卡片一致）
+- [x] 一鍵全收折/全展開
+- [x] per-account 預設收折狀態 — `timelineDefaultCollapsed`（按鈕選擇即存）
+
 ## Wave 2 工單 0531 ✅（已完成）
 
 - [x] #4a Projects 卡片/明細(精簡列表)切換 — per-account `projectsView`
 - [x] #4b Timeline 隱藏專案眼睛 toggle — per-account `hiddenProjects`（project.id）
 - [x] #5 重新整理保持當前頁籤 — localStorage `dash-activeTab`
 - [x] Timeline 收折 + 排序（名稱/進度/手動）+ 隱藏過濾
-- [ ] 技術債：migration baseline 對 prod 執行（腳本就緒，gated，待主 lead/Rock 確認）
+- [x] 技術債：migration baseline 已對 prod 執行（__drizzle_migrations 補 0000–0004，未來 db:migrate 正常）
 
 ---
 
