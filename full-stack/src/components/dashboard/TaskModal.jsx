@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toISO, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
+import { STATUSES } from "@/lib/constants";
 import CalendarPicker from "./CalendarPicker";
 import TagInput from "./TagInput";
 import EditableCell from "./EditableCell";
@@ -158,7 +159,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           {!isNew && <div>
             <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>狀態</div>
             <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={{ ...iS2, cursor: "pointer" }}>
-              {["已完成", "進行中", "待辦", "提案中", "待確認"].map(o => <option key={o}>{o}</option>)}
+              {STATUSES.map(o => <option key={o}>{o}</option>)}
             </select>
           </div>}
           <div>

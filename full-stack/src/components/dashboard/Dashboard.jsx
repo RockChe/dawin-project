@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { F, FM } from "@/lib/theme";
+import { STATUS_FILTERS } from "@/lib/constants";
 import { useTheme } from "@/components/ThemeProvider";
 import useTaskManager from "@/hooks/useTaskManager";
+import useUserSettings from "@/hooks/useUserSettings";
 import TaskModal from "./TaskModal";
 import FileManagerModal from "./FileManagerModal";
 import SettingsTab from "./tabs/SettingsTab";
@@ -28,6 +30,9 @@ export default function Dashboard({ initialData }) {
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
+  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150 });
+  const zoom = userSettings.zoom ?? 150;
+  const onZoomChange = useCallback(v => updateSetting('zoom', v), [updateSetting]);
   const [fpSet, setFPSet] = useState(new Set());
   const toggleFP = p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; });
   const [fs, setFS] = useState("全部");
@@ -82,7 +87,7 @@ export default function Dashboard({ initialData }) {
     const shimmerBg = `linear-gradient(90deg, ${X.surfaceLight || X.surface} 25%, ${X.surface} 50%, ${X.surfaceLight || X.surface} 75%)`;
     const shimmerStyle = { backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 12, background: shimmerBg };
     return (
-      <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text }}>
+      <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, zoom: zoom / 100 }}>
         <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
         <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 20px" }}>
           {/* Header skeleton */}
@@ -123,14 +128,14 @@ export default function Dashboard({ initialData }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s" }}>
+    <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s", zoom: zoom / 100 }}>
       <style>{`::selection{background:${X.selectionBg}} *{box-sizing:border-box} ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:${X.scrollThumb};border-radius:5px} ::-webkit-scrollbar-track{background:transparent} input,select,button{font-family:'Noto Sans TC',-apple-system,sans-serif}`}</style>
       <DashboardHeader themeKey={themeKey} cycleTheme={cycleTheme} isMobile={isMobile} scrolled={scrolled} searchInput={searchInput} handleSearch={handleSearch} searchQ={searchQ} clearSearch={clearSearch} avgProg={avgProg} filtered={filtered} />
 
       <div className="dash-content" style={{ maxWidth: 1400, margin: "0 auto" }}>
         {/* Filters */}
         <div style={{ display: "flex", gap: isMobile ? 6 : 8, marginBottom: isMobile ? 12 : 20, flexWrap: "wrap", alignItems: "center" }}>
-          {["全部", "進行中", "待辦", "已完成", "提案中", "待確認"].map(s => { const a = fs === s, c = SC[s]; return (
+          {STATUS_FILTERS.map(s => { const a = fs === s, c = SC[s]; return (
             <button key={s} onClick={() => setFS(s)} style={{ padding: isMobile ? "4px 10px" : "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
           <div style={{ width: 1, height: 20, background: X.border }} />
           {["全部", "高", "中", "低"].map(p => { const a = fpr === p, c = PC[p]; return (
@@ -183,7 +188,7 @@ export default function Dashboard({ initialData }) {
         {/* DATA TABLE */}
         {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} userRole={userRole} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={setModalTask} />}
         {/* SETTINGS */}
-        {tab === "settings" && <SettingsTab configCats={configCats} saveConfigCats={saveConfigCats} configOwners={configOwners} ganttDraft={ganttDraft} setGanttDraft={setGanttDraft} saveGanttWidths={saveGanttWidths} timelineHeight={timelineHeight} saveTimelineHeight={saveTimelineHeight} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} saveUpcomingSettings={saveUpcomingSettings} isMobile={isMobile} showToast={showToast} />}
+        {tab === "settings" && <SettingsTab configCats={configCats} saveConfigCats={saveConfigCats} configOwners={configOwners} ganttDraft={ganttDraft} setGanttDraft={setGanttDraft} saveGanttWidths={saveGanttWidths} timelineHeight={timelineHeight} saveTimelineHeight={saveTimelineHeight} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} saveUpcomingSettings={saveUpcomingSettings} isMobile={isMobile} showToast={showToast} zoom={zoom} onZoomChange={onZoomChange} />}
       </div>
       {modalTask && <TaskModal task={modalTask._isNew ? "new" : modalTask} projectId={modalTask._isNew ? modalTask.projectId : modalTask.projectId} projectName={modalTask._isNew ? modalTask.projectName : (modalTask.project || "")} onClose={() => setModalTask(null)} addTask={addTask} updateTask={updateTask} allS={allS} addSub={addSub} deleteSub={deleteSub} toggleSub={toggleSub} updateSub={updateSub} configCats={configCats} configOwners={configOwners} reorderSubs={reorderSubs} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} showToast={showToast} />}
       {showFileManager && <FileManagerModal project={showFileManager} tasks={twp} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} onClose={() => setShowFileManager(null)} />}

@@ -26,7 +26,7 @@ export const THEMES = {
 
 export const THEME_ORDER = ["dimmed","warm"];
 
-export function mkSC(t){ const a=t.isDark?"25":"15"; return {"已完成":{color:t.green,bg:t.green+a,icon:"✓"},"進行中":{color:t.amber,bg:t.amber+a,icon:"▸"},"待辦":{color:t.accent,bg:t.accent+a,icon:"○"},"提案中":{color:t.pink,bg:t.pink+a,icon:"◇"},"待確認":{color:t.purple,bg:t.purple+a,icon:"?"}}; }
+export function mkSC(t){ const a=t.isDark?"25":"15"; return {"已完成":{color:t.green,bg:t.green+a,icon:"✓"},"進行中":{color:t.amber,bg:t.amber+a,icon:"▸"},"待辦":{color:t.accent,bg:t.accent+a,icon:"○"},"暫緩":{color:t.textDim,bg:t.textDim+a,icon:"⏸"},"提案中":{color:t.pink,bg:t.pink+a,icon:"◇"},"待確認":{color:t.purple,bg:t.purple+a,icon:"?"}}; }
 export function mkPC(t){ return {"高":{color:t.red},"中":{color:t.amber},"低":{color:t.textDim}}; }
 export function mkCC(t){ return {"商務合作":t.accent,"活動":t.purple,"播出/開始":t.amber,"行銷":t.cyan,"發行":t.green,"市場展":t.red}; }
 export function mkPJC(t){ return [t.accent,t.purple,t.amber,t.red,t.green,t.cyan,t.pink]; }
