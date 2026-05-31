@@ -14,6 +14,7 @@ function TimelineTab({ twp, allS, fpSet, fs, fpr, isMobile, ganttWidths, timelin
     <>
       <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <select
+          aria-label="排序方式"
           value={timelineSort}
           onChange={e => updateSetting("timelineSort", e.target.value)}
           style={{ background: X.surface, color: X.text, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 12px", fontSize: 14, cursor: "pointer", outline: "none" }}
