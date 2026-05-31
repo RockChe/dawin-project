@@ -36,3 +36,6 @@ yarn-error.log*
 **/backups/
 
 .vercel
+
+# git worktrees (cc-fleet)
+.worktrees/
