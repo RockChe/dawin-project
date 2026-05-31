@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, integer, date, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer, date, timestamp, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role', ['super_admin', 'admin']);
 export const statusEnum = pgEnum('task_status', ['已完成', '進行中', '待辦', '提案中', '待確認']);
@@ -26,6 +26,18 @@ export const sessions = pgTable('sessions', {
 }, (table) => [
   index('sessions_user_id_idx').on(table.userId),
   index('sessions_expires_at_idx').on(table.expiresAt),
+]);
+
+// ── User Settings (per-account key/value) ──
+export const userSettings = pgTable('user_settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  key: varchar('key', { length: 100 }).notNull(),
+  value: text('value').notNull(), // JSON 字串，沿用 configTable 慣例
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('user_settings_user_id_idx').on(table.userId),
+  uniqueIndex('user_settings_user_key_idx').on(table.userId, table.key),
 ]);
 
 // ── Projects ──
