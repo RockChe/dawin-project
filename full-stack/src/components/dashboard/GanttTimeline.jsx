@@ -1,9 +1,94 @@
 "use client";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeAllProgress } from "@/lib/utils";
 import MobileGanttList from "./MobileGanttList";
+
+// ── Pure helper functions (exported for testing and reuse) ────────────────────
+
+/**
+ * Filter tasks to exclude any whose projectId is in hiddenProjects.
+ * @param {Array} tasks
+ * @param {Array|null|undefined} hiddenProjects
+ * @returns {Array} new filtered array
+ */
+export function filterVisibleTasks(tasks, hiddenProjects) {
+  if (!hiddenProjects || hiddenProjects.length === 0) return tasks.slice();
+  const hidden = new Set(hiddenProjects);
+  return tasks.filter(t => !hidden.has(t.projectId));
+}
+
+/**
+ * Compute average progress across all tasks, rounded to integer.
+ * @param {Array} projectTasks  — each item has a .progress (0-100)
+ * @returns {number} 0-100 integer
+ */
+export function computeProjectProgress(projectTasks) {
+  if (!projectTasks || projectTasks.length === 0) return 0;
+  const sum = projectTasks.reduce((acc, t) => acc + (t.progress || 0), 0);
+  return Math.round(sum / projectTasks.length);
+}
+
+/**
+ * Sort an array of unique project name strings.
+ * @param {string[]} projectNames
+ * @param {"name"|"progress"|"manual"|string} mode
+ * @param {{ progressByName?: Object, sortOrderByName?: Object }} opts
+ * @returns {string[]} new ordered array
+ */
+export function sortProjectNames(projectNames, mode, opts = {}) {
+  const arr = projectNames.slice(); // never mutate input
+  if (mode === "name") {
+    return arr.sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  }
+  if (mode === "progress") {
+    const pb = opts.progressByName || {};
+    return arr.sort((a, b) => {
+      const diff = (pb[b] || 0) - (pb[a] || 0);
+      if (diff !== 0) return diff;
+      return a.localeCompare(b, "zh-Hant");
+    });
+  }
+  // "manual" or any other value
+  const so = opts.sortOrderByName;
+  if (!so || Object.keys(so).length === 0) return arr; // original order
+  return arr.sort((a, b) => {
+    const oa = so[a] !== undefined ? so[a] : Infinity;
+    const ob = so[b] !== undefined ? so[b] : Infinity;
+    if (oa !== ob) return oa - ob;
+    // tiebreak: original index (stable sort by preserving original positions)
+    return projectNames.indexOf(a) - projectNames.indexOf(b);
+  });
+}
+
+/**
+ * Toggle a project id in the collapsedIds array.
+ * @param {string[]|undefined} collapsedIds
+ * @param {string} id
+ * @returns {string[]} new array
+ */
+export function toggleCollapsed(collapsedIds, id) {
+  const arr = collapsedIds ? collapsedIds.slice() : [];
+  const idx = arr.indexOf(id);
+  if (idx >= 0) {
+    arr.splice(idx, 1);
+  } else {
+    arr.push(id);
+  }
+  return arr;
+}
+
+/**
+ * Check if a project id is in the collapsed set.
+ * @param {string[]|null|undefined} collapsedIds
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isCollapsed(collapsedIds, id) {
+  if (!collapsedIds) return false;
+  return collapsedIds.includes(id);
+}
 
 function computeScaleDivisions(mn, mx, td, dim) {
   const divs = [];
@@ -56,11 +141,42 @@ export function TimeScaleToggle({ value, onChange }) {
 
 export { computeScaleDivisions };
 
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [] }) {
+const LS_KEY = "dash-timelineCollapsed";
+
+function readCollapsedFromLS() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LS_KEY));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [] }) {
   const { X, SC, PC, PJC } = useTheme();
-  if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} />;
+
+  // ── ALL hooks unconditionally at top (fix rules-of-hooks) ─────────────────
+  const [hI, setHI] = useState(null);
+  const [leftHidden, setLeftHidden] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => readCollapsedFromLS());
+  const lR = useRef(null), rR = useRef(null), sy = useRef(false);
+
+  // Persist collapse state to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(collapsed)); } catch { /* ignore */ }
+  }, [collapsed]);
+
   const ganttData = useMemo(() => {
-    const fil = tasks.filter(d => { if (!d.start) return false; if (fp instanceof Set) { if (fp.size > 0 && !fp.has(d.project)) return false; } else if (typeof fp === "string" && fp !== "全部" && d.project !== fp) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; return true; });
+    // A. Apply hidden-project filter FIRST
+    const visible = filterVisibleTasks(tasks, hiddenProjects);
+    const fil = visible.filter(d => {
+      if (!d.start) return false;
+      if (fp instanceof Set) { if (fp.size > 0 && !fp.has(d.project)) return false; }
+      else if (typeof fp === "string" && fp !== "全部" && d.project !== fp) return false;
+      if (fs !== "全部" && d.status !== fs) return false;
+      if (fpr !== "全部" && d.priority !== fpr) return false;
+      return true;
+    });
     if (!fil.length) return null;
     const dates = fil.flatMap(d => [pD(d.start), pD(d.end)]).filter(Boolean);
     const mn = new Date(Math.min(...dates)), mx = new Date(Math.max(...dates)), td = (mx - mn) / 864e5 + 1;
@@ -68,33 +184,65 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
     const gw = ganttWidths || { day: 20, week: 50, month: 50, quarter: 100 };
     const ganttMinW = timeDim === "日" ? Math.max(700, td * gw.day) : timeDim === "週" ? Math.max(700, Math.ceil(td / 7) * gw.week) : timeDim === "季" ? Math.max(700, months.length * gw.quarter) : Math.max(700, months.length * gw.month);
     const pMap = {}; fil.forEach(d => { if (!pMap[d.project]) pMap[d.project] = []; pMap[d.project].push(d); });
+
+    // pcMap uses NATURAL order (color stability across sort changes)
     const pcMap = {}; [...new Set(tasks.map(d => d.project))].forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
+
     const progressMap = computeAllProgress(subtasks, fil);
-    const rows = []; Object.keys(pMap).forEach(proj => {
-      rows.push({ type: "h", proj, n: pMap[proj].length });
-      pMap[proj].forEach(task => { const s = pD(task.start), e = pD(task.end); const l = ((s - mn) / 864e5) / td * 100, w = Math.max(0.3, ((e - s) / 864e5 + 1) / td * 100);
-        const prog = progressMap.get(task.id) || { total: 0, done: 0, pct: 0 };
-        rows.push({ type: "t", task: { ...task, progress: task.status === "已完成" ? 100 : prog.pct }, proj, l, w });
-      });
+
+    // B. Sort project names
+    const naturalNames = Object.keys(pMap); // insertion order = natural
+    const progressByName = {};
+    naturalNames.forEach(name => {
+      const pts = pMap[name].map(t => ({ progress: t.status === "已完成" ? 100 : (progressMap.get(t.id)?.pct || 0) }));
+      progressByName[name] = computeProjectProgress(pts);
+    });
+    const sortOrderByName = {};
+    projects.forEach(p => { if (p.name !== undefined) sortOrderByName[p.name] = p.sortOrder; });
+    const sortedNames = sortProjectNames(naturalNames, timelineSort, { progressByName, sortOrderByName });
+
+    const rows = [];
+    sortedNames.forEach(proj => {
+      const projId = pMap[proj][0].projectId;
+      rows.push({ type: "h", proj, projId, n: pMap[proj].length });
+      // C. Skip task rows when project is collapsed
+      if (!isCollapsed(collapsed, projId)) {
+        pMap[proj].forEach(task => {
+          const s = pD(task.start), e = pD(task.end);
+          const l = ((s - mn) / 864e5) / td * 100, w = Math.max(0.3, ((e - s) / 864e5 + 1) / td * 100);
+          const prog = progressMap.get(task.id) || { total: 0, done: 0, pct: 0 };
+          rows.push({ type: "t", task: { ...task, progress: task.status === "已完成" ? 100 : prog.pct }, proj, l, w });
+        });
+      }
     });
     const todayPct = ((new Date() - mn) / 864e5) / td * 100;
     return { months, ganttMinW, pcMap, rows, todayPct };
-  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths]);
+  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsed]);
+
+  // ── Early returns AFTER all hooks ─────────────────────────────────────────
+  if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} />;
   if (!ganttData) return (<div style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📅</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No timeline data</div><div style={{ fontSize: 14 }}>Try adjusting filters or adding tasks with dates</div></div>);
+
   const { months, ganttMinW, pcMap, rows, todayPct } = ganttData;
-  const [hI, setHI] = useState(null); const [leftHidden, setLeftHidden] = useState(false); const lR = useRef(null), rR = useRef(null), sy = useRef(false);
   const ss = (s, t) => { if (sy.current) return; sy.current = true; if (t.current) t.current.scrollTop = s.current.scrollTop; requestAnimationFrame(() => { sy.current = false; }); };
+
   return (
     <div style={{ border: `1px solid ${X.border}`, borderRadius: 12, overflow: "hidden", background: X.surface }}>
       <div style={{ display: "flex", overflow: "hidden", maxHeight: `${timelineHeight || 100}vh` }}>
         <div ref={lR} onScroll={() => ss(lR, rR)} className={`dash-gantt-left dash-gantt-left-collapsible${leftHidden ? " dash-gantt-left-hidden" : ""}`} style={{ overflowY: "auto", borderRight: leftHidden ? "none" : `1px solid ${X.border}`, background: X.surfaceLight }}>
           <div style={{ position: "sticky", top: 0, zIndex: 5, height: 48, display: "flex", alignItems: "flex-end", padding: "0 16px 10px", background: X.surfaceLight, borderBottom: `1px solid ${X.border}`, fontSize: 14, color: X.textDim }}>Project / Task</div>
           <div>{rows.map((r, i) => {
-            if (r.type === "h") { const c = pcMap[r.proj] || X.accent; return (<div key={`h-${r.proj}`} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }}>
-              <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
-              <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.proj}</span>
-              <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
-            </div>); }
+            if (r.type === "h") {
+              const c = pcMap[r.proj] || X.accent;
+              const coll = isCollapsed(collapsed, r.projId);
+              const toggle = () => setCollapsed(prev => toggleCollapsed(prev, r.projId));
+              return (<div key={`h-${r.proj}`} role="button" tabIndex={0} aria-expanded={!coll} onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); toggle(); } }} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
+                <span style={{ fontSize: 12, color: c, flexShrink: 0, userSelect: "none" }}>{coll ? "▸" : "▾"}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.proj}</span>
+                <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
+              </div>);
+            }
             const sc = SC[r.task.status] || {}, pc = PC[r.task.priority] || {};
             return (<div key={`t-${r.task.id}`} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ height: 40, display: "flex", alignItems: "center", padding: "0 10px 0 26px", gap: 6, background: hI === i ? X.surfaceHover : "transparent", borderBottom: `1px solid ${X.border}22` }}>
               <span style={{ width: 4, height: 4, borderRadius: "50%", background: pc.color, flexShrink: 0 }} />
@@ -112,7 +260,10 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
               {todayPct >= 0 && todayPct <= 100 && <div style={{ position: "absolute", left: `${todayPct}%`, top: 0, bottom: 0, borderLeft: `2px dashed ${X.accent}`, zIndex: 2, opacity: 0.7 }}><div style={{ background: X.accent, color: "#fff", fontSize: 10, padding: "2px 5px", borderRadius: 10, fontWeight: 700, marginLeft: 3, display: "inline-block", position: "sticky", top: 2 }}>TODAY</div></div>}
             </div>
             {rows.map((r, i) => {
-              if (r.type === "h") { const c = pcMap[r.proj] || X.accent; return (<div key={`rh-${r.proj}`} style={{ height: 32, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }} />); }
+              if (r.type === "h") {
+                const c = pcMap[r.proj] || X.accent;
+                return (<div key={`rh-${r.proj}`} style={{ height: 32, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }} />);
+              }
               const bc = pcMap[r.proj], hv = hI === i, dn = r.task.status === "已完成", pp = r.task.status === "提案中" || r.task.status === "待確認";
               return (<div key={`rt-${r.task.id}`} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ position: "relative", height: 40, background: hv ? X.surfaceHover : "transparent", zIndex: hv ? 10 : 1, borderBottom: `1px solid ${X.border}22` }}>
                 <div style={{ position: "absolute", left: `${r.l}%`, width: `${r.w}%`, top: 10, height: 20, borderRadius: 10, background: pp ? `repeating-linear-gradient(135deg,${bc}28,${bc}28 4px,${bc}15 4px,${bc}15 8px)` : `${bc}30`, border: `1px solid ${bc}40`, minWidth: 6 }} />
