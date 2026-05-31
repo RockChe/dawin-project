@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, text, boolean, integer, date, timestamp, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role', ['super_admin', 'admin']);
-export const statusEnum = pgEnum('task_status', ['已完成', '進行中', '待辦', '提案中', '待確認']);
+export const statusEnum = pgEnum('task_status', ['已完成', '進行中', '待辦', '暫緩', '提案中', '待確認']);
 export const priorityEnum = pgEnum('priority', ['高', '中', '低']);
 
 // ── Users ──

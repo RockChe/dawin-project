@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { FM } from "@/lib/theme";
+import { STATUSES } from "@/lib/constants";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toISO, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
 import EditableCell from "../EditableCell";
@@ -273,7 +274,7 @@ function DataTab({
                       <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.project} onSave={v => updateTask(d.id, "project", v)} {...cellP(d.id, "project")} /></div></div></td>
                       <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /></div></div></td>
                       <td style={{ padding: "9px 4px", fontSize: 14 }}><select value={d.owner || ""} onChange={e => updateTask(d.id, "owner", e.target.value)} onClick={e => e.stopPropagation()} style={{ fontFamily: FM, fontSize: 13, padding: "2px 4px", borderRadius: 6, border: `1px solid ${X.border}`, background: X.surface, color: X.textSec, cursor: "pointer", outline: "none", maxWidth: 100 }}><option value="">—</option>{d.owner && !configOwners.includes(d.owner) && <option value={d.owner}>{d.owner}</option>}{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
-                      <td style={{ padding: "9px 8px" }}><EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={["已完成", "進行中", "待辦", "提案中", "待確認"]} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /></td>
+                      <td style={{ padding: "9px 8px" }}><EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={STATUSES} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /></td>
                       <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.category} onSave={v => updateTask(d.id, "category", v)} {...cellP(d.id, "category")} options={configCats} style={{ padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} /></td>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { F, FM } from "@/lib/theme";
+import { STATUS_FILTERS } from "@/lib/constants";
 import { useTheme } from "@/components/ThemeProvider";
 import useTaskManager from "@/hooks/useTaskManager";
 import TaskModal from "./TaskModal";
@@ -130,7 +131,7 @@ export default function Dashboard({ initialData }) {
       <div className="dash-content" style={{ maxWidth: 1400, margin: "0 auto" }}>
         {/* Filters */}
         <div style={{ display: "flex", gap: isMobile ? 6 : 8, marginBottom: isMobile ? 12 : 20, flexWrap: "wrap", alignItems: "center" }}>
-          {["全部", "進行中", "待辦", "已完成", "提案中", "待確認"].map(s => { const a = fs === s, c = SC[s]; return (
+          {STATUS_FILTERS.map(s => { const a = fs === s, c = SC[s]; return (
             <button key={s} onClick={() => setFS(s)} style={{ padding: isMobile ? "4px 10px" : "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
           <div style={{ width: 1, height: 20, background: X.border }} />
           {["全部", "高", "中", "低"].map(p => { const a = fpr === p, c = PC[p]; return (

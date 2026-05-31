@@ -1,0 +1,1 @@
+ALTER TYPE "public"."task_status" ADD VALUE '暫緩' BEFORE '提案中';
