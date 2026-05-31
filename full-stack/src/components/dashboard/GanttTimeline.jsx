@@ -4,7 +4,6 @@ import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeAllProgress } from "@/lib/utils";
 import MobileGanttList from "./MobileGanttList";
-import ProgressBar from "./ProgressBar";
 
 // ── Pure helper functions (exported for testing and reuse) ────────────────────
 
@@ -29,6 +28,26 @@ export function computeProjectProgress(projectTasks) {
   if (!projectTasks || projectTasks.length === 0) return 0;
   const sum = projectTasks.reduce((acc, t) => acc + (t.progress || 0), 0);
   return Math.round(sum / projectTasks.length);
+}
+
+/**
+ * Compute a project's roll-up span: earliest task start → latest task end,
+ * returned as the original date strings. Returns null when no closed range
+ * exists (no dated tasks, or a start with no matching end). Used to draw the
+ * collapsed-project roll-up bar in the Gantt grid.
+ * @param {Array} projectTasks — each item may have .start / .end (date strings)
+ * @returns {{start: string, end: string}|null}
+ */
+export function projectSpan(projectTasks) {
+  if (!projectTasks || projectTasks.length === 0) return null;
+  let minD = null, maxD = null, minStr = null, maxStr = null;
+  for (const t of projectTasks) {
+    const s = pD(t.start), e = pD(t.end);
+    if (s && (minD === null || s < minD)) { minD = s; minStr = t.start; }
+    if (e && (maxD === null || e > maxD)) { maxD = e; maxStr = t.end; }
+  }
+  if (!minStr || !maxStr) return null;
+  return { start: minStr, end: maxStr };
 }
 
 /**
@@ -266,7 +285,15 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
       const projId = pMap[proj][0].projectId;
       // Compute avg from the FULL tasks prop (not date-filtered) to match Projects card value
       const avg = computeProjectProgress(tasks.filter(t => t.project === proj));
-      rows.push({ type: "h", proj, projId, n: pMap[proj].length, avg });
+      // Roll-up bar span: use the date-filtered visible tasks (pMap[proj]) so it
+      // aligns with the same mn/td used for individual task bars. null → not drawn.
+      const span = projectSpan(pMap[proj]);
+      let rollup = null;
+      if (span) {
+        const rs = pD(span.start), re = pD(span.end);
+        rollup = { l: ((rs - mn) / 864e5) / td * 100, w: Math.max(0.3, ((re - rs) / 864e5 + 1) / td * 100) };
+      }
+      rows.push({ type: "h", proj, projId, n: pMap[proj].length, avg, rollup });
       // C. Skip task rows when project is collapsed
       if (!isCollapsed(collapsedState, projId)) {
         pMap[proj].forEach(task => {
@@ -298,14 +325,17 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
               const c = pcMap[r.proj] || X.accent;
               const coll = isCollapsed(collapsedState, r.projId);
               const toggle = () => { if (isControlled) onToggleCollapse(r.projId); else setInternalCollapsed(prev => toggleCollapsed(prev, r.projId)); };
-              return (<div key={`h-${r.proj}`} role="button" tabIndex={0} aria-expanded={!coll} onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); toggle(); } }} style={{ height: 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
-                <div style={{ width: 3, height: 14, borderRadius: 2, background: c }} />
+              // Collapsed rows are taller so the full project name can wrap (≤2 lines)
+              // and the roll-up bar (rendered in the Gantt grid) has room. Both the
+              // left and right header strips use this same height to stay scroll-aligned.
+              const nameStyle = coll
+                ? { whiteSpace: "normal", overflowWrap: "anywhere", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.25 }
+                : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
+              return (<div key={`h-${r.proj}`} role="button" tabIndex={0} aria-expanded={!coll} aria-label={r.proj} onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { if (e.key === " ") e.preventDefault(); toggle(); } }} style={{ height: coll ? 44 : 32, display: "flex", alignItems: "center", padding: "0 14px", gap: 8, background: `${c}10`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30`, cursor: "pointer" }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: c, flexShrink: 0 }} />
                 <span style={{ fontSize: 12, color: c, flexShrink: 0, userSelect: "none" }}>{coll ? "▸" : "▾"}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.proj}</span>
-                {coll
-                  ? <div style={{ width: 100, flexShrink: 0 }}><ProgressBar pct={r.avg} timeBased /></div>
-                  : <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{r.n}</span>
-                }
+                <span style={{ fontSize: 14, fontWeight: 700, color: c, flex: 1, minWidth: 0, ...nameStyle }}>{r.proj}</span>
+                {!coll && <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim, flexShrink: 0 }}>{r.n}</span>}
               </div>);
             }
             const sc = SC[r.task.status] || {}, pc = PC[r.task.priority] || {};
@@ -327,7 +357,19 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
             {rows.map((r, i) => {
               if (r.type === "h") {
                 const c = pcMap[r.proj] || X.accent;
-                return (<div key={`rh-${r.proj}`} style={{ height: 32, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }} />);
+                const coll = isCollapsed(collapsedState, r.projId);
+                const rowH = coll ? 44 : 32;
+                const ru = r.rollup;
+                const bt = rowH / 2 - 5; // vertically center a 10px-tall bar
+                const dn = r.avg === 100;
+                return (<div key={`rh-${r.proj}`} style={{ position: "relative", height: rowH, background: `${c}08`, borderTop: i > 0 ? `1px solid ${X.border}` : "none", borderBottom: `1px solid ${c}30` }}>
+                  {coll && ru && <>
+                    <div style={{ position: "absolute", left: `${ru.l}%`, width: `${ru.w}%`, top: bt, height: 10, borderRadius: 5, background: `${c}30`, border: `1px solid ${c}40`, minWidth: 6 }} />
+                    {r.avg > 0 && <div style={{ position: "absolute", left: `${ru.l}%`, width: `${ru.w * r.avg / 100}%`, top: bt, height: 10, borderRadius: 5, background: c, opacity: dn ? 0.6 : 0.85, minWidth: 4 }} />}
+                    {r.avg > 0 && r.avg < 100 && ru.w > 3 && <div style={{ position: "absolute", left: `${ru.l + ru.w * r.avg / 100 + 0.4}%`, top: bt - 4, fontSize: 12, fontFamily: FM, color: c, fontWeight: 700 }}>{r.avg}%</div>}
+                    {dn && ru.w > 3 && <div style={{ position: "absolute", left: `${ru.l + ru.w / 2}%`, top: bt - 4, fontSize: 12, fontFamily: FM, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)", fontWeight: 700, transform: "translateX(-50%)" }}>100%</div>}
+                  </>}
+                </div>);
               }
               const bc = pcMap[r.proj], hv = hI === i, dn = r.task.status === "已完成", pp = r.task.status === "提案中" || r.task.status === "待確認";
               return (<div key={`rt-${r.task.id}`} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)} style={{ position: "relative", height: 40, background: hv ? X.surfaceHover : "transparent", zIndex: hv ? 10 : 1, borderBottom: `1px solid ${X.border}22` }}>

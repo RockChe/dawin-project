@@ -17,6 +17,7 @@ import {
   uniqueProjectIds,
   collapseAllIds,
   resolveInitialCollapsed,
+  projectSpan,
 } from '@/components/dashboard/GanttTimeline';
 
 // ── filterVisibleTasks ────────────────────────────────────────────────────────
@@ -469,5 +470,65 @@ describe('resolveInitialCollapsed', () => {
       expect(result).not.toBe(ids);
       expect(ids).toEqual(['p1', 'p2']); // unchanged
     });
+  });
+});
+
+// ── projectSpan ───────────────────────────────────────────────────────────────
+// Project roll-up span for the collapsed Gantt bar: earliest task start →
+// latest task end (as date strings). Returns null when no closed range exists.
+
+describe('projectSpan', () => {
+  it('returns null for empty tasks array', () => {
+    expect(projectSpan([])).toBeNull();
+  });
+
+  it('returns null for null input', () => {
+    expect(projectSpan(null)).toBeNull();
+  });
+
+  it('returns null for undefined input', () => {
+    expect(projectSpan(undefined)).toBeNull();
+  });
+
+  it('returns null when no task has valid dates', () => {
+    expect(projectSpan([{ id: '1' }, { id: '2', start: '', end: '' }])).toBeNull();
+  });
+
+  it('returns null when tasks have a start but no end (no closed range)', () => {
+    expect(projectSpan([{ start: '2020-01-01' }])).toBeNull();
+  });
+
+  it('single task returns its own start/end', () => {
+    expect(projectSpan([{ start: '2020-01-01', end: '2020-12-31' }]))
+      .toEqual({ start: '2020-01-01', end: '2020-12-31' });
+  });
+
+  it('takes min(start) and max(end) across multiple tasks', () => {
+    const tasks = [
+      { start: '2020-06-01', end: '2020-06-30' },
+      { start: '2020-01-01', end: '2020-03-01' }, // earliest start
+      { start: '2020-05-01', end: '2020-12-31' }, // latest end
+    ];
+    expect(projectSpan(tasks)).toEqual({ start: '2020-01-01', end: '2020-12-31' });
+  });
+
+  it('ignores tasks with missing dates when computing the range', () => {
+    expect(projectSpan([{ start: '2020-03-01', end: '2020-06-30' }, { id: 'nodate' }]))
+      .toEqual({ start: '2020-03-01', end: '2020-06-30' });
+  });
+
+  it('preserves the original date string format (does not normalize)', () => {
+    expect(projectSpan([{ start: '2020/01/01', end: '2020/12/31' }]))
+      .toEqual({ start: '2020/01/01', end: '2020/12/31' });
+  });
+
+  it('does not mutate the input array', () => {
+    const tasks = [
+      { start: '2020-06-01', end: '2020-06-30' },
+      { start: '2020-01-01', end: '2020-12-31' },
+    ];
+    const snapshot = JSON.parse(JSON.stringify(tasks));
+    projectSpan(tasks);
+    expect(tasks).toEqual(snapshot);
   });
 });
