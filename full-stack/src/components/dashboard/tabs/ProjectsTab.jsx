@@ -17,6 +17,18 @@ import { deleteProjectBanner } from "@/server/actions/projects";
 
 const STATUS_OPTIONS = ["已完成", "進行中", "待辦", "提案中", "待確認"];
 
+/**
+ * Toggle a project id in the hiddenProjects list (immutable add/remove).
+ * Used by the #4b eye toggle — hiddenProjects stores project.id (stable across renames).
+ * @param {Array|null|undefined} hiddenIds
+ * @param {string} id
+ * @returns {Array} new array
+ */
+export function toggleHidden(hiddenIds, id) {
+  const list = hiddenIds || [];
+  return list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+}
+
 function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
   const { X, SC, inputStyle } = useTheme();
   const projMeta = useMemo(() => { const m = {}; projects.forEach(p => { m[p.name] = { creatorName: p.creatorName || null, source: p.source || null }; }); return m; }, [projects]);
