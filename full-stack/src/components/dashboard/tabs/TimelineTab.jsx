@@ -56,10 +56,17 @@ function TimelineTab({
     [twp, hiddenProjects]
   );
 
-  // Apply server-persisted default — only when no localStorage record exists and user hasn't touched.
+  // Apply server-persisted default — only when no localStorage record exists and
+  // the user hasn't touched the state. `timelineDefaultCollapsed` arrives async
+  // from the server (Dashboard → useUserSettings), so this re-fires when it flips
+  // false → true and collapses all then. When the default is falsy there is
+  // nothing to apply, so we early-return without touching state — the initial `[]`
+  // already represents "all expanded", and skipping the write avoids a redundant
+  // re-render on every `allProjectIds` change.
   useEffect(() => {
     if (userTouchedRef.current) return;
     if (!allProjectIds.length) return;
+    if (!timelineDefaultCollapsed) return;
     setCollapsed(resolveInitialCollapsed(null, timelineDefaultCollapsed, allProjectIds));
   }, [timelineDefaultCollapsed, allProjectIds]);
 

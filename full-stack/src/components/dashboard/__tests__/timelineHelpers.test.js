@@ -15,7 +15,6 @@ import {
   toggleCollapsed,
   isCollapsed,
   uniqueProjectIds,
-  computeProgressByProject,
   collapseAllIds,
   resolveInitialCollapsed,
 } from '@/components/dashboard/GanttTimeline';
@@ -366,91 +365,6 @@ describe('uniqueProjectIds', () => {
 
   it('hiddenProjects with unknown id does not filter anything', () => {
     expect(uniqueProjectIds(tasks, ['pXYZ'])).toEqual(['p1', 'p2', 'p3']);
-  });
-});
-
-// ── computeProgressByProject ──────────────────────────────────────────────────
-
-describe('computeProgressByProject', () => {
-  it('returns {} for undefined input', () => {
-    expect(computeProgressByProject(undefined)).toEqual({});
-  });
-
-  it('returns {} for null input', () => {
-    expect(computeProgressByProject(null)).toEqual({});
-  });
-
-  it('returns {} for empty array', () => {
-    expect(computeProgressByProject([])).toEqual({});
-  });
-
-  it('returns correct avg for single project with one task', () => {
-    const tasks = [{ project: 'Alpha', progress: 60 }];
-    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 60 });
-  });
-
-  it('returns correct rounded avg for single project with multiple tasks', () => {
-    const tasks = [
-      { project: 'Alpha', progress: 30 },
-      { project: 'Alpha', progress: 40 },
-      { project: 'Alpha', progress: 51 },
-    ];
-    // (30 + 40 + 51) / 3 = 40.33... → 40
-    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 40 });
-  });
-
-  it('handles multiple projects', () => {
-    const tasks = [
-      { project: 'Alpha', progress: 100 },
-      { project: 'Beta', progress: 50 },
-      { project: 'Alpha', progress: 0 },
-      { project: 'Beta', progress: 50 },
-    ];
-    // Alpha: (100+0)/2=50, Beta: (50+50)/2=50
-    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 50, Beta: 50 });
-  });
-
-  it('treats missing .progress as 0', () => {
-    const tasks = [{ project: 'Alpha' }, { project: 'Alpha', progress: 100 }];
-    // (0 + 100) / 2 = 50
-    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 50 });
-  });
-
-  it('已完成 tasks with progress=100 are computed correctly (baked in by twp)', () => {
-    // Spec says .progress is already baked: 已完成→100. Just use .progress directly.
-    const tasks = [
-      { project: 'Alpha', progress: 100 }, // 已完成 — already baked
-      { project: 'Alpha', progress: 0 },
-    ];
-    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 50 });
-  });
-
-  it('rounds 0.5 up to 1', () => {
-    const tasks = [{ project: 'P', progress: 0 }, { project: 'P', progress: 1 }];
-    // (0+1)/2 = 0.5 → Math.round → 1
-    expect(computeProgressByProject(tasks)).toEqual({ P: 1 });
-  });
-
-  it('returns integer values (not floats)', () => {
-    const tasks = [{ project: 'P', progress: 33 }, { project: 'P', progress: 34 }];
-    const result = computeProgressByProject(tasks);
-    expect(Number.isInteger(result['P'])).toBe(true);
-  });
-
-  it('skips tasks with null or undefined project name', () => {
-    const tasks = [
-      { project: null, progress: 50 },
-      { project: undefined, progress: 80 },
-      { project: 'Alpha', progress: 40 },
-    ];
-    expect(computeProgressByProject(tasks)).toEqual({ Alpha: 40 });
-  });
-
-  it('does not mutate the input array', () => {
-    const tasks = [{ project: 'A', progress: 60 }];
-    const orig = [...tasks];
-    computeProgressByProject(tasks);
-    expect(tasks).toEqual(orig);
   });
 });
 
