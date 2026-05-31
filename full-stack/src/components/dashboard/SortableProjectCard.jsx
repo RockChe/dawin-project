@@ -12,15 +12,17 @@ import { CSS } from "@dnd-kit/utilities";
  */
 export function EyeToggle({ hidden, onToggle, style }) {
   const { X } = useTheme();
-  const label = hidden ? "在 Timeline 顯示" : "不在 Timeline 顯示";
+  // title = dynamic action (sighted hover); aria-label stays static + aria-pressed
+  // encodes state (visible = pressed) so screen readers announce state coherently.
+  const action = hidden ? "在 Timeline 顯示" : "不在 Timeline 顯示";
   return (
     <button
       type="button"
       onClick={e => { e.stopPropagation(); onToggle(); }}
-      title={label}
-      aria-label={label}
-      aria-pressed={hidden}
-      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 4, lineHeight: 0, color: hidden ? X.textDim : X.textSec, display: "inline-flex", alignItems: "center", justifyContent: "center", ...style }}
+      title={action}
+      aria-label="在 Timeline 顯示此專案"
+      aria-pressed={!hidden}
+      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 4, lineHeight: 0, color: hidden ? X.amber : X.textSec, display: "inline-flex", alignItems: "center", justifyContent: "center", ...style }}
       onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
       {hidden ? (

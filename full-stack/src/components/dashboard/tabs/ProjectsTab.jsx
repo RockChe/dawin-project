@@ -36,7 +36,7 @@ export function toggleHidden(hiddenIds, id) {
  */
 function SortableProjectRow({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, hidden, onToggleHidden, onSelect }) {
   const { X, SC } = useTheme();
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id, disabled: !dragEnabled });
   const sStyle = { transform: CSS.Transform.toString(transform), transition };
   return (
     <div ref={setNodeRef} style={sStyle}>
