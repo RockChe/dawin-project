@@ -31,10 +31,15 @@ export async function createTask(data) {
     const proj = await db.select({ id: projects.id }).from(projects).where(eq(projects.id, data.projectId)).limit(1);
     if (!proj[0]) return { error: '專案不存在' };
 
-    // Validate owner exists in users table (if provided)
+    // Validate owner(s) exist in users table (supports comma-separated multi-owner)
     if (data.owner) {
-      const ownerExists = await db.select({ id: users.id }).from(users).where(eq(users.name, data.owner)).limit(1);
-      if (!ownerExists[0]) return { error: `Owner "${data.owner}" 不存在` };
+      const ownerNames = data.owner.split(',').map(s => s.trim()).filter(Boolean);
+      if (ownerNames.length > 0) {
+        const found = await db.select({ name: users.name }).from(users).where(inArray(users.name, ownerNames));
+        const foundNames = new Set(found.map(u => u.name));
+        const missing = ownerNames.filter(n => !foundNames.has(n));
+        if (missing.length > 0) return { error: `Owner "${missing.join(', ')}" 不存在` };
+      }
     }
 
     const result = await db.insert(tasks).values({
@@ -49,6 +54,7 @@ export async function createTask(data) {
       priority: data.priority || '中',
       notes: data.notes || null,
       sortOrder: data.sortOrder || 0,
+      source: 'manual',
       createdBy: session.userId,
     }).returning();
 
@@ -72,10 +78,15 @@ export async function updateTask(id, data) {
     if (key in data) updateData[key] = data[key];
   }
 
-  // Validate owner exists in users table (if provided)
+  // Validate owner(s) exist in users table (supports comma-separated multi-owner)
   if (updateData.owner) {
-    const ownerExists = await db.select({ id: users.id }).from(users).where(eq(users.name, updateData.owner)).limit(1);
-    if (!ownerExists[0]) return { error: `Owner "${updateData.owner}" 不存在` };
+    const ownerNames = updateData.owner.split(',').map(s => s.trim()).filter(Boolean);
+    if (ownerNames.length > 0) {
+      const found = await db.select({ name: users.name }).from(users).where(inArray(users.name, ownerNames));
+      const foundNames = new Set(found.map(u => u.name));
+      const missing = ownerNames.filter(n => !foundNames.has(n));
+      if (missing.length > 0) return { error: `Owner "${missing.join(', ')}" 不存在` };
+    }
   }
 
   try {
@@ -101,10 +112,10 @@ export async function deleteTask(id) {
     // 2. Delete task (cascade deletes subtasks, links, files)
     await db.delete(tasks).where(eq(tasks.id, id));
 
-    // 3. Best-effort R2 cleanup
-    for (const key of r2Keys) {
-      try { await deleteFromR2(key); } catch (e) { console.error('[deleteTask] R2 cleanup failed (orphan):', key, e); }
-    }
+    // 3. Best-effort R2 cleanup (parallel)
+    await Promise.allSettled(
+      r2Keys.map(key => deleteFromR2(key).catch(e => console.error('[deleteTask] R2 cleanup failed (orphan):', key, e)))
+    );
 
     return { success: true };
   } catch (err) {
@@ -358,6 +369,7 @@ export async function upsertTasks(importedTasks) {
         const newProj = await db.insert(projects).values({
           name: projName,
           sortOrder: maxOrder,
+          source: 'csv_import',
           createdBy: session.userId,
         }).returning();
         projectId = newProj[0].id;
@@ -390,6 +402,7 @@ export async function upsertTasks(importedTasks) {
           projectId,
           task: t.task,
           ...data,
+          source: 'csv_import',
           createdBy: session.userId,
         });
         inserted++;
@@ -419,10 +432,15 @@ export async function updateManyTasks(ids, data) {
   }
   if (Object.keys(updateData).length <= 1) return { error: 'No valid fields to update' };
 
-  // Validate owner exists in users table (if provided)
+  // Validate owner(s) exist in users table (supports comma-separated multi-owner)
   if (updateData.owner) {
-    const ownerExists = await db.select({ id: users.id }).from(users).where(eq(users.name, updateData.owner)).limit(1);
-    if (!ownerExists[0]) return { error: `Owner "${updateData.owner}" 不存在` };
+    const ownerNames = updateData.owner.split(',').map(s => s.trim()).filter(Boolean);
+    if (ownerNames.length > 0) {
+      const found = await db.select({ name: users.name }).from(users).where(inArray(users.name, ownerNames));
+      const foundNames = new Set(found.map(u => u.name));
+      const missing = ownerNames.filter(n => !foundNames.has(n));
+      if (missing.length > 0) return { error: `Owner "${missing.join(', ')}" 不存在` };
+    }
   }
 
   try {
@@ -453,10 +471,10 @@ export async function deleteManyTasks(ids) {
     // 2. Batch delete tasks (cascade)
     await db.delete(tasks).where(inArray(tasks.id, ids));
 
-    // 3. Best-effort R2 cleanup
-    for (const key of r2Keys) {
-      try { await deleteFromR2(key); } catch (e) { console.error('[deleteManyTasks] R2 cleanup failed (orphan):', key, e); }
-    }
+    // 3. Best-effort R2 cleanup (parallel)
+    await Promise.allSettled(
+      r2Keys.map(key => deleteFromR2(key).catch(e => console.error('[deleteManyTasks] R2 cleanup failed (orphan):', key, e)))
+    );
 
     return { success: true, deleted: ids.length };
   } catch (err) {
@@ -479,10 +497,10 @@ export async function deleteAllTasks() {
     // 2. Delete all tasks (cascade deletes subtasks, links, files)
     await db.delete(tasks);
 
-    // 3. Best-effort R2 cleanup
-    for (const key of r2Keys) {
-      try { await deleteFromR2(key); } catch (e) { console.error('[deleteAllTasks] R2 cleanup failed (orphan):', key, e); }
-    }
+    // 3. Best-effort R2 cleanup (parallel)
+    await Promise.allSettled(
+      r2Keys.map(key => deleteFromR2(key).catch(e => console.error('[deleteAllTasks] R2 cleanup failed (orphan):', key, e)))
+    );
 
     return { success: true };
   } catch (err) {
@@ -496,12 +514,22 @@ export async function deleteAllTasks() {
 export async function getDashboardData() {
   const { error } = await safeRequireAuth();
   if (error) return { error };
-  const [allTasks, allSubtasks, allLinks, allFiles] = await Promise.all([
-    db.select().from(tasks).orderBy(asc(tasks.sortOrder)),
+  const [taskRows, allSubtasks, allLinks, allFiles] = await Promise.all([
+    db.select({
+      id: tasks.id, projectId: tasks.projectId, task: tasks.task,
+      status: tasks.status, category: tasks.category,
+      startDate: tasks.startDate, endDate: tasks.endDate,
+      duration: tasks.duration, owner: tasks.owner,
+      priority: tasks.priority, notes: tasks.notes,
+      sortOrder: tasks.sortOrder, source: tasks.source,
+      createdBy: tasks.createdBy, createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt, creatorName: users.name,
+    }).from(tasks).leftJoin(users, eq(tasks.createdBy, users.id))
+      .orderBy(asc(tasks.sortOrder)),
     db.select().from(subtasks).orderBy(asc(subtasks.sortOrder)),
     db.select().from(links).orderBy(desc(links.createdAt)),
     db.select().from(files).orderBy(desc(files.createdAt)),
   ]);
 
-  return { tasks: allTasks, subtasks: allSubtasks, links: allLinks, files: allFiles };
+  return { tasks: taskRows, subtasks: allSubtasks, links: allLinks, files: allFiles };
 }

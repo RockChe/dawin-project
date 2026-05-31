@@ -46,6 +46,7 @@ export const projects = pgTable('projects', {
   name: varchar('name', { length: 255 }).notNull(),
   bannerR2Key: varchar('banner_r2_key', { length: 1000 }),
   sortOrder: integer('sort_order').default(0).notNull(),
+  source: varchar('source', { length: 50 }),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -65,6 +66,7 @@ export const tasks = pgTable('tasks', {
   priority: priorityEnum('priority').default('中').notNull(),
   notes: text('notes'),
   sortOrder: integer('sort_order').default(0).notNull(),
+  source: varchar('source', { length: 50 }),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -73,6 +75,7 @@ export const tasks = pgTable('tasks', {
   index('tasks_created_at_idx').on(table.createdAt),
   index('tasks_status_idx').on(table.status),
   index('tasks_created_by_idx').on(table.createdBy),
+  index('tasks_sort_order_idx').on(table.sortOrder),
 ]);
 
 // ── Subtasks ──
@@ -89,6 +92,7 @@ export const subtasks = pgTable('subtasks', {
 }, (table) => [
   index('subtasks_task_id_idx').on(table.taskId),
   index('subtasks_done_idx').on(table.done),
+  index('subtasks_sort_order_idx').on(table.sortOrder),
 ]);
 
 // ── Links ──
@@ -140,6 +144,7 @@ export const auditLog = pgTable('audit_log', {
   index('audit_log_user_id_idx').on(table.userId),
   index('audit_log_action_idx').on(table.action),
   index('audit_log_created_at_idx').on(table.createdAt),
+  index('audit_log_action_created_at_idx').on(table.action, table.createdAt),
 ]);
 
 // ── Backup History ──
@@ -153,5 +158,8 @@ export const backupHistory = pgTable('backup_history', {
   durationMs: integer('duration_ms'),
   tableCounts: text('table_counts'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  index('backup_history_status_idx').on(table.status),
+  index('backup_history_created_at_idx').on(table.createdAt),
+]);
 

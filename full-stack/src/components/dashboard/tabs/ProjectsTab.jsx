@@ -1,11 +1,12 @@
 "use client";
-import { useState, useRef, useCallback, useMemo, memo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD } from "@/lib/utils";
 import EditableCell from "../EditableCell";
 import InlineNote from "../InlineNote";
 import OwnerTags from "../OwnerTags";
+import TagInput from "../TagInput";
 import ProgressBar from "../ProgressBar";
 import SortableSubItem from "../SortableSubItem";
 import GanttTimeline, { TimeScaleToggle } from "../GanttTimeline";
@@ -14,8 +15,11 @@ import { SortableContext, verticalListSortingStrategy, rectSortingStrategy } fro
 import SortableProjectCard from "../SortableProjectCard";
 import { deleteProjectBanner } from "@/server/actions/projects";
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
+const STATUS_OPTIONS = ["已完成", "進行中", "待辦", "提案中", "待確認"];
+
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted }) {
   const { X, SC, inputStyle } = useTheme();
+  const projMeta = useMemo(() => { const m = {}; projects.forEach(p => { m[p.name] = { creatorName: p.creatorName || null, source: p.source || null }; }); return m; }, [projects]);
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
   const [newProjName, setNewProjName] = useState("");
@@ -27,7 +31,18 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
   const [timeDim, setTimeDim] = useState("月");
   const [sortMode, setSortMode] = useState("manual");
   const [detailIconHover, setDetailIconHover] = useState(false);
+  const [openStatusId, setOpenStatusId] = useState(null);
+  const statusDropRef = useRef(null);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (!openStatusId) return;
+    const handler = (e) => { if (statusDropRef.current && !statusDropRef.current.contains(e.target)) setOpenStatusId(null); };
+    const keyHandler = (e) => { if (e.key === "Escape") setOpenStatusId(null); };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => { document.removeEventListener("mousedown", handler); document.removeEventListener("keydown", keyHandler); };
+  }, [openStatusId]);
   const iS2 = inputStyle;
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -211,14 +226,14 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
             title="刪除圖示">×</button>
         )}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}><h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /></h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div></div>
+      <div style={{ flex: 1, minWidth: 0 }}><h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /></h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div>{projMeta[selProj]?.creatorName && <div style={{ fontSize: 12, color: X.textDim, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>{projMeta[selProj].creatorName} · <span style={{ padding: "0 5px", borderRadius: 6, background: projMeta[selProj].source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: projMeta[selProj].source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{projMeta[selProj].source === 'csv_import' ? 'CSV匯入' : '手動'}</span></div>}</div>
       <button onClick={() => setShowFileManager(selProj)} style={{ background: "transparent", border: `1px solid ${X.accent}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.accent, cursor: "pointer", fontWeight: 600 }}>📁 檔案管理</button>
       <button onClick={() => archiveProj(selProj)} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>
       <button onClick={() => { if (confirm("Delete?")) deleteProj(selProj); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>
     </div>
     {pt.some(t => t.start) && (<div style={{ marginBottom: 20 }}>
       <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={setTimeDim} /></div>
-      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={"全部"} fpr={"全部"} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} />
+      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={"全部"} fpr={"全部"} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} configOwners={configOwners} />
     </div>)}
     <div className="dash-detail-grid" style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -251,11 +266,22 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.task}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3 }}>
-                  <OwnerTags value={task.owner} /><span style={{ fontSize: 14, color: X.textDim }}>·</span>
+                  <OwnerTags value={task.owner} configOwners={configOwners} /><span style={{ fontSize: 14, color: X.textDim }}>·</span>
                   <span style={{ fontFamily: FM, fontSize: 14, color: X.textSec }}>{fD(task.start)} → {fD(task.end)}</span>
                 </div>
               </div>
-              <span style={{ fontSize: 14, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600 }}>{task.status}</span>
+              <div ref={openStatusId === task.id ? statusDropRef : null} style={{ position: "relative" }}>
+                <span onClick={e => { e.stopPropagation(); setOpenStatusId(openStatusId === task.id ? null : task.id); }} style={{ fontSize: 14, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, cursor: "pointer", userSelect: "none" }}>{task.status}</span>
+                {openStatusId === task.id && (
+                  <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 50, background: X.surface, border: `1px solid ${X.border}`, borderRadius: 10, boxShadow: `0 4px 16px ${X.shadowHeavy}`, padding: "4px 0", minWidth: 120 }}>
+                    {STATUS_OPTIONS.map(st => { const s = SC[st] || {}; return (
+                      <div key={st} onClick={e => { e.stopPropagation(); updateTask(task.id, "status", st); setOpenStatusId(null); }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"} style={{ padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                        <span style={{ padding: "1px 8px", borderRadius: 8, background: s.bg, color: s.color, fontWeight: 600, fontSize: 12 }}>{st}</span>
+                        {task.status === st && <span style={{ color: s.color, fontSize: 12, marginLeft: "auto" }}>✓</span>}
+                      </div>); })}
+                  </div>
+                )}
+              </div>
               <div style={{ width: 90 }}><ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} timeBased={task.timeBased} /></div>
               <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(task.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "4px 6px" }}>×</button>
             </div>
@@ -272,7 +298,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
               {showSubAdd === task.id
                 ? <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", padding: "4px 0" }}>
                   <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(task.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px", minWidth: 120 }} />
-                  <select value={subDraft.owner} onChange={e => setSubDraft(p => ({ ...p, owner: e.target.value }))} style={{ ...iS2, width: 80, fontSize: 13, padding: "5px 10px", cursor: "pointer" }}><option value="">Owner</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>
+                  <div style={{ flex: "0 0 140px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
                   <button onClick={() => { if (subDraft.name.trim()) { addSub(task.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Add</button>
                   <button onClick={() => setShowSubAdd(null)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "4px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>Cancel</button>
                 </div>

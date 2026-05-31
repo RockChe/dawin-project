@@ -7,7 +7,8 @@ import CalendarPicker from "./CalendarPicker";
 
 const EditableCell = memo(function EditableCell({
   value, onSave, options = null, isDate = false, style = {},
-  isSelected, isEditing, onSelect, onStartEdit, onStopEdit, onNavigate, initialTypedChar
+  isSelected, isEditing, onSelect, onStartEdit, onStopEdit, onNavigate, initialTypedChar,
+  renderValue: renderValueProp
 }) {
   const { X, inputStyle } = useTheme();
   const controlled = isSelected !== undefined;
@@ -36,7 +37,7 @@ const EditableCell = memo(function EditableCell({
     const start = (e) => { e.stopPropagation(); setDr(isDate ? toISO(value) : (value || "")); setEd(true); setTimeout(() => ref.current?.focus(), 0); };
     const commit = () => { setEd(false); const v = isDate ? fromISO(dr) : dr; if (v !== value) onSave(v); };
     const cancel = () => { setEd(false); setDr(isDate ? toISO(value) : value); };
-    if (!ed) return (<span onClick={start} style={{ cursor: "text", borderBottom: "1px dashed transparent", overflow: "hidden", textOverflow: "ellipsis", ...style }} onMouseEnter={e => e.target.style.borderBottomColor = X.borderLight} onMouseLeave={e => e.target.style.borderBottomColor = "transparent"}>{value || "\u2014"}</span>);
+    if (!ed) return (<span onClick={start} style={{ cursor: "text", borderBottom: "1px dashed transparent", overflow: "hidden", textOverflow: "ellipsis", ...style }} onMouseEnter={e => e.target.style.borderBottomColor = X.borderLight} onMouseLeave={e => e.target.style.borderBottomColor = "transparent"}>{renderValueProp ? renderValueProp(value) : (value || "\u2014")}</span>);
     if (isDate) return (<CalendarPicker value={value || ""} onChange={v => { onSave(v); setEd(false); }} autoOpen onClose={() => setEd(false)} style={{ minWidth: 110, ...style }} />);
     if (options) return (<select ref={ref} value={dr} onChange={e => setDr(e.target.value)} onBlur={commit} onClick={e => e.stopPropagation()} onKeyDown={e => { if (e.key === "Escape") cancel(); }} style={{ fontFamily: F, fontSize: 14, padding: "2px 4px", borderRadius: 4, border: `1px solid ${X.accent}`, outline: "none", background: X.surface, color: X.text, ...style }}>{dr && !options.includes(dr) && <option value={dr}>{dr}</option>}{options.map(o => <option key={o} value={o}>{o}</option>)}</select>);
     return (<input ref={ref} type="text" value={dr} onChange={e => setDr(e.target.value)} onBlur={commit} onClick={e => e.stopPropagation()} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") cancel(); }} style={{ fontFamily: F, fontSize: 14, padding: "2px 4px", borderRadius: 4, border: `1px solid ${X.accent}`, outline: "none", background: X.surface, color: X.text, width: "100%", ...style }} />);
@@ -66,7 +67,7 @@ const EditableCell = memo(function EditableCell({
         onClick={e => { e.stopPropagation(); if (onSelect) onSelect(); }}
         onDoubleClick={e => { e.stopPropagation(); if (onStartEdit) onStartEdit(); }}
         style={{ cursor: "default", display: "block", padding: "1px 2px", borderRadius: 3, outline: isSelected ? `2px solid ${X.accent}` : "none", outlineOffset: -1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 20, ...style }}
-      >{value || "\u2014"}</span>
+      >{renderValueProp ? renderValueProp(value) : (value || "\u2014")}</span>
     );
   }
 

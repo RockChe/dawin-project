@@ -179,7 +179,6 @@ export default function useTaskManager(initialData) {
 
     let prev;
     setAllT(p => { prev = p; return p.map(t => t.id === id ? { ...t, [field]: value } : t); });
-    invalidateCache();
     const updateData = {};
     const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
     const dbField = fieldMap[field] || field;
@@ -194,20 +193,19 @@ export default function useTaskManager(initialData) {
     } finally {
       pendingUpdates.current.delete(key);
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast]);
 
   const addTask = useCallback(async (projectId, data) => {
     const result = await createTaskAction({ projectId, ...data });
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllT(p => [...p, result.task]);
-      invalidateCache();
       showToast('任務已建立', 'success');
     } else if (result?.error) {
       showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast]);
 
   const deleteTask = useCallback(async (id) => {
     let prevT, prevS, prevL, prevF;
@@ -230,42 +228,38 @@ export default function useTaskManager(initialData) {
   const toggleSub = useCallback(async (id) => {
     let prev;
     setAllS(p => { prev = p; return p.map(s => s.id === id ? { ...s, done: !s.done, doneDate: !s.done ? new Date().toISOString().split('T')[0] : null } : s); });
-    invalidateCache();
     const result = await toggleSubtaskAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
       setAllS(prev);
       showToast(result.error, 'error');
     }
-  }, [invalidateCache, showToast]);
+  }, [showToast]);
 
   const updateSub = useCallback(async (id, field, value) => {
     let prev;
     setAllS(p => { prev = p; return p.map(s => s.id === id ? { ...s, [field]: value } : s); });
-    invalidateCache();
     const result = await updateSubtaskAction(id, { [field]: value });
     if (checkAuthError(result)) return;
     if (result?.error) {
       setAllS(prev);
       showToast(result.error, 'error');
     }
-  }, [invalidateCache, showToast]);
+  }, [showToast]);
 
   const addSub = useCallback(async (taskId, data) => {
     const result = await createSubtaskAction({ taskId, ...data });
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllS(p => [...p, result.subtask]);
-      invalidateCache();
       showToast('子任務已新增', 'success');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast]);
 
   const deleteSub = useCallback(async (id) => {
     let prev;
     setAllS(p => { prev = p; return p.filter(s => s.id !== id); });
-    invalidateCache();
     const result = await deleteSubtaskAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
@@ -274,7 +268,7 @@ export default function useTaskManager(initialData) {
     } else {
       showToast('子任務已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast]);
 
   // ── Link CRUD ──
   const addLink = useCallback(async (taskId, data) => {
@@ -290,7 +284,6 @@ export default function useTaskManager(initialData) {
   const deleteLink = useCallback(async (id) => {
     let prev;
     setAllL(p => { prev = p; return p.filter(l => l.id !== id); });
-    invalidateCache();
     const result = await deleteLinkAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
@@ -299,7 +292,7 @@ export default function useTaskManager(initialData) {
     } else {
       showToast('連結已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast]);
 
   // ── File CRUD ──
   const addFile = useCallback((taskId, fileData) => {
@@ -310,7 +303,6 @@ export default function useTaskManager(initialData) {
   const deleteFileHandler = useCallback(async (id) => {
     let prev;
     setAllF(p => { prev = p; return p.filter(f => f.id !== id); });
-    invalidateCache();
     const result = await deleteFileAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
@@ -319,7 +311,7 @@ export default function useTaskManager(initialData) {
     } else {
       showToast('檔案已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast]);
 
   // ── Project CRUD ──
   const renameProject = useCallback(async (id, newName) => {

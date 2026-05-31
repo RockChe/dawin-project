@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { users, projects, tasks, subtasks, links, files, configTable, auditLog, backupHistory } from '@/server/db/schema';
-import { asc, desc } from 'drizzle-orm';
+import { asc, desc, gte } from 'drizzle-orm';
 
 const BACKUP_VERSION = '1.0';
 const BACKUP_PREFIX = 'backups/';
@@ -34,8 +34,10 @@ export async function exportAllTables(db) {
     db.select().from(links).orderBy(desc(links.createdAt)),
     db.select().from(files).orderBy(desc(files.createdAt)),
     db.select().from(configTable),
-    db.select().from(auditLog).orderBy(desc(auditLog.createdAt)),
-    db.select().from(backupHistory).orderBy(desc(backupHistory.createdAt)),
+    // auditLog — 只備份最近 90 天
+    db.select().from(auditLog).where(gte(auditLog.createdAt, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))).orderBy(desc(auditLog.createdAt)),
+    // backupHistory — 只備份最近 100 筆
+    db.select().from(backupHistory).orderBy(desc(backupHistory.createdAt)).limit(100),
   ]);
 
   return {
@@ -130,17 +132,14 @@ export async function listBackupsFromR2(credentials) {
 export async function cleanupR2Backups(credentials, keepCount) {
   const items = await listBackupsFromR2(credentials);
   if (items.length <= keepCount) return 0;
-
   const client = createBackupR2Client(credentials);
   const toDelete = items.slice(keepCount);
-
-  for (const item of toDelete) {
-    await client.send(new DeleteObjectCommand({
+  await Promise.allSettled(toDelete.map(item =>
+    client.send(new DeleteObjectCommand({
       Bucket: credentials.bucket,
       Key: item.key,
-    }));
-  }
-
+    }))
+  ));
   return toDelete.length;
 }
 
@@ -156,7 +155,13 @@ export async function testR2Connection(credentials) {
 
 // ── Google Drive ──
 
+let _gdriveCache = null;
+
 async function getGoogleDriveClient(credentials) {
+  const cacheKey = `${credentials.email}:${credentials.folderId}`;
+  if (_gdriveCache && _gdriveCache.key === cacheKey) {
+    return _gdriveCache.drive;
+  }
   const { google } = await import('googleapis');
   const auth = new google.auth.JWT(
     credentials.email,
@@ -164,7 +169,9 @@ async function getGoogleDriveClient(credentials) {
     credentials.privateKey.replace(/\\n/g, '\n'),
     ['https://www.googleapis.com/auth/drive.file'],
   );
-  return google.drive({ version: 'v3', auth });
+  const drive = google.drive({ version: 'v3', auth });
+  _gdriveCache = { key: cacheKey, drive };
+  return drive;
 }
 
 export async function uploadToGoogleDrive(backupData, credentials) {
@@ -213,14 +220,11 @@ export async function listBackupsFromGDrive(credentials) {
 export async function cleanupGDriveBackups(credentials, keepCount) {
   const items = await listBackupsFromGDrive(credentials);
   if (items.length <= keepCount) return 0;
-
   const drive = await getGoogleDriveClient(credentials);
   const toDelete = items.slice(keepCount);
-
-  for (const item of toDelete) {
-    await drive.files.delete({ fileId: item.fileId });
-  }
-
+  await Promise.allSettled(toDelete.map(item =>
+    drive.files.delete({ fileId: item.fileId })
+  ));
   return toDelete.length;
 }
 

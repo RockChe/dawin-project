@@ -2,7 +2,7 @@
 import { useState, useRef, useMemo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
-import { pD, fD, computeProgress } from "@/lib/utils";
+import { pD, fD, computeAllProgress } from "@/lib/utils";
 import MobileGanttList from "./MobileGanttList";
 
 function computeScaleDivisions(mn, mx, td, dim) {
@@ -56,9 +56,9 @@ export function TimeScaleToggle({ value, onChange }) {
 
 export { computeScaleDivisions };
 
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight }) {
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [] }) {
   const { X, SC, PC, PJC } = useTheme();
-  if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} />;
+  if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} />;
   const ganttData = useMemo(() => {
     const fil = tasks.filter(d => { if (!d.start) return false; if (fp instanceof Set) { if (fp.size > 0 && !fp.has(d.project)) return false; } else if (typeof fp === "string" && fp !== "全部" && d.project !== fp) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; return true; });
     if (!fil.length) return null;
@@ -69,10 +69,11 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, isMobile, 
     const ganttMinW = timeDim === "日" ? Math.max(700, td * gw.day) : timeDim === "週" ? Math.max(700, Math.ceil(td / 7) * gw.week) : timeDim === "季" ? Math.max(700, months.length * gw.quarter) : Math.max(700, months.length * gw.month);
     const pMap = {}; fil.forEach(d => { if (!pMap[d.project]) pMap[d.project] = []; pMap[d.project].push(d); });
     const pcMap = {}; [...new Set(tasks.map(d => d.project))].forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
+    const progressMap = computeAllProgress(subtasks, fil);
     const rows = []; Object.keys(pMap).forEach(proj => {
       rows.push({ type: "h", proj, n: pMap[proj].length });
       pMap[proj].forEach(task => { const s = pD(task.start), e = pD(task.end); const l = ((s - mn) / 864e5) / td * 100, w = Math.max(0.3, ((e - s) / 864e5 + 1) / td * 100);
-        const prog = computeProgress(task.id, subtasks, task);
+        const prog = progressMap.get(task.id) || { total: 0, done: 0, pct: 0 };
         rows.push({ type: "t", task: { ...task, progress: task.status === "已完成" ? 100 : prog.pct }, proj, l, w });
       });
     });

@@ -30,6 +30,17 @@ export function mkSC(t){ const a=t.isDark?"25":"15"; return {"已完成":{color:
 export function mkPC(t){ return {"高":{color:t.red},"中":{color:t.amber},"低":{color:t.textDim}}; }
 export function mkCC(t){ return {"商務合作":t.accent,"活動":t.purple,"播出/開始":t.amber,"行銷":t.cyan,"發行":t.green,"市場展":t.red}; }
 export function mkPJC(t){ return [t.accent,t.purple,t.amber,t.red,t.green,t.cyan,t.pink]; }
+export function mkOC(t){ return [t.accent,t.purple,t.amber,t.red,t.green,t.cyan||"#06B6D4",t.pink,t.accentDark,t.textDim,"#D2A8FF"]; }
+
+function hashStr(s){ let h=0; for(let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return Math.abs(h); }
+
+export function getOwnerColor(X, name, knownOwners=[]){
+  const oc=mkOC(X);
+  const idx=knownOwners.indexOf(name);
+  const c=idx>=0 ? oc[idx%oc.length] : oc[hashStr(name||'')%oc.length];
+  const a=X.isDark?"25":"15";
+  return { color:c, bg:c+a };
+}
 
 export const F = "var(--font-noto-sans-tc),-apple-system,BlinkMacSystemFont,sans-serif";
 export const FM = "var(--font-jetbrains-mono),'SF Mono',monospace";
