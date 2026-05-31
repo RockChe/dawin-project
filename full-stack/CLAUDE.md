@@ -34,7 +34,7 @@ src/
 │   └── dashboard/             # 17 個元件 + tabs/ (6 個子元件)
 ├── hooks/
 │   ├── useTaskManager.js      # 核心狀態管理 hook
-│   └── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）
+│   └── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）；管理 zoom / projectsView / hiddenProjects / timelineSort 等 key
 ├── lib/
 │   ├── auth.js                # Session 認證（7 天過期）
 │   ├── constants.js           # 全域常數（STATUSES 狀態順序、STATUS_FILTERS 篩選選項）
@@ -133,7 +133,9 @@ export async function actionName(params) {
 - **SESSION_SECRET**：用於 AES-256-GCM 加密 configTable 中的敏感設定（備份 API Key 等），至少 32 字元隨機字串
 - **CRON_SECRET**：Vercel Cron 觸發 `/api/backup` POST 時的 Bearer token 驗證，防止未授權存取。需在 Vercel 環境變數中設定
 - **Migration 0003/0004**：Wave 1 新增 `user_settings` 表（0003）及 `task_status` enum 新增「暫緩」值（0004）的 migration 已合併至程式碼，**production apply 尚未執行**，須由 Rock 手動 `npm run db:migrate` 完成（0003 含 journal-drift 補建 index，正式環境若曾 `db:push` 過需先核對）
-- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom），Wave 1 後共 34 個測試全綠
+- **Migration baseline（技術債）**：`scripts/baseline-migrations.mjs` 已就緒（idempotent：讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入 `__drizzle_migrations`，已存在則跳過），用來把 0000–0004 標記為「已套用」，之後 `db:migrate` 只會套 0005+。**待對 prod 執行（碰 prod = gated，須 Rock 確認）**，執行並驗證後刪除臨時腳本
+- **Wave 2 個人化（工單 0531）**：Projects 卡片/明細（精簡列表）切換（`projectsView`，user_settings）、Timeline 隱藏專案眼睛 toggle（`hiddenProjects`=project.id 陣列，user_settings；**Dashboard 掛 `useUserSettings` 為單一真相**，以 props 同時傳 ProjectsTab 顯示眼睛狀態 + TimelineTab 過濾，W2-2 不自呼叫 hook）、Timeline 排序（`timelineSort`，user_settings）。ephemeral UI state 走 localStorage：active tab（`dash-activeTab`）、Timeline 收折（`dash-timelineCollapsed`）
+- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），Wave 2 後共 89 個測試全綠
 
 ## 關鍵參考檔案
 

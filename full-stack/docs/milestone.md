@@ -45,6 +45,15 @@
 - ✅ T1 設定層：新增 `user_settings` 表 + Server Actions + 獨立 `useUserSettings` hook（樂觀更新 + key-scoped rollback）
 - ✅ 測試基建：vitest（config + @/ alias + jsdom），`npm test` 執行，Wave 1 合併後 34 綠
 
+## Wave 2 工單 0531（2026-05-31 合併）
+
+- ✅ #4a Projects 卡片/明細切換 — 明細＝精簡列表（一列一專案 + 拖移把手），卡片⟷列表 switch，per-account（`projectsView`，user_settings）
+- ✅ #4b Timeline 隱藏專案 — 每專案眼睛 toggle，隱藏清單存 `hiddenProjects`（project.id 陣列，per-account）；Dashboard 以 props 同時餵 ProjectsTab（眼睛狀態）與 TimelineTab（過濾）
+- ✅ #5 重新整理保持頁籤 — active tab 持久化於 localStorage（`dash-activeTab`，per-device）
+- ✅ Timeline 增強 — project/task 收折（localStorage `dash-timelineCollapsed`）+ 排序（名稱/進度/手動，`timelineSort` per-account）+ 隱藏過濾（依 project.id）
+- ✅ 測試：Wave 2 合併後 89 綠（vitest，已排除 `.worktrees`）
+- 🔲 技術債：migration baseline（`scripts/baseline-migrations.mjs` 就緒，待對 prod 執行，gated）
+
 ## v0.4.0 — 穩定性
 
 - 加入測試（至少 Server Actions 單元測試）

@@ -5,6 +5,16 @@
 
 ---
 
+## Wave 2 工單 0531 ✅（已完成）
+
+- [x] #4a Projects 卡片/明細(精簡列表)切換 — per-account `projectsView`
+- [x] #4b Timeline 隱藏專案眼睛 toggle — per-account `hiddenProjects`（project.id）
+- [x] #5 重新整理保持當前頁籤 — localStorage `dash-activeTab`
+- [x] Timeline 收折 + 排序（名稱/進度/手動）+ 隱藏過濾
+- [ ] 技術債：migration baseline 對 prod 執行（腳本就緒，gated，待主 lead/Rock 確認）
+
+---
+
 ## 高優先
 
 - [x] Dashboard.jsx 拆分 — 已完成（945→187 行，6 個 tab 子元件於 `tabs/` 目錄）
