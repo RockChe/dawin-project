@@ -2,7 +2,7 @@
 import { useState, memo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
-function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast }) {
+function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast, zoom, onZoomChange }) {
   const { X, CC, PJC, inputStyle } = useTheme();
   const [newCat, setNewCat] = useState("");
   const [tlHeightDraft, setTlHeightDraft] = useState(timelineHeight);
@@ -53,6 +53,23 @@ function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, set
       </div>
       <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.green, borderRadius: 2 }} />Display Settings</h3>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: X.textSec, marginBottom: 6 }}>全站放大 {zoom}%</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: X.textDim, flexShrink: 0 }}>50%</span>
+            <input
+              type="range"
+              aria-label="全站放大"
+              min={50}
+              max={200}
+              step={10}
+              value={zoom}
+              onChange={e => onZoomChange(Number(e.target.value))}
+              style={{ flex: 1, accentColor: X.green, cursor: "pointer" }}
+            />
+            <span style={{ fontSize: 11, color: X.textDim, flexShrink: 0 }}>200%</span>
+          </div>
+        </div>
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: X.textSec, marginBottom: 6 }}>Timeline Height (vh)</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
