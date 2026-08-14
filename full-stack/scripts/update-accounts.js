@@ -3,10 +3,20 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import * as schema from '../src/server/db/schema.js';
+import { assertWriteAllowed } from './_guard.js';
 
 async function updateAccounts() {
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL is required. Set it in .env file.');
+    process.exit(1);
+  }
+  assertWriteAllowed({ operation: 'update-accounts' });
+  if (!process.env.ROCK_PASSWORD) {
+    console.error('❌ ROCK_PASSWORD is required. Set it in .env file.');
+    process.exit(1);
+  }
+  if (!process.env.JIEJIE_PASSWORD) {
+    console.error('❌ JIEJIE_PASSWORD is required. Set it in .env file.');
     process.exit(1);
   }
 
@@ -16,7 +26,7 @@ async function updateAccounts() {
   console.log('🔄 Updating accounts...\n');
 
   // 1. Update existing admin@example.com → rock0923@gmail.com
-  const rockHash = await bcrypt.hash('750921', 12);
+  const rockHash = await bcrypt.hash(process.env.ROCK_PASSWORD, 12);
   const updated = await db.update(schema.users)
     .set({
       email: 'rock0923@gmail.com',
@@ -43,7 +53,7 @@ async function updateAccounts() {
   }
 
   // 2. Create 950201@gmail.com (姐姐)
-  const jiejieHash = await bcrypt.hash('770214', 12);
+  const jiejieHash = await bcrypt.hash(process.env.JIEJIE_PASSWORD, 12);
 
   // Check if already exists
   const existing = await db.select()
@@ -73,8 +83,8 @@ async function updateAccounts() {
 
   console.log('\n🎉 帳號更新完成！');
   console.log('\n📋 登入資訊：');
-  console.log('   1. rock0923@gmail.com / 750921 (Rock, super_admin)');
-  console.log('   2. 950201@gmail.com / 770214 (姐姐, super_admin)');
+  console.log('   1. rock0923@gmail.com (Rock, super_admin)');
+  console.log('   2. 950201@gmail.com (姐姐, super_admin)');
 }
 
 updateAccounts().catch(err => {

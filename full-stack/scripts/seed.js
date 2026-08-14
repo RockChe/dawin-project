@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import bcrypt from 'bcryptjs';
 import * as schema from '../src/server/db/schema.js';
+import { assertWriteAllowed } from './_guard.js';
 
 const SEED_TASKS = [
   { id:"T01",project:"虎姑婆和他的朋友",task:"MOMO上架",status:"已完成",category:"商務合作",start:"2025-11-24",duration:158,end:"2026-04-30",notes:"",owner:"林佳穎",priority:"高",sort_order:1 },
@@ -71,6 +72,15 @@ async function seed() {
     console.error('❌ DATABASE_URL is required. Set it in .env file.');
     process.exit(1);
   }
+  assertWriteAllowed({ operation: 'seed' });
+  if (!process.env.ROCK_PASSWORD) {
+    console.error('❌ ROCK_PASSWORD is required. Set it in .env file.');
+    process.exit(1);
+  }
+  if (!process.env.JIEJIE_PASSWORD) {
+    console.error('❌ JIEJIE_PASSWORD is required. Set it in .env file.');
+    process.exit(1);
+  }
 
   const sql = neon(process.env.DATABASE_URL);
   const db = drizzle(sql, { schema });
@@ -79,8 +89,8 @@ async function seed() {
 
   // 1. Create Super Admins
   const accounts = [
-    { email: 'rock0923@gmail.com', password: '750921', name: 'Rock' },
-    { email: '950201@gmail.com', password: '770214', name: '姐姐' },
+    { email: 'rock0923@gmail.com', password: process.env.ROCK_PASSWORD, name: 'Rock' },
+    { email: '950201@gmail.com', password: process.env.JIEJIE_PASSWORD, name: '姐姐' },
   ];
 
   let superAdmin;
@@ -151,9 +161,9 @@ async function seed() {
   console.log(`✅ ${subCount} subtasks created`);
 
   console.log('\n🎉 Seed complete!');
-  console.log(`\n📋 Login credentials:`);
+  console.log(`\n📋 Accounts created:`);
   for (const acc of accounts) {
-    console.log(`   ${acc.email} / ${acc.password} (${acc.name})`);
+    console.log(`   ${acc.email} (${acc.name})`);
   }
 }
 

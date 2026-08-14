@@ -2,12 +2,14 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
 import * as schema from '../src/server/db/schema.js';
+import { assertWriteAllowed } from './_guard.js';
 
 async function cleanup() {
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL is required.');
     process.exit(1);
   }
+  assertWriteAllowed({ operation: 'cleanup-old-admin' });
 
   const sql = neon(process.env.DATABASE_URL);
   const db = drizzle(sql, { schema });

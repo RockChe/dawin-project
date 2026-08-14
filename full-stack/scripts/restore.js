@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 import ws from 'ws';
 import { neonConfig } from '@neondatabase/serverless';
+import { assertWriteAllowed } from './_guard.js';
 
 // WebSocket is required for Neon Pool (transaction support)
 neonConfig.webSocketConstructor = ws;
@@ -55,6 +56,8 @@ async function main() {
     console.error('Add --confirm flag to proceed.');
     process.exit(1);
   }
+
+  assertWriteAllowed({ operation: 'restore' });
 
   // Pre-compute password hashes outside transaction (bcrypt is slow)
   console.log('\nPre-computing password hashes...');

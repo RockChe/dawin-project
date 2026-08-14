@@ -11,6 +11,7 @@
 # misc
 .DS_Store
 *.pem
+**/cookies.txt
 
 # debug
 npm-debug.log*
@@ -39,3 +40,10 @@ yarn-error.log*
 
 # git worktrees (cc-fleet)
 .worktrees/
+
+# AI tooling artifacts (local only)
+.claude/
+**/docs/superpowers/
+
+# infra notes containing credential handling details — keep local
+**/docs/infra-auth-notes.html
