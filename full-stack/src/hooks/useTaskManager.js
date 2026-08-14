@@ -261,12 +261,13 @@ export default function useTaskManager(initialData) {
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllT(p => [...p, result.task]);
+      invalidateCache();
       showToast('任務已建立', 'success');
     } else if (result?.error) {
       showToast(result.error, 'error');
     }
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const deleteTask = useCallback(async (id) => {
     const prevTSnap = allTRef.current;
@@ -330,10 +331,11 @@ export default function useTaskManager(initialData) {
           ...(result.doneDate !== undefined ? { doneDate: result.doneDate } : {}),
         } : s));
       }
+      invalidateCache();
     } finally {
       pendingUpdates.current.delete(key);
     }
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const updateSub = useCallback(async (id, field, value) => {
     const prevRow = allSRef.current.find(s => s.id === id);
@@ -344,18 +346,21 @@ export default function useTaskManager(initialData) {
     if (result?.error) {
       if (prevRow) setAllS(p => p.map(s => s.id === id ? { ...s, [field]: prevValue } : s));
       showToast(result.error, 'error');
+    } else {
+      invalidateCache();
     }
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const addSub = useCallback(async (taskId, data) => {
     const result = await createSubtaskAction({ taskId, ...data });
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllS(p => [...p, result.subtask]);
+      invalidateCache();
       showToast('子任務已新增', 'success');
     }
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const deleteSub = useCallback(async (id) => {
     const idx = allSRef.current.findIndex(s => s.id === id);
@@ -369,9 +374,10 @@ export default function useTaskManager(initialData) {
       }
       showToast(result.error, 'error');
     } else {
+      invalidateCache();
       showToast('子任務已刪除', 'error');
     }
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   // ── Link CRUD ──
   const addLink = useCallback(async (taskId, data) => {
@@ -379,10 +385,11 @@ export default function useTaskManager(initialData) {
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllL(p => [...p, result.link]);
+      invalidateCache();
       showToast('連結已新增', 'success');
     }
     return result;
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const deleteLink = useCallback(async (id) => {
     const idx = allLRef.current.findIndex(l => l.id === id);
@@ -396,15 +403,17 @@ export default function useTaskManager(initialData) {
       }
       showToast(result.error, 'error');
     } else {
+      invalidateCache();
       showToast('連結已刪除', 'error');
     }
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   // ── File CRUD ──
   const addFile = useCallback((taskId, fileData) => {
     setAllF(p => [...p, fileData]);
+    invalidateCache();
     showToast('檔案已上傳', 'success');
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const deleteFileHandler = useCallback(async (id) => {
     const idx = allFRef.current.findIndex(f => f.id === id);
@@ -418,9 +427,10 @@ export default function useTaskManager(initialData) {
       }
       showToast(result.error, 'error');
     } else {
+      invalidateCache();
       showToast('檔案已刪除', 'error');
     }
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   // ── Project CRUD ──
   const renameProject = useCallback(async (id, newName) => {
@@ -614,14 +624,16 @@ export default function useTaskManager(initialData) {
     const result = await saveConfig('owners', newOwners);
     if (checkAuthError(result)) return;
     if (result?.error) showToast(result.error, 'error');
-  }, [showToast]);
+    else invalidateCache();
+  }, [showToast, invalidateCache]);
 
   const saveConfigCats = useCallback(async (newCats) => {
     setConfigCats(newCats);
     const result = await saveConfig('categories', newCats);
     if (checkAuthError(result)) return;
     if (result?.error) showToast(result.error, 'error');
-  }, [showToast]);
+    else invalidateCache();
+  }, [showToast, invalidateCache]);
 
   return {
     projects, setProjects,
