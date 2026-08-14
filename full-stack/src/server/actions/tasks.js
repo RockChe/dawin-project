@@ -5,7 +5,7 @@ import { tasks, subtasks, links, files, projects, users } from '@/server/db/sche
 import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 import { safeRequireAuth, safeRequireAdmin } from '@/lib/auth';
 import { deleteFromR2 } from '@/lib/r2';
-import { isValidUUID } from '@/lib/utils';
+import { isValidUUID, toBusinessDateString } from '@/lib/utils';
 
 // ── Tasks ──
 
@@ -208,13 +208,16 @@ export async function toggleSubtask(id) {
 
     const sub = result[0];
     const newDone = !sub.done;
+    // Business-zone calendar day, not the runtime's. This runtime is UTC on
+    // Vercel, so toISOString() recorded the previous day for anything done
+    // before 08:00 Taipei.
+    const doneDate = newDone ? toBusinessDateString() : null;
 
-    await db.update(subtasks).set({
-      done: newDone,
-      doneDate: newDone ? new Date().toISOString().split('T')[0] : null,
-    }).where(eq(subtasks.id, id));
+    await db.update(subtasks).set({ done: newDone, doneDate }).where(eq(subtasks.id, id));
 
-    return { success: true };
+    // Returned so the client can reconcile its optimistic guess with the value
+    // actually stored — the server is the source of truth for the day boundary.
+    return { success: true, done: newDone, doneDate };
   } catch (err) {
     console.error("toggleSubtask error:", err);
     return { error: err.message || "切換子任務狀態失敗" };

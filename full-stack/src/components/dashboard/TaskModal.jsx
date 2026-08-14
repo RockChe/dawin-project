@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toISO, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
+import { planTaskUpdates } from "@/lib/taskUpdates";
 import { STATUSES } from "@/lib/constants";
 import CalendarPicker from "./CalendarPicker";
 import TagInput from "./TagInput";
@@ -63,18 +64,8 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           return;
         }
       } else {
-        const fieldMap = { task: "task", start: "startDate", end: "endDate", category: "category", priority: "priority", owner: "owner", status: "status", notes: "notes" };
-        for (const [formField, dbField] of Object.entries(fieldMap)) {
-          const orig = (formField === "start" || formField === "end") ? (task.startDate || task.endDate || "") : (task[formField] || "");
-          const cur = form[formField] || "";
-          if (orig !== cur) {
-            const val = (formField === "start" || formField === "end") ? (cur ? toISO(cur) : null) : cur;
-            await updateTask(task.id, formField, val);
-          }
-        }
-        if (form.start && form.end) {
-          const dur = Math.max(1, Math.ceil((pD(form.end) - pD(form.start)) / 864e5));
-          await updateTask(task.id, "duration", dur);
+        for (const { field, value } of planTaskUpdates(task, form)) {
+          await updateTask(task.id, field, value);
         }
       }
       onClose();

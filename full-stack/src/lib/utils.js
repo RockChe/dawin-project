@@ -11,6 +11,25 @@ export function pD(s) {
   return new Date(y, m - 1, d);
 }
 
+// The product's day boundary. Pinned explicitly rather than using the runtime's
+// local zone, because the two runtimes disagree: the browser uses the user's
+// device zone while the Vercel server runtime is UTC. `new Date().toISOString()`
+// (the previous approach) yields the UTC day, which is the PREVIOUS day for
+// anything done between 00:00 and 07:59 in Taipei.
+export const BUSINESS_TIME_ZONE = 'Asia/Taipei';
+
+const businessDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: BUSINESS_TIME_ZONE,
+  year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+/** Calendar day in the business time zone, as "YYYY-MM-DD". */
+export function toBusinessDateString(date = new Date()) {
+  const parts = businessDateFormatter.formatToParts(date);
+  const get = type => parts.find(p => p.type === type)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 export function fD(s) { return s ? s.replace(/\//g, ".").replace(/-/g, ".") : "\u2014"; }
 export function toISO(s) { if (!s) return ""; const p = s.split(" "); return p[0].replace(/[\/\.]/g, "-"); }
 export function fromISO(s) { if (!s) return ""; const p = s.split(" "); return p[0].replace(/-/g, "/"); }

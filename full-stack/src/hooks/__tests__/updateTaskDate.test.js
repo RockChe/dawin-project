@@ -110,6 +110,36 @@ describe('updateTask — date fields reach the rendered view (twp)', () => {
     expect(sessionStorage.getItem('dash_cache')).toBeNull();
   });
 
+  // DataTab's inline cell hands CalendarPicker output straight to updateTask,
+  // i.e. "2026/09/01" with slashes, while TaskModal sends ISO. Postgres accepts
+  // both for a DATE column, but the local row then holds a different string
+  // shape than the one the server round-trips back, so the table shows
+  // "2026/09/01" until the next load and "2026-09-01" after it. Normalise at
+  // the single choke point instead of at each call site.
+  it('normalizes slash-format dates to ISO before persisting', async () => {
+    const { result } = setup();
+    await act(async () => { await result.current.updateTask(TASK_ID, 'start', '2026/09/01'); });
+    expect(updateTaskAction).toHaveBeenCalledWith(TASK_ID, { startDate: '2026-09-01' });
+  });
+
+  it('normalizes the optimistic value too, so the table never shows a mixed format', async () => {
+    const { result } = setup();
+    await act(async () => { await result.current.updateTask(TASK_ID, 'end', '2026/09/20 14:30'); });
+    expect(result.current.twp[0].end).toBe('2026-09-20');
+  });
+
+  it('sends null when a date is cleared', async () => {
+    const { result } = setup();
+    await act(async () => { await result.current.updateTask(TASK_ID, 'start', ''); });
+    expect(updateTaskAction).toHaveBeenCalledWith(TASK_ID, { startDate: null });
+  });
+
+  it('leaves non-date fields untouched by normalization', async () => {
+    const { result } = setup();
+    await act(async () => { await result.current.updateTask(TASK_ID, 'notes', 'a/b/c'); });
+    expect(updateTaskAction).toHaveBeenCalledWith(TASK_ID, { notes: 'a/b/c' });
+  });
+
   it('rolls the date back in twp when the server rejects the update', async () => {
     updateTaskAction.mockImplementationOnce(async () => ({ error: '更新任務失敗' }));
     const { result } = setup();

@@ -10,11 +10,9 @@ import CalendarPicker from "../CalendarPicker";
 import TagInput from "../TagInput";
 import ProgressBar from "../ProgressBar";
 import OwnerTags from "../OwnerTags";
+import { getEditableCols } from "@/lib/tableColumns";
 
-const EDITABLE_COLS = ["project","task","owner","status","priority","category","start","end","notes"];
-const SUB_EDITABLE_COLS = ["name","owner","notes"];
 const COL_POS = { project: 0, task: 1, name: 1, owner: 2, status: 3, priority: 4, category: 6, start: 7, end: 8, notes: 9 };
-const getEditableCols = (type) => type === "sub" ? SUB_EDITABLE_COLS : EDITABLE_COLS;
 
 function DataTab({
   filtered, allS, allT, twp, projects,
@@ -289,7 +287,7 @@ function DataTab({
                   return [
                     <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}`, background: selectedRows.has(d.id) ? `${X.accent}10` : "transparent" }} onMouseEnter={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = X.surfaceHover; }} onMouseLeave={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = "transparent"; }}>
                       <td style={{ padding: "9px 6px", textAlign: "center" }}><input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} /></td>
-                      <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.project} onSave={v => updateTask(d.id, "project", v)} {...cellP(d.id, "project")} /></div></div></td>
+                      <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.project}>{d.project || "—"}</div></div></td>
                       <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /></div></div></td>
                       <td style={{ padding: "9px 8px", fontSize: 14 }}><EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /></td>
                       <td style={{ padding: "9px 8px" }}><EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={STATUSES} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /></td>

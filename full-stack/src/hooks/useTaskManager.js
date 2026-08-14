@@ -1,6 +1,6 @@
 'use client';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { computeAllProgress } from '@/lib/utils';
+import { computeAllProgress, toISO, toBusinessDateString } from '@/lib/utils';
 import { getInitialData } from '@/server/actions/dashboard';
 import {
   createTask as createTaskAction,
@@ -30,6 +30,8 @@ import { runReorder } from './reorderProjects';
 const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
 const CACHE_KEY = 'dash_cache';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// task columns backed by PG `date` — values get normalised to ISO on write
+const DATE_COLUMNS = new Set(['startDate', 'endDate']);
 
 function checkAuthError(result) {
   if (result?.error === 'UNAUTHORIZED' || result?.error === 'FORBIDDEN') {
@@ -37,6 +39,26 @@ function checkAuthError(result) {
     return true;
   }
   return false;
+}
+
+// Restore rows removed by a cascade delete without clobbering edits made to
+// OTHER rows while the delete was in flight. `originalSnapshot` fixes the
+// relative order to put the removed rows back into; anything still present
+// in `current` keeps its (possibly since-edited) value, and anything in
+// `current` that wasn't in the snapshot (created after the optimistic
+// delete) is appended at the end.
+export function mergeRestore(current, originalSnapshot, removedItems) {
+  if (!removedItems.length) return current;
+  const removedIds = new Set(removedItems.map(r => r.id));
+  const currentById = new Map(current.map(c => [c.id, c]));
+  // Order comes from the snapshot; the VALUE of a surviving row comes from
+  // `current`, so an edit that landed while the delete was in flight survives
+  // the rollback. Only the rows this delete removed fall back to the snapshot.
+  const restored = originalSnapshot
+    .filter(o => currentById.has(o.id) || removedIds.has(o.id))
+    .map(o => currentById.get(o.id) ?? o);
+  const extra = current.filter(c => !originalSnapshot.some(o => o.id === c.id));
+  return [...restored, ...extra];
 }
 
 export default function useTaskManager(initialData) {
@@ -171,20 +193,37 @@ export default function useTaskManager(initialData) {
   // ── Task CRUD ──
   const pendingUpdates = useRef(new Set());
 
-  // Mirror of allT so async callbacks can read the pre-update value without
-  // taking allT as a dependency (which would re-create them on every edit).
-  // Do NOT read state out of a setState updater side-effect — React may defer
-  // the updater or run it twice, leaving the captured value undefined (BUG01).
+  // Mirrors so async callbacks can read the pre-update value without taking
+  // the state as a dependency (which would re-create them on every edit).
+  // Do NOT read state out of a setState updater side-effect — React only
+  // runs an updater eagerly when the fiber has no other update already
+  // pending; any setState call after the first one in the same synchronous
+  // tick (or a 2nd mutation fired before the 1st's update flushes) has its
+  // updater DEFERRED, leaving the captured value undefined (BUG01).
   const allTRef = useRef(allT);
   useEffect(() => { allTRef.current = allT; }, [allT]);
+  const allSRef = useRef(allS);
+  useEffect(() => { allSRef.current = allS; }, [allS]);
+  const allLRef = useRef(allL);
+  useEffect(() => { allLRef.current = allL; }, [allL]);
+  const allFRef = useRef(allF);
+  useEffect(() => { allFRef.current = allF; }, [allF]);
+  const projectsRef = useRef(projects);
+  useEffect(() => { projectsRef.current = projects; }, [projects]);
 
-  const updateTask = useCallback(async (id, field, value) => {
+  const updateTask = useCallback(async (id, field, rawValue) => {
     // Canonicalize to the DB field name FIRST. `allT` rows are DB-shaped
     // (startDate/endDate), and `twp` re-derives the view aliases start/end
     // from them — so an optimistic write under the form name (`start`) would
     // be silently overwritten by twp and the UI would keep the old value.
     const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
     const dbField = fieldMap[field] || field;
+
+    // Date columns are PG `date`, and callers disagree on shape: TaskModal
+    // sends ISO, DataTab's inline cell sends CalendarPicker output
+    // ("2026/09/01 14:30"). Normalise here so the local row and the persisted
+    // row always hold the same string. toISO is idempotent on ISO input.
+    const value = DATE_COLUMNS.has(dbField) ? (toISO(rawValue ?? '') || null) : rawValue;
 
     const key = `${id}:${dbField}`;
     // Skip if same field on same task is already being updated (prevent race condition)
@@ -230,16 +269,30 @@ export default function useTaskManager(initialData) {
   }, [showToast]);
 
   const deleteTask = useCallback(async (id) => {
-    let prevT, prevS, prevL, prevF;
-    setAllT(p => { prevT = p; return p.filter(t => t.id !== id); });
-    setAllS(p => { prevS = p; return p.filter(s => s.taskId !== id); });
-    setAllL(p => { prevL = p; return p.filter(l => l.taskId !== id); });
-    setAllF(p => { prevF = p; return p.filter(f => f.taskId !== id); });
+    const prevTSnap = allTRef.current;
+    const prevSSnap = allSRef.current;
+    const prevLSnap = allLRef.current;
+    const prevFSnap = allFRef.current;
+    const removedT = prevTSnap.find(t => t.id === id);
+    const tIdx = prevTSnap.findIndex(t => t.id === id);
+    const removedS = prevSSnap.filter(s => s.taskId === id);
+    const removedL = prevLSnap.filter(l => l.taskId === id);
+    const removedF = prevFSnap.filter(f => f.taskId === id);
+
+    setAllT(p => p.filter(t => t.id !== id));
+    setAllS(p => p.filter(s => s.taskId !== id));
+    setAllL(p => p.filter(l => l.taskId !== id));
+    setAllF(p => p.filter(f => f.taskId !== id));
     invalidateCache();
     const result = await deleteTaskAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setAllT(prevT); setAllS(prevS); setAllL(prevL); setAllF(prevF);
+      if (removedT) {
+        setAllT(p => p.some(t => t.id === id) ? p : [...p.slice(0, Math.min(tIdx, p.length)), removedT, ...p.slice(Math.min(tIdx, p.length))]);
+      }
+      if (removedS.length) setAllS(p => mergeRestore(p, prevSSnap, removedS));
+      if (removedL.length) setAllL(p => mergeRestore(p, prevLSnap, removedL));
+      if (removedF.length) setAllF(p => mergeRestore(p, prevFSnap, removedF));
       showToast(result.error, 'error');
     } else {
       showToast('任務已刪除', 'error');
@@ -248,23 +301,48 @@ export default function useTaskManager(initialData) {
 
   // ── Subtask CRUD ──
   const toggleSub = useCallback(async (id) => {
-    let prev;
-    setAllS(p => { prev = p; return p.map(s => s.id === id ? { ...s, done: !s.done, doneDate: !s.done ? new Date().toISOString().split('T')[0] : null } : s); });
-    const result = await toggleSubtaskAction(id);
-    if (checkAuthError(result)) return;
-    if (result?.error) {
-      setAllS(prev);
-      showToast(result.error, 'error');
+    // Per-row in-flight guard. Two quick clicks on the SAME subtask would both
+    // read the same pre-update row, and the server's read-toggle-write would
+    // silently drop one toggle; a failed rollback could also clobber a
+    // successful one.
+    const key = `sub:${id}:done`;
+    if (pendingUpdates.current.has(key)) return;
+    pendingUpdates.current.add(key);
+
+    const prevRow = allSRef.current.find(s => s.id === id);
+    setAllS(p => p.map(s => s.id === id
+      ? { ...s, done: !s.done, doneDate: !s.done ? toBusinessDateString() : null }
+      : s));
+    try {
+      const result = await toggleSubtaskAction(id);
+      if (checkAuthError(result)) return;
+      if (result?.error) {
+        if (prevRow) setAllS(p => p.map(s => s.id === id ? prevRow : s));
+        showToast(result.error, 'error');
+        return;
+      }
+      // The server owns the day boundary, so adopt what it actually stored
+      // rather than trusting the optimistic guess.
+      if (result?.done !== undefined || result?.doneDate !== undefined) {
+        setAllS(p => p.map(s => s.id === id ? {
+          ...s,
+          ...(result.done !== undefined ? { done: result.done } : {}),
+          ...(result.doneDate !== undefined ? { doneDate: result.doneDate } : {}),
+        } : s));
+      }
+    } finally {
+      pendingUpdates.current.delete(key);
     }
   }, [showToast]);
 
   const updateSub = useCallback(async (id, field, value) => {
-    let prev;
-    setAllS(p => { prev = p; return p.map(s => s.id === id ? { ...s, [field]: value } : s); });
+    const prevRow = allSRef.current.find(s => s.id === id);
+    const prevValue = prevRow ? prevRow[field] : undefined;
+    setAllS(p => p.map(s => s.id === id ? { ...s, [field]: value } : s));
     const result = await updateSubtaskAction(id, { [field]: value });
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setAllS(prev);
+      if (prevRow) setAllS(p => p.map(s => s.id === id ? { ...s, [field]: prevValue } : s));
       showToast(result.error, 'error');
     }
   }, [showToast]);
@@ -280,12 +358,15 @@ export default function useTaskManager(initialData) {
   }, [showToast]);
 
   const deleteSub = useCallback(async (id) => {
-    let prev;
-    setAllS(p => { prev = p; return p.filter(s => s.id !== id); });
+    const idx = allSRef.current.findIndex(s => s.id === id);
+    const removed = idx === -1 ? null : allSRef.current[idx];
+    setAllS(p => p.filter(s => s.id !== id));
     const result = await deleteSubtaskAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setAllS(prev);
+      if (removed) {
+        setAllS(p => p.some(s => s.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removed, ...p.slice(Math.min(idx, p.length))]);
+      }
       showToast(result.error, 'error');
     } else {
       showToast('子任務已刪除', 'error');
@@ -304,12 +385,15 @@ export default function useTaskManager(initialData) {
   }, [showToast]);
 
   const deleteLink = useCallback(async (id) => {
-    let prev;
-    setAllL(p => { prev = p; return p.filter(l => l.id !== id); });
+    const idx = allLRef.current.findIndex(l => l.id === id);
+    const removed = idx === -1 ? null : allLRef.current[idx];
+    setAllL(p => p.filter(l => l.id !== id));
     const result = await deleteLinkAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setAllL(prev);
+      if (removed) {
+        setAllL(p => p.some(l => l.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removed, ...p.slice(Math.min(idx, p.length))]);
+      }
       showToast(result.error, 'error');
     } else {
       showToast('連結已刪除', 'error');
@@ -323,12 +407,15 @@ export default function useTaskManager(initialData) {
   }, [showToast]);
 
   const deleteFileHandler = useCallback(async (id) => {
-    let prev;
-    setAllF(p => { prev = p; return p.filter(f => f.id !== id); });
+    const idx = allFRef.current.findIndex(f => f.id === id);
+    const removed = idx === -1 ? null : allFRef.current[idx];
+    setAllF(p => p.filter(f => f.id !== id));
     const result = await deleteFileAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setAllF(prev);
+      if (removed) {
+        setAllF(p => p.some(f => f.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removed, ...p.slice(Math.min(idx, p.length))]);
+      }
       showToast(result.error, 'error');
     } else {
       showToast('檔案已刪除', 'error');
@@ -365,14 +452,22 @@ export default function useTaskManager(initialData) {
   }, [showToast, invalidateCache]);
 
   const deleteProjectHandler = useCallback(async (id) => {
-    let prevProj, prevT;
-    setProjects(p => { prevProj = p; return p.filter(proj => proj.id !== id); });
-    setAllT(p => { prevT = p; return p.filter(t => t.projectId !== id); });
+    const prevProjSnap = projectsRef.current;
+    const prevTSnap = allTRef.current;
+    const idx = prevProjSnap.findIndex(proj => proj.id === id);
+    const removedProj = idx === -1 ? null : prevProjSnap[idx];
+    const removedT = prevTSnap.filter(t => t.projectId === id);
+
+    setProjects(p => p.filter(proj => proj.id !== id));
+    setAllT(p => p.filter(t => t.projectId !== id));
     invalidateCache();
     const result = await deleteProjectAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setProjects(prevProj); setAllT(prevT);
+      if (removedProj) {
+        setProjects(p => p.some(proj => proj.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removedProj, ...p.slice(Math.min(idx, p.length))]);
+      }
+      if (removedT.length) setAllT(p => mergeRestore(p, prevTSnap, removedT));
       showToast(result.error, 'error');
     } else {
       showToast('專案已刪除', 'error');
@@ -381,16 +476,27 @@ export default function useTaskManager(initialData) {
 
   // ── Batch Delete ──
   const deleteManyTasks = useCallback(async (ids) => {
-    let prevT, prevS, prevL, prevF;
-    setAllT(p => { prevT = p; return p.filter(t => !ids.includes(t.id)); });
-    setAllS(p => { prevS = p; return p.filter(s => !ids.includes(s.taskId)); });
-    setAllL(p => { prevL = p; return p.filter(l => !ids.includes(l.taskId)); });
-    setAllF(p => { prevF = p; return p.filter(f => !ids.includes(f.taskId)); });
+    const prevTSnap = allTRef.current;
+    const prevSSnap = allSRef.current;
+    const prevLSnap = allLRef.current;
+    const prevFSnap = allFRef.current;
+    const removedT = prevTSnap.filter(t => ids.includes(t.id));
+    const removedS = prevSSnap.filter(s => ids.includes(s.taskId));
+    const removedL = prevLSnap.filter(l => ids.includes(l.taskId));
+    const removedF = prevFSnap.filter(f => ids.includes(f.taskId));
+
+    setAllT(p => p.filter(t => !ids.includes(t.id)));
+    setAllS(p => p.filter(s => !ids.includes(s.taskId)));
+    setAllL(p => p.filter(l => !ids.includes(l.taskId)));
+    setAllF(p => p.filter(f => !ids.includes(f.taskId)));
     invalidateCache();
     const result = await deleteManyTasksAction(ids);
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setAllT(prevT); setAllS(prevS); setAllL(prevL); setAllF(prevF);
+      if (removedT.length) setAllT(p => mergeRestore(p, prevTSnap, removedT));
+      if (removedS.length) setAllS(p => mergeRestore(p, prevSSnap, removedS));
+      if (removedL.length) setAllL(p => mergeRestore(p, prevLSnap, removedL));
+      if (removedF.length) setAllF(p => mergeRestore(p, prevFSnap, removedF));
       showToast(result.error, 'error');
     } else {
       showToast(`已刪除 ${result.deleted} 筆任務`, 'error');
@@ -400,14 +506,14 @@ export default function useTaskManager(initialData) {
 
   // ── Batch Update ──
   const updateManyTasks = useCallback(async (ids, field, value) => {
-    let prevT;
-    setAllT(p => { prevT = p; return p.map(t => ids.includes(t.id) ? { ...t, [field]: value } : t); });
+    const prevValues = new Map(allTRef.current.filter(t => ids.includes(t.id)).map(t => [t.id, t[field]]));
+    setAllT(p => p.map(t => ids.includes(t.id) ? { ...t, [field]: value } : t));
     invalidateCache();
     const fieldMap = { task: 'task', status: 'status', category: 'category', owner: 'owner', priority: 'priority' };
     const result = await updateManyTasksAction(ids, { [fieldMap[field] || field]: value });
     if (checkAuthError(result)) return;
     if (result?.error) {
-      setAllT(prevT);
+      setAllT(p => p.map(t => prevValues.has(t.id) ? { ...t, [field]: prevValues.get(t.id) } : t));
       showToast(result.error, 'error');
     } else {
       showToast(`已更新 ${result.updated} 筆任務`, 'success');
