@@ -171,29 +171,51 @@ export default function useTaskManager(initialData) {
   // ── Task CRUD ──
   const pendingUpdates = useRef(new Set());
 
+  // Mirror of allT so async callbacks can read the pre-update value without
+  // taking allT as a dependency (which would re-create them on every edit).
+  // Do NOT read state out of a setState updater side-effect — React may defer
+  // the updater or run it twice, leaving the captured value undefined (BUG01).
+  const allTRef = useRef(allT);
+  useEffect(() => { allTRef.current = allT; }, [allT]);
+
   const updateTask = useCallback(async (id, field, value) => {
-    const key = `${id}:${field}`;
+    // Canonicalize to the DB field name FIRST. `allT` rows are DB-shaped
+    // (startDate/endDate), and `twp` re-derives the view aliases start/end
+    // from them — so an optimistic write under the form name (`start`) would
+    // be silently overwritten by twp and the UI would keep the old value.
+    const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
+    const dbField = fieldMap[field] || field;
+
+    const key = `${id}:${dbField}`;
     // Skip if same field on same task is already being updated (prevent race condition)
     if (pendingUpdates.current.has(key)) return;
     pendingUpdates.current.add(key);
 
-    let prev;
-    setAllT(p => { prev = p; return p.map(t => t.id === id ? { ...t, [field]: value } : t); });
+    const prevRow = allTRef.current.find(t => t.id === id);
+    const hadRow = !!prevRow;
+    const prevValue = prevRow ? prevRow[dbField] : undefined;
+
+    setAllT(p => p.map(t => t.id === id ? { ...t, [dbField]: value } : t));
     const updateData = {};
-    const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
-    const dbField = fieldMap[field] || field;
     updateData[dbField] = value;
     try {
       const result = await updateTaskAction(id, updateData);
       if (checkAuthError(result)) return;
       if (result?.error) {
-        setAllT(prev);
+        // Roll back only this field, so a concurrent edit to another field
+        // on the same task isn't clobbered.
+        if (hadRow) setAllT(p => p.map(t => t.id === id ? { ...t, [dbField]: prevValue } : t));
         showToast(result.error, 'error');
+      } else {
+        // The cached snapshot is now stale. loadData() short-circuits on a
+        // cache younger than CACHE_TTL, so leaving it would make the next
+        // mount re-apply the OLD value and never hit the server.
+        invalidateCache();
       }
     } finally {
       pendingUpdates.current.delete(key);
     }
-  }, [showToast]);
+  }, [showToast, invalidateCache]);
 
   const addTask = useCallback(async (projectId, data) => {
     const result = await createTaskAction({ projectId, ...data });
