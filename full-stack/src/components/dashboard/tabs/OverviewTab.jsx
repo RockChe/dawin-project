@@ -71,7 +71,9 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
         const ovMinW = timeDim === "日" ? Math.max(700, td * ovGW.day) : timeDim === "週" ? Math.max(700, Math.ceil(td / 7) * ovGW.week) : timeDim === "季" ? Math.max(700, months.length * ovGW.quarter) : Math.max(700, months.length * ovGW.month);
         return (<div style={ovMinW > 0 ? { overflowX: "auto" } : {}}>
         <div>
-          <div style={{ display: "flex", marginBottom: 4 }}>
+          {/* gap must match the bar rows below, or the month labels sit 8px left of
+              the gridlines they name. */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
             <div className="dash-tl-label" />
             <div style={{ width: ovMinW, position: "relative", height: 20, flexShrink: 0 }}>
               {(() => { const step = timeDim === "日" ? Math.max(1, Math.ceil(40 / (ovGW.day || 20))) : timeDim === "週" ? 2 : 1; return months.filter((_, i) => i % step === 0); })().map((m, i) => (<div key={i} style={{ position: "absolute", left: `${m.pct}%`, fontSize: 11, color: X.textDim, whiteSpace: "nowrap" }}>{m.isFirst ? `${m.year} ` : ""}{m.label}</div>))}
@@ -95,7 +97,12 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
                 </div>
               </div>);
             })}
-            {todayPct >= 0 && todayPct <= 100 && <div style={{ position: "absolute", left: `${130 + 8}px`, right: 0, top: 0, bottom: 0, pointerEvents: "none" }}><div style={{ position: "absolute", left: `${todayPct}%`, top: 0, bottom: 0, borderLeft: `2px dashed ${X.accent}`, opacity: 0.5 }} /></div>}
+            {/* Mirror the bar-row layout (label column + ovMinW track) so todayPct is a
+                % of the same track the month gridlines use. A fixed-px offset plus
+                right:0 measures the visible container instead, so the line drifts as
+                soon as the chart scrolls — and the hardcoded label width was wrong at
+                the ≤860 / ≤560 breakpoints (80px / 60px) regardless. */}
+            {todayPct >= 0 && todayPct <= 100 && <div style={{ position: "absolute", inset: 0, display: "flex", gap: 8, pointerEvents: "none" }}><div className="dash-tl-label" /><div style={{ width: ovMinW, position: "relative", flexShrink: 0 }}><div style={{ position: "absolute", left: `${todayPct}%`, top: 0, bottom: 0, borderLeft: `2px dashed ${X.accent}`, opacity: 0.5 }} /></div></div>}
           </div>
         </div></div>);
       })()}
@@ -113,7 +120,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
             return (<div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${X.border}22` }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[t.project] || X.accent, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.task}</div>
+                <div className="dash-name-1line" style={{ fontSize: 14, fontWeight: 500 }}>{t.task}</div>
                 <div style={{ fontSize: 12, color: X.textSec, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>{t.project} · <OwnerTags value={t.owner} configOwners={configOwners} /></div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -133,7 +140,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
             return (<div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${X.border}22` }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[t.project] || X.accent, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.task}</div>
+                <div className="dash-name-1line" style={{ fontSize: 14, fontWeight: 500 }}>{t.task}</div>
                 <div style={{ fontSize: 12, color: X.textSec, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>{t.project} · <OwnerTags value={t.owner} configOwners={configOwners} /></div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>

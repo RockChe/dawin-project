@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<title>Tasks 排序／篩選 · 單一 vs 多重</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{ color-scheme:light; --bg:#f4f6f9; --fg:#1a1a1a; --muted:#5b6472; --line:#dde3ec; --accent:#3b6ea5; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--fg);
+        font:15px/1.75 "Segoe UI","Noto Sans TC",system-ui,sans-serif; }
+  main{ max-width:1000px; margin:0 auto; padding:28px 24px 80px; }
+  h1{ font-size:24px; margin:0 0 4px; }
+  .meta{ color:var(--muted); font-size:13px; margin:0 0 20px; }
+  h2{ font-size:18px; margin:34px 0 10px; padding-left:11px; border-left:4px solid var(--accent); }
+  h3{ font-size:14.5px; margin:20px 0 8px; color:#33414f; }
+  .fig{ background:#fff; padding:12px; border-radius:8px; border:1px solid var(--line); overflow-x:auto; }
+  .fig svg{ display:block; min-width:860px; height:auto; }
+  table{ border-collapse:collapse; width:100%; background:#fff; border:1px solid var(--line);
+         border-radius:10px; overflow:hidden; margin-top:12px; }
+  th,td{ padding:9px 12px; text-align:left; border-bottom:1px solid #e7ecf3; font-size:14px; vertical-align:top; }
+  th{ background:#eef2f7; font-weight:600; }
+  tr:last-child td{ border-bottom:none; }
+  code{ background:#eef2f7; padding:1px 5px; border-radius:4px; font-size:13px; }
+  .rec{ background:#e6f3e9; border:1px solid #9cc7a6; border-radius:8px; padding:12px 16px; margin-top:14px; font-size:14px; }
+  .rev{ background:#fff9e8; border:1px solid #e0c88a; border-radius:8px; padding:12px 16px; margin-top:14px; font-size:14px; }
+  .hint{ color:var(--muted); font-size:12.5px; margin:8px 0 0; }
+  blockquote{ margin:0 0 18px; padding:12px 16px; background:#fff9e8; border-left:4px solid #c9a227;
+              border-radius:0 8px 8px 0; white-space:pre-wrap; font-size:13.5px; }
+</style>
+<main>
+<h1>排序：單一 vs 多重　／　篩選：單選 vs 多選</h1>
+<p class="meta">2026-09-04 · 這兩項是我先前<b>自己預設、沒問過 Rock</b> 的，攤開來讓你裁 · 未經 confer</p>
+
+<h2>問題來源（Rock 原話）</h2>
+<blockquote>我預設了幾個沒問你的：排序單選不是多重排序、負責人／緊急度篩選是單選下拉（狀態才多選）。要改講一聲。
+
+詳細畫圖說明一下</blockquote>
+
+<h2>共用範例：同一批 task</h2>
+<div class="fig"><svg viewBox="0 0 900 190" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <text x="16" y="22" font-size="12" fill="#5b6472">下面每張圖都拿這五筆當輸入。原始順序 ＝ sortOrder（使用者自己排的）</text>
+  <rect x="16" y="34" width="868" height="26" fill="#eef2f7"/>
+  <text x="30" y="52" font-size="11.5" font-weight="700" fill="#33414f">#</text>
+  <text x="70" y="52" font-size="11.5" font-weight="700" fill="#33414f">任務</text>
+  <text x="330" y="52" font-size="11.5" font-weight="700" fill="#33414f">狀態</text>
+  <text x="440" y="52" font-size="11.5" font-weight="700" fill="#33414f">截止日</text>
+  <text x="560" y="52" font-size="11.5" font-weight="700" fill="#33414f">負責人</text>
+  <text x="790" y="52" font-size="11.5" font-weight="700" fill="#33414f">緊急度</text>
+
+  <text x="30" y="78" font-size="11.5" fill="#5b6472">1</text>
+  <text x="70" y="78" font-size="11.5" fill="#1a1a1a">保險</text>
+  <text x="330" y="78" font-size="11.5" fill="#1d5b2c">已完成</text>
+  <text x="440" y="78" font-size="11.5" fill="#1a1a1a">05.29</text>
+  <text x="560" y="78" font-size="11.5" fill="#1a1a1a">Felien 車</text>
+  <text x="790" y="78" font-size="11.5" fill="#1a1a1a">中</text>
+  <line x1="16" y1="88" x2="884" y2="88" stroke="#eef2f7"/>
+
+  <text x="30" y="104" font-size="11.5" fill="#5b6472">2</text>
+  <text x="70" y="104" font-size="11.5" fill="#1a1a1a">Must 音樂授權</text>
+  <text x="330" y="104" font-size="11.5" fill="#1d5b2c">已完成</text>
+  <text x="440" y="104" font-size="11.5" fill="#1a1a1a">06.12</text>
+  <text x="560" y="104" font-size="11.5" fill="#1a1a1a">Felien 車</text>
+  <text x="790" y="104" font-size="11.5" fill="#1a1a1a">低</text>
+  <line x1="16" y1="114" x2="884" y2="114" stroke="#eef2f7"/>
+
+  <text x="30" y="130" font-size="11.5" fill="#5b6472">3</text>
+  <text x="70" y="130" font-size="11.5" fill="#1a1a1a">商品合作</text>
+  <text x="330" y="130" font-size="11.5" fill="#7a4a08">進行中</text>
+  <text x="440" y="130" font-size="11.5" fill="#1a1a1a">06.30</text>
+  <text x="560" y="130" font-size="11.5" fill="#1a1a1a">Karen, Felien 車, Rae</text>
+  <text x="790" y="130" font-size="11.5" fill="#a34a4a">高</text>
+  <line x1="16" y1="140" x2="884" y2="140" stroke="#eef2f7"/>
+
+  <text x="30" y="156" font-size="11.5" fill="#5b6472">4</text>
+  <text x="70" y="156" font-size="11.5" fill="#1a1a1a">小露吃 義式冰淇淋</text>
+  <text x="330" y="156" font-size="11.5" fill="#7a4a08">進行中</text>
+  <text x="440" y="156" font-size="11.5" fill="#1a1a1a">09.15</text>
+  <text x="560" y="156" font-size="11.5" fill="#1a1a1a">Felien 車</text>
+  <text x="790" y="156" font-size="11.5" fill="#1a1a1a">中</text>
+  <line x1="16" y1="166" x2="884" y2="166" stroke="#eef2f7"/>
+
+  <text x="30" y="182" font-size="11.5" fill="#5b6472">5</text>
+  <text x="70" y="182" font-size="11.5" fill="#1a1a1a">駁二場地確認</text>
+  <text x="330" y="182" font-size="11.5" fill="#1a4a75">待辦</text>
+  <text x="440" y="182" font-size="11.5" fill="#1a1a1a">10.02</text>
+  <text x="560" y="182" font-size="11.5" fill="#1a1a1a">Rae</text>
+  <text x="790" y="182" font-size="11.5" fill="#a34a4a">高</text>
+</svg></div>
+
+<h2>議題一：排序　單一 vs 多重</h2>
+<p class="hint">兩者都選「按狀態排」。差別只在<b>同一個狀態內部</b>怎麼排。</p>
+
+<div class="fig"><svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="a1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+
+  <text x="220" y="24" font-size="13.5" font-weight="700" text-anchor="middle" fill="#1a1a1a">單一排序（我原本預設）</text>
+  <text x="680" y="24" font-size="13.5" font-weight="700" text-anchor="middle" fill="#1a1a1a">多重排序</text>
+
+  <rect x="20" y="36" width="400" height="26" rx="6" fill="#dbe7f4" stroke="#3b6ea5"/>
+  <text x="220" y="54" font-size="11.5" text-anchor="middle" fill="#1a4a75">排序：狀態 ↑　（一個下拉，選一個）</text>
+
+  <rect x="480" y="36" width="400" height="26" rx="6" fill="#fff9e8" stroke="#9A6410"/>
+  <text x="680" y="54" font-size="11.5" text-anchor="middle" fill="#7a4a08">排序條件：① 狀態 ↑　② 截止日 ↑　（可加、可拖曳調序）</text>
+
+  <!-- 左：單一 -->
+  <rect x="20" y="76" width="400" height="72" rx="6" fill="#f5f9f6" stroke="#9cc7a6"/>
+  <text x="34" y="94" font-size="10.5" font-weight="700" fill="#1d5b2c">已完成</text>
+  <text x="34" y="114" font-size="11.5" fill="#1a1a1a">保險　　　　　　　　　05.29</text>
+  <text x="34" y="136" font-size="11.5" fill="#1a1a1a">Must 音樂授權　　　　 06.12</text>
+  <text x="300" y="94" font-size="10" fill="#5b6472">← 沿用 sortOrder</text>
+
+  <rect x="20" y="156" width="400" height="72" rx="6" fill="#fdf7ef" stroke="#e0c88a"/>
+  <text x="34" y="174" font-size="10.5" font-weight="700" fill="#7a4a08">進行中</text>
+  <text x="34" y="194" font-size="11.5" fill="#1a1a1a">商品合作　　　　　　　06.30</text>
+  <text x="34" y="216" font-size="11.5" fill="#1a1a1a">小露吃 義式冰淇淋　　 09.15</text>
+  <text x="300" y="174" font-size="10" fill="#5b6472">← 沿用 sortOrder</text>
+
+  <rect x="20" y="236" width="400" height="50" rx="6" fill="#f2f6fa" stroke="#a9c3dd"/>
+  <text x="34" y="254" font-size="10.5" font-weight="700" fill="#1a4a75">待辦</text>
+  <text x="34" y="274" font-size="11.5" fill="#1a1a1a">駁二場地確認　　　　　10.02</text>
+
+  <rect x="20" y="298" width="400" height="30" rx="6" fill="#eef2f7" stroke="#8a94a6"/>
+  <text x="220" y="318" font-size="11" text-anchor="middle" fill="#33414f">組內順序 ＝ 你自己排的那個順序（穩定，不會亂跳）</text>
+
+  <!-- 右：多重 -->
+  <rect x="480" y="76" width="400" height="72" rx="6" fill="#f5f9f6" stroke="#9cc7a6"/>
+  <text x="494" y="94" font-size="10.5" font-weight="700" fill="#1d5b2c">已完成</text>
+  <text x="494" y="114" font-size="11.5" fill="#1a1a1a">保險　　　　　　　　　05.29</text>
+  <text x="494" y="136" font-size="11.5" fill="#1a1a1a">Must 音樂授權　　　　 06.12</text>
+  <text x="760" y="94" font-size="10" fill="#7a4a08">← 再按截止日</text>
+
+  <rect x="480" y="156" width="400" height="72" rx="6" fill="#fdf7ef" stroke="#e0c88a"/>
+  <text x="494" y="174" font-size="10.5" font-weight="700" fill="#7a4a08">進行中</text>
+  <text x="494" y="194" font-size="11.5" fill="#1a1a1a">商品合作　　　　　　　06.30</text>
+  <text x="494" y="216" font-size="11.5" fill="#1a1a1a">小露吃 義式冰淇淋　　 09.15</text>
+  <text x="760" y="174" font-size="10" fill="#7a4a08">← 再按截止日</text>
+
+  <rect x="480" y="236" width="400" height="50" rx="6" fill="#f2f6fa" stroke="#a9c3dd"/>
+  <text x="494" y="254" font-size="10.5" font-weight="700" fill="#1a4a75">待辦</text>
+  <text x="494" y="274" font-size="11.5" fill="#1a1a1a">駁二場地確認　　　　　10.02</text>
+
+  <rect x="480" y="298" width="400" height="30" rx="6" fill="#fbf0ee" stroke="#A62B1F"/>
+  <text x="680" y="318" font-size="11" text-anchor="middle" fill="#A62B1F">這批資料下，兩邊結果一模一樣</text>
+</svg></div>
+
+<div class="rev"><b>關鍵：這批資料兩邊長得一樣，不是巧合。</b>
+  JS 的 <code>Array.sort</code> 是<b>穩定排序</b>——同一個狀態內部，原本誰在前就還是誰在前，
+  而「原本」就是你拖出來的 <code>sortOrder</code>。<br>
+  所以單一排序<b>本來就有第二層</b>，只是那一層固定是「你自己排的順序」，不能換成截止日。
+  多重排序買到的，是<b>把那第二層換掉的能力</b>。</div>
+
+<h3>什麼時候會真的想要多重</h3>
+<div class="fig"><svg viewBox="0 0 900 150" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <rect x="20" y="24" width="410" height="106" rx="8" fill="#f7f9fc" stroke="#dde3ec"/>
+  <text x="225" y="46" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">18 筆 task（本專案實際規模）</text>
+  <text x="38" y="70" font-size="11" fill="#1a1a1a">進行中 12 筆擠在同一組</text>
+  <text x="38" y="90" font-size="11" fill="#5b6472">組內若是 sortOrder，等於沒排</text>
+  <text x="38" y="112" font-size="11" fill="#a34a4a">→ 這時「狀態 → 截止日」才有意義</text>
+
+  <rect x="470" y="24" width="410" height="106" rx="8" fill="#f7f9fc" stroke="#dde3ec"/>
+  <text x="675" y="46" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">替代解：不排狀態，直接排截止日</text>
+  <text x="488" y="70" font-size="11" fill="#1a1a1a">用狀態 chip 篩掉已完成</text>
+  <text x="488" y="90" font-size="11" fill="#1a1a1a">再單排截止日</text>
+  <text x="488" y="112" font-size="11" fill="#1d5b2c">→ 同樣的畫面，零額外 UI</text>
+</svg></div>
+
+<div class="rec"><b>我的建議：維持單一排序。</b>
+  「狀態 → 截止日」這個唯一有說服力的情境，用「chip 篩掉已完成 ＋ 單排截止日」就能得到<b>同樣的畫面</b>，
+  而且看到的東西更少、更清楚。多重排序要多一套「條件列表 + 加減 + 拖曳調序」的 UI，
+  換到的是一個已經有替代解的能力。<br>
+  <b>但若你要，隨時可以升級</b>：排序狀態存的是 <code>{field, dir}</code>，改成 <code>[{field,dir}, …]</code>
+  只是把單筆包成陣列，資料形狀相容。</div>
+
+<h2>議題二：負責人／緊急度篩選　單選 vs 多選</h2>
+
+<div class="fig"><svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <text x="220" y="24" font-size="13.5" font-weight="700" text-anchor="middle" fill="#1a1a1a">單選下拉（我原本預設）</text>
+  <text x="680" y="24" font-size="13.5" font-weight="700" text-anchor="middle" fill="#1a1a1a">多選</text>
+
+  <rect x="20" y="36" width="400" height="26" rx="6" fill="#dbe7f4" stroke="#3b6ea5"/>
+  <text x="220" y="54" font-size="11.5" text-anchor="middle" fill="#1a4a75">負責人：Rae</text>
+  <rect x="480" y="36" width="400" height="26" rx="6" fill="#dbe7f4" stroke="#3b6ea5"/>
+  <text x="680" y="54" font-size="11.5" text-anchor="middle" fill="#1a4a75">負責人：Karen ＋ Rae</text>
+
+  <rect x="20" y="74" width="400" height="120" rx="6" fill="#fff" stroke="#dde3ec"/>
+  <text x="34" y="96" font-size="11.5" fill="#1a1a1a">商品合作</text>
+  <text x="240" y="96" font-size="10" fill="#5b6472">Karen, Felien 車, Rae</text>
+  <line x1="20" y1="108" x2="420" y2="108" stroke="#eef2f7"/>
+  <text x="34" y="128" font-size="11.5" fill="#1a1a1a">駁二場地確認</text>
+  <text x="240" y="128" font-size="10" fill="#5b6472">Rae</text>
+  <text x="34" y="164" font-size="10.5" fill="#5b6472">2 筆</text>
+  <text x="34" y="184" font-size="10.5" fill="#a34a4a">想順便看 Karen 的？要重選一次</text>
+
+  <rect x="480" y="74" width="400" height="120" rx="6" fill="#fff" stroke="#dde3ec"/>
+  <text x="494" y="96" font-size="11.5" fill="#1a1a1a">商品合作</text>
+  <text x="700" y="96" font-size="10" fill="#5b6472">Karen, Felien 車, Rae</text>
+  <line x1="480" y1="108" x2="880" y2="108" stroke="#eef2f7"/>
+  <text x="494" y="128" font-size="11.5" fill="#1a1a1a">駁二場地確認</text>
+  <text x="700" y="128" font-size="10" fill="#5b6472">Rae</text>
+  <text x="494" y="164" font-size="10.5" fill="#5b6472">2 筆（本例 Karen 只出現在同一筆，結果相同）</text>
+  <text x="494" y="184" font-size="10.5" fill="#1d5b2c">Karen 若有獨立 task，這裡會一起出現</text>
+
+  <rect x="20" y="212" width="860" height="72" rx="8" fill="#f7f9fc" stroke="#dde3ec"/>
+  <text x="36" y="234" font-size="12" font-weight="700" fill="#1a1a1a">為什麼這裡特別容易踩到：owner 是「逗號分隔多人」的字串</text>
+  <text x="36" y="256" font-size="11" fill="#1a1a1a">一筆 task 可以同時掛 Karen、Felien 車、Rae。所以篩選必須是「包含這個人」，不是「等於這個人」。</text>
+  <text x="36" y="276" font-size="11" fill="#5b6472">多選時：欄位內是 OR（Karen 或 Rae 任一）；不同欄位之間是 AND（負責人 AND 緊急度 AND 狀態）。</text>
+</svg></div>
+
+<h3>心智模型的一致性</h3>
+<div class="fig"><svg viewBox="0 0 900 170" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <text x="220" y="24" font-size="13" font-weight="700" text-anchor="middle" fill="#1a1a1a">單選下拉 → 兩種規則</text>
+  <text x="680" y="24" font-size="13" font-weight="700" text-anchor="middle" fill="#1a1a1a">全部多選 → 一種規則</text>
+
+  <rect x="20" y="40" width="400" height="112" rx="8" fill="#fbf0ee" stroke="#A62B1F"/>
+  <text x="38" y="64" font-size="11.5" fill="#1a1a1a">狀態（chip）　→ 可以複選</text>
+  <text x="38" y="88" font-size="11.5" fill="#1a1a1a">負責人（下拉）→ 只能選一個</text>
+  <text x="38" y="112" font-size="11.5" fill="#1a1a1a">緊急度（下拉）→ 只能選一個</text>
+  <text x="38" y="138" font-size="11" fill="#A62B1F">使用者得記住「哪個能複選」——沒有理由可講</text>
+
+  <rect x="480" y="40" width="400" height="112" rx="8" fill="#e6f3e9" stroke="#0B6E4F"/>
+  <text x="498" y="64" font-size="11.5" fill="#1a1a1a">狀態　　→ 可以複選</text>
+  <text x="498" y="88" font-size="11.5" fill="#1a1a1a">負責人　→ 可以複選</text>
+  <text x="498" y="112" font-size="11.5" fill="#1a1a1a">緊急度　→ 可以複選</text>
+  <text x="498" y="138" font-size="11" fill="#1d5b2c">一句話講完：全不選＝全部，選了就只看選的</text>
+</svg></div>
+
+<div class="rev"><b>這一題我改變主意，推翻自己原本的預設。</b>
+  單選省下的程式碼是「radio 換成 checkbox、比對用 <code>includes</code> 換成 <code>some</code>」——幾行而已；
+  換來的卻是一條講不出理由的規則（狀態能複選，其他不行）。<b>建議改成三個欄位全部多選。</b>
+  <br><span style="font-size:13px;color:#5b6472">緊急度只有高／中／低三個值，多選在這裡幾乎不花成本；負責人才是真的會用到的那個。</span></div>
+
+<h2>兩題彙整</h2>
+<table>
+  <tr><th style="width:16%">議題</th><th style="width:24%">我原本的預設</th><th style="width:24%">建議</th><th>理由</th></tr>
+  <tr><td><b>排序</b></td><td>單一排序</td><td><b>維持單一</b></td>
+      <td>穩定排序已經給了第二層（sortOrder）；唯一想要多重的情境有等效替代解（篩掉已完成＋單排日期）。之後要升級，資料形狀相容。</td></tr>
+  <tr><td><b>篩選</b></td><td>負責人／緊急度單選</td><td><b>改成全部多選</b></td>
+      <td>省不了多少程式碼，卻多出一條「為什麼狀態能複選、其他不行」的規則。欄位內 OR、欄位間 AND，一句話講完。</td></tr>
+</table>
+<p class="hint">若兩項都採納，資料形狀變成：
+  <code>{ sort:{field,dir}, status:[], owner:[], priority:[] }</code>——一筆 <code>user_settings</code>，全域一組。</p>
+
+</main>
+</html>

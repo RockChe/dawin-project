@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<title>dawin-dash · 架構文件</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#f4f6f9; --fg:#1a1a1a; --muted:#5b6472; --line:#dde3ec;
+    --card:#fff; --accent:#3b6ea5; --warn:#c9a227; --ok:#3f7d4e; --bad:#a34a4a;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--fg);
+        font:15px/1.75 "Segoe UI","Noto Sans TC",system-ui,sans-serif; }
+  nav{ position:sticky; top:0; z-index:9; background:#fff; border-bottom:1px solid var(--line);
+       padding:10px 24px; display:flex; flex-wrap:wrap; gap:4px 14px; align-items:center; }
+  nav b{ font-size:13px; color:var(--muted); margin-right:6px; }
+  nav a{ font-size:13px; color:var(--accent); text-decoration:none; padding:2px 6px; border-radius:5px; }
+  nav a:hover{ background:#eef2f7; }
+  nav a.ext::after{ content:" ↗"; color:var(--muted); font-size:11px; }
+  nav span.sep{ color:#c9d2de; }
+
+  main{ max-width:1000px; margin:0 auto; padding:28px 24px 80px; }
+  h1{ font-size:26px; margin:0 0 6px; }
+  .meta{ color:var(--muted); font-size:13px; margin:0 0 18px; }
+  h2{ font-size:19px; margin:38px 0 12px; padding-left:11px; border-left:4px solid var(--accent);
+      scroll-margin-top:64px; }
+  h3{ font-size:15px; margin:22px 0 8px; color:#33414f; }
+  section{ scroll-margin-top:64px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+
+  .bar{ height:8px; background:#e7ecf3; border-radius:99px; overflow:hidden; margin:6px 0 2px; }
+  .bar i{ display:block; height:100%; background:var(--ok); width:0; }
+
+  .split{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:860px){ .split{ grid-template-columns:1fr; } }
+  .col > h3{ margin:0 0 8px; font-size:13px; letter-spacing:.5px; }
+  .tagl{ display:inline-block; font-size:11px; font-weight:700; padding:2px 8px;
+         border-radius:99px; margin-right:6px; vertical-align:1px; }
+  .tagl.raw{ background:#fdf0d5; color:#7a5310; }
+  .tagl.llm{ background:#e8ddf2; color:#3d3050; }
+  blockquote.verbatim{ margin:0; padding:12px 16px; background:#fff9e8; border-left:4px solid var(--warn);
+        border-radius:0 8px 8px 0; white-space:pre-wrap; font-size:13.5px; }
+  .interp{ margin:0; padding:12px 16px; background:#f7f9fc; border-left:4px solid #7a5aa0;
+        border-radius:0 8px 8px 0; font-size:13.5px; }
+  .interp ol{ margin:0; padding-left:20px; }
+  .interp li{ margin-bottom:6px; }
+  .interp .dod{ margin-top:10px; padding-top:8px; border-top:1px dashed #c9d2de; }
+
+  ul.tasks{ list-style:none; margin:0; padding:0; }
+  ul.tasks ul{ list-style:none; margin:4px 0 4px 26px; padding:0; border-left:2px solid var(--line); }
+  ul.tasks li{ padding:3px 0 3px 10px; }
+  ul.tasks label{ display:flex; gap:8px; align-items:flex-start; cursor:default; }
+  ul.tasks input{ margin-top:6px; accent-color:var(--ok); }
+  ul.tasks input:disabled{ opacity:1; }
+  .done > label > span.t{ color:var(--muted); text-decoration:line-through; }
+  .chip{ display:inline-block; font-size:11px; padding:1px 7px; border-radius:99px;
+         background:#eef2f7; color:#33414f; margin-left:6px; white-space:nowrap; }
+  .chip.team{ background:#e8ddf2; color:#3d3050; }
+  .chip.test{ background:#e6f3e9; color:#1d5b2c; }
+  .chip.tool{ background:#fdecd8; color:#7a4a08; }
+
+  ul.tree{ list-style:none; margin:0; padding:0; }
+  ul.tree ul{ list-style:none; margin:2px 0 2px 12px; padding-left:18px;
+              border-left:2px solid var(--line); }
+  ul.tree li{ padding:4px 0; position:relative; }
+  ul.tree ul > li::before{ content:""; position:absolute; left:-18px; top:16px;
+              width:14px; height:2px; background:var(--line); }
+  ul.tree .path{ color:var(--muted); font-size:12px; }
+
+  .fig{ background:#fff; padding:12px; border-radius:8px; border:1px solid var(--line); overflow-x:auto; }
+  .fig svg{ display:block; min-width:860px; height:auto; }
+
+  table{ border-collapse:collapse; width:100%; background:#fff; border:1px solid var(--line);
+         border-radius:10px; overflow:hidden; }
+  th,td{ padding:9px 12px; text-align:left; border-bottom:1px solid #e7ecf3; font-size:14px; vertical-align:top; }
+  th{ background:#eef2f7; font-weight:600; }
+  tr:last-child td{ border-bottom:none; }
+  code{ background:#eef2f7; padding:1px 5px; border-radius:4px; font-size:13px; }
+  .hint{ color:var(--muted); font-size:12.5px; margin:6px 0 0; }
+  .sched-badge{ display:block; margin:0 0 10px; padding:7px 12px; font-size:13px; font-weight:600;
+                background:#fbf3e4; border:1px solid #e0c88a; color:#8a5a18; border-radius:6px; }
+  .sched-badge.is-baseline{ background:#f1f3f2; border-color:#c9d3ce; color:#48534f; }
+  .schedule-frozen{ filter:grayscale(1) opacity(.72); }
+</style>
+
+<nav>
+  <b>目錄</b>
+  <a href="#user-requirements-h">1 用戶需求</a>
+  <a href="#stack">2 技術棧</a>
+  <a href="#subs">3 子專案地圖</a>
+  <a href="#plan">4 任務拆解</a>
+  <a href="#schedule">5 時程</a>
+  <a href="#arch">6 架構圖</a>
+  <a href="#flow">7 流程圖</a>
+  <a href="#seq">8 時序圖</a>
+  <a href="#db">9 資料庫串接圖</a>
+  <a href="#docs">10 相關文件</a>
+  <span class="sep">|</span>
+  <a class="ext" href="./dawin-dash-task-sortfilter-q-scope.html">記憶範圍</a>
+  <a class="ext" href="./dawin-dash-task-sortfilter-q-ui.html">UI 版型</a>
+  <a class="ext" href="./dawin-dash-task-sortfilter-q-multi.html">單一 vs 多重</a>
+</nav>
+
+<main>
+<h1>dawin-dash · 架構文件</h1>
+<p class="meta">
+  <code>docs/design/dawin-dash.html</code> ·
+  建立於 2026-09-04 · 單檔模式（十章全在本檔，未拆功能子檔） ·
+  L2 錨點核准：<b style="color:var(--ok)">已核准 2026-09-04</b>（rev ad2aac1）
+</p>
+<div class="card">
+  進度 <b id="pct">0%</b> <span class="hint" id="cnt"></span>
+  <div class="bar"><i id="fill"></i></div>
+</div>
+
+<!-- ══ 1 用戶需求 ══ 這兩個 id 是 anchor_probe.py 的硬契約，不可改名 ══ -->
+<h2 id="user-requirements-h">1 用戶需求</h2>
+<section id="user-requirements" class="card">
+<div class="split">
+
+  <div class="col">
+    <h3><span class="tagl raw">原文</span>逐字，不重述不意譯</h3>
+    <blockquote class="verbatim" id="req-verbatim">overview 的 時間線，沒有隨當下的日期移動 今天是9月 仍標在6月
+
+我開 bypass 你試試
+
+跑 /project-wiki 補一份正式架構文件（含五張圖）
+沒關係
+
+我希望這邊，可以按 狀態 排列 篩選 來討論下
+
+可以按 狀態 排列 篩選，或是按 日期、負責人、緊急度
+
+然後這部分的設定 是可以存到 個人自定義的紀錄
+
+我預設了幾個沒問你的：排序單選不是多重排序、負責人／緊急度篩選是單選下拉（狀態才多選）。要改講一聲。
+
+詳細畫圖說明一下
+
+定了</blockquote>
+    <p class="hint">以上為 2026-09-04 session 中 Rock 的逐字原話（含他引述我的話再要我攤開的那一段）。
+      <b>dawin-dash 這個 repo 早於本文件存在</b>——第 2、3、6、9 章描述的是既有現況
+      （來源：各子專案的 <code>CLAUDE.md</code> / <code>README.md</code>），不是本次提出的需求。本欄只放原話。</p>
+  </div>
+
+  <div class="col">
+    <h3><span class="tagl llm">LLM 重新整理</span>我的解讀，非原話，與左欄衝突時以左欄為準</h3>
+    <div class="interp">
+      <ol>
+        <li><b>需求一 — Overview 時間線 TODAY 線畫錯位置。</b>
+            系統日期 2026-09-04，虛線卻落在 6／7 月交界。
+            <b>不是</b>「線不會動」：<code>todayPct</code> 每次 render 都用 <code>new Date()</code> 重算，數值正確；
+            錯的是它被當成<b>可視容器</b>寬度的百分比，而月份格線用的是 <code>ovMinW</code> <b>軌道</b>寬度——
+            圖一橫向捲動，兩個基準就分家。</li>
+        <li><b>需求二 — Projects 專案詳情頁的 Tasks 列表要能排序與篩選。</b>
+            維度：狀態、日期、負責人、緊急度。設定要 per-user 持久化（「存到個人自定義的紀錄」）。</li>
+        <li><b>需求二的四項裁決</b>（各附一份問答圖檔，見第 10 章）：
+            <br>· 記憶範圍＝<b>全域一組</b>（非每專案一組）
+            <br>· 排序四個維度、篩選三個（<b>日期只排不篩</b>）
+            <br>· UI＝<b>左側狀態 chip 直接變可點篩選</b>，排序與另兩個篩選放 Tasks 標題下方
+            <br>· <b>單一排序</b>（非多重）＋ <b>三個篩選欄位全部多選</b></li>
+        <li><b>本文件的定位</b>：Rock 選擇「補正式架構文件」來過 <code>anchor_probe.py</code> 的 PreToolUse 閘
+            （bypass 權限模式對 hook 無效，實測仍 deny）。<b>五張圖</b>是他指定的交付範圍。</li>
+        <li><b>不擴大範圍</b>：既有技術債（migration 未對 prod apply 等）只<b>登記</b>為未排程，本次不動。</li>
+      </ol>
+      <div class="dod"><b>DoD</b>：
+        ① TODAY 線與月份格線同基準（任何捲動位置、任何 <code>dash-tl-label</code> 斷點寬度下都對齊）；
+        ② Tasks 列表可依裁決排序／篩選，設定重新整理後仍在；
+        ③ 篩選不影響 Progress／Subtasks／Tasks 數字與甘特條；
+        ④ <code>npm test</code> 全綠。</div>
+    </div>
+  </div>
+
+</div>
+  <p class="hint">⚠ 兩個硬契約：<code>&lt;section id="user-requirements"&gt;</code> 是 anchor_probe.py 找錨點的依據，
+     <code>id="req-verbatim"</code> 是它實際抓去注入的那一塊——只注入左欄，右欄的解讀不進 context，
+     免得我的重寫把原話蓋掉。兩個 id 都不可改名。</p>
+</section>
+
+<!-- ══ 2 技術棧 ══ -->
+<h2 id="stack">2 技術棧</h2>
+<table>
+  <tr>
+    <th style="width:13%">層</th><th style="width:20%">選型</th><th style="width:9%">版本</th>
+    <th style="width:29%">為什麼是它</th><th>被否決的替代方案</th>
+  </tr>
+  <tr><td>前端框架</td><td>Next.js App Router + React</td><td>15.3 / 19</td>
+      <td>Server Actions 直接打 DB，省掉一層 REST；Vercel 零設定部署</td>
+      <td>Vite SPA：得自己搭 API 層與 auth 中介</td></tr>
+  <tr><td>資料層（full-stack）</td><td>Neon PostgreSQL + Drizzle ORM</td><td>0.39</td>
+      <td>Serverless PG 冷啟快、有真交易與外鍵；Drizzle schema 即型別</td>
+      <td>Prisma：engine binary 在 Vercel 上肥；raw SQL：schema 漂移無從察覺</td></tr>
+  <tr><td>資料層（gws）</td><td>Google Sheets API v4 + 自建 DAL</td><td>v4</td>
+      <td>小團隊要能直接開試算表看／改資料，零 DB 維運</td>
+      <td>Airtable：授權與配額成本；直接用 PG：非工程使用者進不去</td></tr>
+  <tr><td>檔案儲存</td><td>Cloudflare R2（full-stack）／ Google Drive（gws）</td><td>S3 相容 / v3</td>
+      <td>R2 無 egress 費；gws 版沿用團隊既有的 Drive 權限模型</td>
+      <td>S3：egress 計費；存 DB：blob 撐爆備份</td></tr>
+  <tr><td>個人化設定</td><td><code>user_settings</code> 表 + <code>useUserSettings</code></td><td>—</td>
+      <td>已在跑：<code>zoom</code>／<code>projectsView</code>／<code>hiddenProjects</code>／<code>timelineSort</code>
+          都是這套，本次新增的 <code>projectTaskView</code> 沿用同一個模式</td>
+      <td>localStorage：換裝置就沒了、進不了備份<br>新開一張表：一個 key-value 需求不值得</td></tr>
+  <tr><td>認證</td><td>自建 session（bcryptjs + cookie）</td><td>—</td>
+      <td>內部工具、單一 tenant，不需要 OAuth 那層複雜度</td>
+      <td>NextAuth：設定面大於需求；JWT 無狀態：撤銷 session 做不到</td></tr>
+  <tr><td>時間線繪製</td><td>手刻 absolute % 定位（無圖表庫）</td><td>—</td>
+      <td>甘特列要同時掛拖曳、hover、進度覆蓋層，庫的封裝反而礙事</td>
+      <td>frappe-gantt / vis-timeline：客製深度不夠<br><b>代價</b>：定位基準得自己顧——需求一的 bug 正是踩在這裡</td></tr>
+  <tr><td>排序／篩選</td><td>純函式 + <code>Array.sort</code>（穩定）</td><td>—</td>
+      <td>18 筆規模，前端算完即可；穩定排序讓「同組維持 sortOrder」是免費的</td>
+      <td>後端排序：多一次往返換不到東西<br>多重排序：第二層已由 sortOrder 接住，見問答檔</td></tr>
+  <tr><td>Bot（chatbot）</td><td>FastAPI + Claude API tool use</td><td>Py 3.12</td>
+      <td>意圖理解交給模型，bot 只維護 tool schema</td>
+      <td>規則式指令解析：中文自由輸入撐不住</td></tr>
+  <tr><td>測試</td><td>vitest + jsdom</td><td>—</td>
+      <td>與 Vite 同一套 transform，啟動快；已排除 <code>.worktrees</code></td>
+      <td>Jest：ESM 設定成本</td></tr>
+  <tr><td>本文件圖表</td><td>手刻 inline SVG</td><td>—</td>
+      <td><code>file://</code> 直開即圖、零 JS、無暗色分支</td>
+      <td>mermaid：2026-08-27 已於 cc_skill 廢除</td></tr>
+</table>
+<p class="hint">前九列為<b>既有現況記錄</b>（來源：各子專案 <code>CLAUDE.md</code>／<code>README.md</code>），
+   「個人化設定」與「排序／篩選」兩列才是本次的選型決策。</p>
+
+<!-- ══ 3 子專案地圖 ══ -->
+<h2 id="subs">3 子專案地圖</h2>
+<div class="card">
+<ul class="tree">
+  <li>
+    <b>dawin-dash</b>　<span class="chip">monorepo · 本檔即 hub</span><span class="chip test">23 / 23</span>
+    <div class="path">docs/design/dawin-dash.html</div>
+    <ul>
+      <li>
+        <b>full-stack</b>　<span class="chip">主線</span><span class="chip team">Next.js + Neon + Drizzle + R2</span><span class="chip test">23 / 23</span>
+        <div class="path">未拆檔 —— task 在本檔第 4 章</div>
+        <ul>
+          <li>Dashboard · Overview 分頁　<span class="chip test">4 / 4</span>
+              <span class="chip tool">需求一</span></li>
+          <li>Dashboard · Projects 詳情頁　<span class="chip test">6 / 6</span>
+              <span class="chip tool">需求二</span>
+              <span style="font-size:12px;color:#3b6ea5">📁 問答 3</span></li>
+          <li>Server Actions（auth · projects · tasks · users · backup · config）　<span class="chip">本次不動</span></li>
+          <li>備份與審計（R2 + Google Drive · audit_log）　<span class="chip">本次不動</span></li>
+        </ul>
+      </li>
+      <li>
+        <b>gws</b>　<span class="chip">輕量版</span><span class="chip team">Next.js + Google Sheets/Drive</span><span class="chip test">0 / 0</span>
+        <div class="path">未拆檔 —— 本次無 task</div>
+      </li>
+      <li>
+        <b>chatbot</b>　<span class="chip">周邊</span><span class="chip team">FastAPI + Claude tool use</span><span class="chip test">0 / 0</span>
+        <div class="path">未拆檔 —— 本次無 task</div>
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
+<p class="hint"><b>本檔走單檔模式</b>（十章全在本檔），未拆功能子檔——Rock 指定的交付是「一份正式架構文件（含五張圖）」。
+  三個子專案都寫「未拆檔」，不留指向不存在檔案的連結。「📁 問答 3」指第 10 章登記的三份問答圖檔。
+  進度數字手寫維護（<code>file://</code> 下 fetch 不了別的檔）。</p>
+
+<h3>子專案依賴順序</h3>
+<div class="fig"><svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="s3a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+  <text x="16" y="22" font-size="12" fill="#5b6472">箭頭＝真依賴（下游要讀上游的產出）；虛線＝僅慣例相依；無箭頭＝地盤互斥，可並行</text>
+
+  <rect x="20" y="96" width="180" height="62" rx="8" fill="#dbe7f4" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="110" y="122" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">full-stack</text>
+  <text x="110" y="142" font-size="11" text-anchor="middle" fill="#5b6472">Neon schema + REST</text>
+
+  <rect x="300" y="26" width="190" height="62" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="395" y="52" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">chatbot</text>
+  <text x="395" y="72" font-size="11" text-anchor="middle" fill="#5b6472">讀 /api/mcp/*</text>
+
+  <rect x="300" y="166" width="190" height="62" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="395" y="192" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">gws</text>
+  <text x="395" y="212" font-size="11" text-anchor="middle" fill="#5b6472">獨立資料層</text>
+
+  <rect x="590" y="70" width="210" height="54" rx="8" fill="#e6f3e9" stroke="#0B6E4F" stroke-width="1.5"/>
+  <text x="695" y="92" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">需求一 · OverviewTab</text>
+  <text x="695" y="110" font-size="11" text-anchor="middle" fill="#5b6472">TODAY 線定位</text>
+
+  <rect x="590" y="134" width="210" height="54" rx="8" fill="#e6f3e9" stroke="#0B6E4F" stroke-width="1.5"/>
+  <text x="695" y="156" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">需求二 · ProjectsTab</text>
+  <text x="695" y="174" font-size="11" text-anchor="middle" fill="#5b6472">排序／篩選 + 個人設定</text>
+
+  <path d="M200 114 C 240 98, 260 76, 296 62" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#s3a)"/>
+  <text x="232" y="88" font-size="11" fill="#33414f">API 契約</text>
+  <path d="M200 140 C 240 158, 260 180, 296 196" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#s3a)"/>
+  <text x="216" y="184" font-size="11" fill="#5b6472">僅 UI 慣例</text>
+
+  <path d="M200 116 C 380 116, 460 100, 586 97" fill="none" stroke="#3f7d4e" stroke-width="2" marker-end="url(#s3a)"/>
+  <path d="M200 138 C 380 138, 460 156, 586 161" fill="none" stroke="#3f7d4e" stroke-width="2" marker-end="url(#s3a)"/>
+  <text x="530" y="132" font-size="11" text-anchor="middle" fill="#1d5b2c">本次範圍：兩者互不相依，可並行</text>
+</svg></div>
+
+<!-- ══ 4 任務拆解 ══ li 的 id 是勾選的錨，不可重複、不可改 ══ -->
+<h2 id="plan">4 任務拆解</h2>
+<div class="card">
+<div id="tasktree">
+
+<h3 style="margin-top:0">▸ full-stack · Overview 分頁（需求一）　<span class="chip test">4 / 4</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t1">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T1 修 Overview 時間線 TODAY 虛線定位</b></span></label>
+    <span class="chip team">main 自己做（單檔一行）</span><span class="chip test">vitest 全綠 + 瀏覽器橫向捲動目視</span><span class="chip tool">npm test</span>
+    <ul>
+      <li class="done" id="fs-t1-1"><label><input type="checkbox" checked disabled><span class="t">把 <code>OverviewTab.jsx:98</code> 的線包進與長條列相同的
+        <code>dash-tl-label</code> + <code>width:ovMinW</code> flex 列，使百分比與月份格線同基準</span></label></li>
+      <li class="done" id="fs-t1-2"><label><input type="checkbox" checked disabled><span class="t">移除寫死的 <code>130 + 8</code>——
+        <code>globals.css</code> 在 ≤860 / ≤560 斷點是 80px / 60px，寫死值在窄螢幕同樣偏移</span></label></li>
+      <li class="done" id="fs-t1-3"><label><input type="checkbox" checked disabled><span class="t">回歸確認：<code>GanttTimeline.jsx:355</code> 的 TODAY 線已在
+        <code>ganttMinW</code> 容器內，不受本 bug 影響，不動它</span></label></li>
+      <li class="done" id="fs-t1-4"><label><input type="checkbox" checked disabled><span class="t">跑 <code>npm test</code> 全綠，並在瀏覽器橫向捲動下目視對齊</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>▸ full-stack · Projects 詳情頁（需求二）　<span class="chip test">6 / 6</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t2">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T2 Tasks 列表排序／篩選 + 個人化持久化</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">純函式單元測試 + 手動驗證持久化</span><span class="chip tool">npm test</span>
+    <ul>
+      <li class="done" id="fs-t2-1"><label><input type="checkbox" checked disabled><span class="t">
+        <code>useUserSettings</code> 加預設 <code>projectTaskView</code>；<code>Dashboard.jsx</code> 取出後以 props 傳給
+        <code>ProjectsTab</code>（照 <code>projectsView</code> / <code>hiddenProjects</code> 的既有模式，全域一組）</span></label></li>
+      <li class="done" id="fs-t2-2"><label><input type="checkbox" checked disabled><span class="t">
+        抽出 export 純函式 <code>filterProjectTasks</code> / <code>sortProjectTasks</code>：欄位內 OR、欄位間 AND；
+        穩定排序；無日期排最後；<code>owner</code> 是逗號分隔多人，比對用「包含」不是「等於」</span></label></li>
+      <li class="done" id="fs-t2-3"><label><input type="checkbox" checked disabled><span class="t">
+        左側狀態 chip 改可點多選（未選樣式 + 全不選＝全部）；<b>數字維持整專案統計，不隨篩選變</b></span></label></li>
+      <li class="done" id="fs-t2-4"><label><input type="checkbox" checked disabled><span class="t">
+        Tasks 標題下新增一小條：排序下拉（開始日〔預設，＝現況〕／截止日／狀態／負責人／緊急度，可切升降）＋
+        負責人多選 ＋ 緊急度多選 ＋ 清除 ＋ <code>n / total</code> 計數</span></label></li>
+      <li class="done" id="fs-t2-5"><label><input type="checkbox" checked disabled><span class="t">
+        確認 Progress／Subtasks／Tasks 數字與上方甘特條<b>不受篩選影響</b>（它們是整專案統計）</span></label></li>
+      <li class="done" id="fs-t2-6"><label><input type="checkbox" checked disabled><span class="t">
+        新增測試檔覆蓋純函式：排序穩定性、無日期排最後、多負責人「包含」比對、空篩選＝全部、AND 組合</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+
+<h3>▸ full-stack · 狀態篩選一致性（需求三）　<span class="chip test">4 / 4</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t3">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T3 詳情頁甘特連動專案內篩選 + 兩組篩選分工講清楚</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">純函式 TDD + 瀏覽器實測連動</span><span class="chip tool">npm test</span>
+    <ul>
+      <li class="done" id="fs-t3-1"><label><input type="checkbox" checked disabled><span class="t">
+        <code>GanttTimeline</code> 篩選述詞抽成 export 純函式 <code>matchesGanttFilters</code>，
+        <code>fs</code>/<code>fpr</code> 同時支援單選字串與多選陣列，新增 <code>fow</code> 負責人篩選（14 個測試）</span></label></li>
+      <li class="done" id="fs-t3-2"><label><input type="checkbox" checked disabled><span class="t">
+        <code>ProjectsTab.jsx</code> 詳情頁甘特改吃 <code>projectTaskView</code>——原本三個篩選都寫死「全部」，從來不被任何篩選影響</span></label></li>
+      <li class="done" id="fs-t3-3"><label><input type="checkbox" checked disabled><span class="t">
+        Projects 分頁時上方全域篩選列與統計卡灰掉並停用，附一行「此頁使用下方本專案的篩選」</span></label></li>
+      <li class="done" id="fs-t3-4"><label><input type="checkbox" checked disabled><span class="t">
+        補範圍標籤：上方統計卡「全部專案」、下方 Tasks「本專案」——兩組數字範圍不同卻沒字說明，看起來像算錯</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>▸ full-stack · 窄寬度版面崩塌（需求四）　<span class="chip test">2 / 2</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t4">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T4 修窄寬度／高縮放下的版面崩塌</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">多寬度 × 多 zoom 量測</span><span class="chip tool">瀏覽器 DOM 量測</span>
+    <ul>
+      <li class="done" id="fs-t4-1"><label><input type="checkbox" checked disabled><span class="t">
+        <code>flex:1; minWidth:0</code> 的標題塊在 360px × zoom 1.5 時被壓成 <b>寬度 0</b>（內容仍 131px 高），
+        文字溢出疊到狀態徽章與進度條上。改成 <code>flex:"1 1 200px"; minWidth:140</code> ＋ 該列 <code>flexWrap</code>
+        ——實測 titleW 0 → 210，zoom 1／1.5／1.75 皆零重疊</span></label></li>
+      <li class="done" id="fs-t4-2"><label><input type="checkbox" checked disabled><span class="t">
+        全站掃描找到同病另兩處並一併修：專案卡片／明細列的名稱塊（寬度 0）、
+        <code>InlineNote</code> 子任務備註（寬度 12，內容 200）。掃描結果由 8 處降為 0</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>▸ full-stack · Tasks 檢視重置（需求五）　<span class="chip test">1 / 1</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t5">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T5 chip 卡片加「重置」</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">瀏覽器實測點擊後三個 chip 全部取消</span><span class="chip tool">DOM 量測</span>
+    <ul>
+      <li class="done" id="fs-t5-1"><label><input type="checkbox" checked disabled><span class="t">
+        Tasks chip 卡片標題列在非預設狀態時顯示「重置」，與下方工具列共用同一個 handler
+        （單一動作放兩處不會有同步問題，與狀態篩選的雙入口不同）</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+
+<h3>▸ full-stack · Timeline 名稱不截斷（需求六）　<span class="chip test">1 / 1</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t6">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T6 甘特左欄 task 名稱不再被切</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">全分頁 67 個名稱 + 左右列位移量測</span><span class="chip tool">DOM 量測</span>
+    <ul>
+      <li class="done" id="fs-t6-1"><label><input type="checkbox" checked disabled><span class="t">
+        名稱由單行 ellipsis 改為三行換行，列高 40 → 72 並抽成 <code>TASK_ROW_H</code> 常數，
+        左右兩欄與長條垂直位移共用同一組計算——實測 67 個名稱全部完整、左右各 75 列<b>位移 0px</b></span></label></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>▸ full-stack · Mobile RWD（需求七）　<span class="chip test">2 / 2</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t7">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T7 390px 全站優化</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">六分頁 × 390px 與 1440px 量測</span><span class="chip tool">DOM 量測</span>
+    <ul>
+      <li class="done" id="fs-t7-1"><label><input type="checkbox" checked disabled><span class="t">
+        文字截斷：新增 <code>.dash-name-1line</code>（桌機單行省略／手機兩行換行），套用於專案卡片、明細列、
+        詳情頁標題與 task 名稱；<code>MobileGanttList</code>／<code>MobileProjectTimeline</code>／<code>InlineNote</code> 改為換行。
+        <b>五個分頁截斷數歸零</b>（Data 表格經 Rock 裁決暫不處理）</span></label></li>
+      <li class="done" id="fs-t7-2"><label><input type="checkbox" checked disabled><span class="t">
+        觸控目標：新增 <code>.dash-tap</code>，用 <code>::after</code> 把命中區撐到 44×44 而<b>不改變視覺尺寸</b>，
+        套用於拖曳把手 ×3、側欄收合／登出、主題切換、眼睛 toggle、子任務勾選與刪除、Settings 刪除；
+        手機 checkbox 放大到 32px。<b>六個分頁過小目標歸零</b>（range slider 除外）</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>▸ full-stack · 甘特列高（需求八）　<span class="chip test">1 / 1</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t8">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T8 列高改由內容決定：左欄 sticky，左右合併成同一列</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">列高分佈 + sticky + 收合 + TODAY 對齊 + mobile 回歸</span><span class="chip tool">DOM 量測</span>
+    <ul>
+      <li class="done" id="fs-t8-1"><label><input type="checkbox" checked disabled><span class="t">
+        原本為了讓兩棵獨立 DOM 對齊而把<b>每一列</b>寫死 72px，18 列裡只有 1–2 列真要換行，其餘各浪費 32px。
+        改成單一捲動容器、左欄 <code>position:sticky</code>、一列一個 flex row：
+        <b>列高 40／41／49／59／81px 依內容而定</b>，名稱截斷 0，並<b>刪掉</b>原本為對齊而存在的 <code>scrollTop</code> 同步邏輯。
+        實測 sticky 75 格捲動不動、表頭固定、左欄收合與專案收合皆正常、TODAY 線落在 9/4（比例 0.131）、mobile 四分頁回歸 0/0/0</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>▸ full-stack · Mobile 版面溢出（需求九）　<span class="chip test">2 / 2</span><span class="path">（未拆檔）</span></h3>
+<ul class="tasks">
+  <li class="done" id="fs-t9">
+    <label><input type="checkbox" checked disabled><span class="t"><b>T9 修 390px 的橫向溢出與內容被裁</b></span></label>
+    <span class="chip team">main 自己做</span><span class="chip test">七個檢視 × 390／1440px 量測</span><span class="chip tool">DOM 量測</span>
+    <ul>
+      <li class="done" id="fs-t9-1"><label><input type="checkbox" checked disabled><span class="t">
+        <b>先修我自己的量測漏洞</b>：原本只看 <code>documentElement</code> 的溢出與 ellipsis 截斷，
+        因此漏掉（a）捲動發生在 <code>main</code> 而非 document、（b）被祖先 <code>overflow:hidden</code> 裁掉的內容、
+        （c）<code>clientWidth</code>（CSS px）與 <code>getBoundingClientRect</code>（zoom 後裝置 px）<b>單位混用</b>。
+        三個漏洞都是 Rock 用截圖抓到我沒抓到的</span></label></li>
+      <li class="done" id="fs-t9-2"><label><input type="checkbox" checked disabled><span class="t">
+        修四個根因：專案明細列固定 <code>width:140</code> 的進度區改彈性並允許 wrap（251px 空間原本需要 474px）；
+        子任務列 wrap（原本負責人切 33px、刪除鍵切 67px，共 385 個元素被裁）；
+        CSS grid 爆版 <code>1fr</code> → <code>minmax(0,1fr)</code>；Overview 清單與 Settings 分類 chip 換行。
+        <b>七個檢視的 main 橫向溢出全部歸零</b>，desktop 1440px 回歸 0</span></label></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>▸ full-stack · Server Actions／備份　<span class="chip">本次不動</span><span class="path">（未拆檔）</span></h3>
+<p class="hint">既有技術債登記（來源：<code>full-stack/CLAUDE.md</code>），<b>未排程、本次不做</b>，
+  刻意不列為 task 以免混進本次進度分母：<br>
+  · Migration 0003 / 0004 尚未對 production apply（須 Rock 手動 <code>npm run db:migrate</code>）<br>
+  · <code>scripts/baseline-migrations.mjs</code> 待對 prod 執行後刪除（碰 prod ＝ gated）</p>
+
+<h3>▸ gws　<span class="chip test">0 / 0</span><span class="path">（未拆檔）</span></h3>
+<p class="hint">本次無 task。</p>
+
+<h3>▸ chatbot　<span class="chip test">0 / 0</span><span class="path">（未拆檔）</span></h3>
+<p class="hint">本次無 task。</p>
+
+</div>
+<p class="hint">
+  分組與 §3 的樹一一對應，id 用子專案前綴（<code>fs-</code>），跨檔不撞名。進度只數<b>葉節點</b>。
+  勾選狀態寫在檔案裡（<code>checked</code>），做完後改檔更新；靜態 HTML 點了不存檔，所以刻意 <code>disabled</code>。<br>
+  <b>勾之前驗 code，不是驗文件</b>——T1 的打勾依據是瀏覽器裡線真的對齊了，T2 是設定重新整理後真的還在，
+  不是這裡描述寫對了。
+</p>
+
+<!-- ══ 5 時程 ══ -->
+<section id="schedule" data-lifecycle="approved" data-live="none" data-approved-rev="ad2aac1">
+<h2>5 時程</h2>
+<p class="sched-badge is-baseline">初版基線 · 核准於 2026-09-04 · 非現況 · 正式時程尚未建立</p>
+<div class="fig schedule-frozen"><svg viewBox="0 0 900 210" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <text x="16" y="24" font-size="12" fill="#5b6472">單位：日 ｜ 只放日期區間，不畫執行狀態（真實進度看第 4 章 check-box）</text>
+  <line x1="280" y1="40" x2="280" y2="196" stroke="#dde3ec"/>
+  <line x1="440" y1="40" x2="440" y2="196" stroke="#dde3ec"/>
+  <line x1="600" y1="40" x2="600" y2="196" stroke="#dde3ec"/>
+  <line x1="760" y1="40" x2="760" y2="196" stroke="#dde3ec"/>
+  <text x="280" y="54" font-size="11" fill="#5b6472" text-anchor="middle">09/04</text>
+  <text x="440" y="54" font-size="11" fill="#5b6472" text-anchor="middle">09/05</text>
+  <text x="600" y="54" font-size="11" fill="#5b6472" text-anchor="middle">09/06</text>
+  <text x="760" y="54" font-size="11" fill="#5b6472" text-anchor="middle">09/07</text>
+
+  <text x="24" y="82" font-size="12.5" fill="#1a1a1a">需求釐清與四項裁決</text>
+  <rect x="280" y="68" width="80" height="20" rx="5" fill="#dbe7f4" stroke="#3b6ea5"/>
+
+  <text x="24" y="118" font-size="12.5" fill="#1a1a1a">本架構文件產出與核准</text>
+  <rect x="280" y="104" width="160" height="20" rx="5" fill="#dbe7f4" stroke="#3b6ea5"/>
+
+  <text x="24" y="154" font-size="12.5" fill="#1a1a1a">T1 TODAY 線修正</text>
+  <rect x="440" y="140" width="80" height="20" rx="5" fill="#dbe7f4" stroke="#3b6ea5"/>
+
+  <text x="24" y="190" font-size="12.5" fill="#1a1a1a">T2 排序／篩選 + 測試</text>
+  <rect x="440" y="176" width="240" height="20" rx="5" fill="#dbe7f4" stroke="#3b6ea5"/>
+</svg></div>
+<p class="hint">
+  本章是<b>尚未核准的預估時程</b>，<b>不代表實際進度</b>——實際完成狀態只在第 4 章的 check-box。<br>
+  <b>不標任何執行狀態</b>（沒有顏色代表「已完成」或「進行中」）：第 5 章沒有任何機制知道真實執行狀態。<br>
+  核准後改 <code>data-lifecycle="approved"</code>、補 <code>data-approved-rev</code> 與 as-of 日期，
+  並給圖加 <code>schedule-frozen</code>；<b>圖本身不重畫，計畫變更請新增版本，不覆寫基線</b>。
+  本專案不上 GitHub Project，<code>data-live</code> 維持 <code>none</code>（合法終態）。
+</p>
+</section>
+
+<!-- ══ 6 架構圖 ══ -->
+<h2 id="arch">6 架構圖</h2>
+<div class="fig"><svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="c6a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+
+  <rect x="20" y="24" width="150" height="52" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="95" y="46" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">瀏覽器</text>
+  <text x="95" y="64" font-size="11" text-anchor="middle" fill="#5b6472">內部團隊</text>
+
+  <rect x="20" y="150" width="150" height="52" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="95" y="172" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">LINE / Telegram</text>
+  <text x="95" y="190" font-size="11" text-anchor="middle" fill="#5b6472">chatbot 入口</text>
+
+  <rect x="230" y="16" width="250" height="130" rx="9" fill="#dbe7f4" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="355" y="40" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">Next.js（Vercel）</text>
+  <text x="246" y="64" font-size="11" fill="#1a1a1a">middleware.js — cookie 存在性檢查</text>
+  <text x="246" y="84" font-size="11" fill="#1a1a1a">Dashboard + useTaskManager</text>
+  <text x="246" y="104" font-size="11" fill="#1a1a1a">useUserSettings — per-user 設定</text>
+  <text x="246" y="124" font-size="11" fill="#1a1a1a">Server Actions — safeRequireAuth()</text>
+
+  <rect x="230" y="176" width="250" height="60" rx="9" fill="#fff9e8" stroke="#9A6410" stroke-width="1.5"/>
+  <text x="355" y="200" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">chatbot（Railway）</text>
+  <text x="355" y="220" font-size="11" text-anchor="middle" fill="#5b6472">FastAPI + Claude tool use + APScheduler</text>
+
+  <rect x="540" y="24" width="180" height="56" rx="9" fill="#e6f3e9" stroke="#0B6E4F" stroke-width="1.5"/>
+  <text x="630" y="48" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">Neon PostgreSQL</text>
+  <text x="630" y="66" font-size="11" text-anchor="middle" fill="#5b6472">Drizzle ORM · 11 張表</text>
+
+  <rect x="540" y="104" width="180" height="56" rx="9" fill="#f3f1ec" stroke="#5C6B66" stroke-width="1.5"/>
+  <text x="630" y="128" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">Cloudflare R2</text>
+  <text x="630" y="146" font-size="11" text-anchor="middle" fill="#5b6472">附件 · banner · 備份</text>
+
+  <rect x="540" y="184" width="180" height="56" rx="9" fill="#f3f1ec" stroke="#5C6B66" stroke-width="1.5"/>
+  <text x="630" y="208" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">Google Sheets/Drive</text>
+  <text x="630" y="226" font-size="11" text-anchor="middle" fill="#5b6472">gws 版資料層（獨立）</text>
+
+  <rect x="230" y="266" width="490" height="56" rx="9" fill="#fbf0ee" stroke="#A62B1F" stroke-width="1.5"/>
+  <text x="475" y="288" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">本次範圍：兩處純前端改動</text>
+  <text x="475" y="308" font-size="11" text-anchor="middle" fill="#5b6472">OverviewTab（TODAY 線）· ProjectsTab（排序篩選）＋ user_settings 讀寫</text>
+
+  <path d="M170 50 L 226 50" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c6a)"/>
+  <path d="M170 176 L 226 200" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c6a)"/>
+  <path d="M480 60 L 536 52" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c6a)"/>
+  <path d="M480 100 L 536 126" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c6a)"/>
+  <path d="M400 176 L 400 150" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c6a)"/>
+  <text x="410" y="166" font-size="11" fill="#33414f">REST</text>
+  <path d="M355 146 L 355 262" fill="none" stroke="#A62B1F" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#c6a)"/>
+</svg></div>
+<p class="hint">gws 走自己的資料層（Sheets/Drive），與 full-stack 的 Neon 之間<b>沒有程式相依</b>，只共用 UI 慣例。</p>
+
+<!-- ══ 7 流程圖 ══ -->
+<h2 id="flow">7 流程圖</h2>
+
+<h3>7.1　需求一：TODAY 虛線的定位基準（紅色為缺陷）</h3>
+<div class="fig"><svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="c7a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+
+  <rect x="16" y="120" width="140" height="52" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="86" y="142" font-size="12" text-anchor="middle" fill="#1a1a1a">tasks 的最早／</text>
+  <text x="86" y="160" font-size="12" text-anchor="middle" fill="#1a1a1a">最晚日期</text>
+
+  <rect x="196" y="120" width="150" height="52" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="271" y="142" font-size="12" text-anchor="middle" fill="#1a1a1a">mn / mx / td</text>
+  <text x="271" y="160" font-size="11" text-anchor="middle" fill="#5b6472">td ＝ 總天數</text>
+
+  <rect x="386" y="34" width="200" height="60" rx="8" fill="#dbe7f4" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="486" y="58" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">月份格線 · 長條</text>
+  <text x="486" y="78" font-size="11" text-anchor="middle" fill="#5b6472">基準＝ width:ovMinW 軌道</text>
+
+  <rect x="386" y="200" width="200" height="60" rx="8" fill="#fbf0ee" stroke="#A62B1F" stroke-width="1.5"/>
+  <text x="486" y="224" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">TODAY 虛線（bug）</text>
+  <text x="486" y="244" font-size="11" text-anchor="middle" fill="#5b6472">基準＝ left:138px→right:0 可視區</text>
+
+  <path d="M156 146 L 192 146" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7a)"/>
+  <path d="M346 138 C 366 110, 370 90, 382 76" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7a)"/>
+  <text x="330" y="102" font-size="11" fill="#33414f">m.pct</text>
+  <path d="M346 156 C 366 186, 370 206, 382 222" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7a)"/>
+  <text x="322" y="200" font-size="11" fill="#33414f">todayPct</text>
+
+  <path d="M586 64 C 640 64, 660 110, 676 138" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7a)"/>
+  <path d="M586 230 C 640 230, 660 184, 676 156" fill="none" stroke="#A62B1F" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#c7a)"/>
+
+  <path d="M760 118 L 810 146 L 760 174 L 710 146 Z" fill="#fff9e8" stroke="#9A6410" stroke-width="1.5"/>
+  <text x="760" y="143" font-size="10.5" text-anchor="middle" fill="#1a1a1a">兩者同</text>
+  <text x="760" y="157" font-size="10.5" text-anchor="middle" fill="#1a1a1a">寬度嗎</text>
+
+  <rect x="700" y="216" width="180" height="56" rx="8" fill="#fbf0ee" stroke="#A62B1F" stroke-width="1.5"/>
+  <text x="790" y="238" font-size="11.5" text-anchor="middle" fill="#1a1a1a">否（一捲動就不同）</text>
+  <text x="790" y="256" font-size="11" text-anchor="middle" fill="#5b6472">線往左飄 → 9 月畫成 6 月</text>
+  <path d="M780 170 L 790 212" fill="none" stroke="#A62B1F" stroke-width="2" marker-end="url(#c7a)"/>
+
+  <rect x="700" y="34" width="180" height="56" rx="8" fill="#e6f3e9" stroke="#0B6E4F" stroke-width="1.5"/>
+  <text x="790" y="56" font-size="11.5" text-anchor="middle" fill="#1a1a1a">是 → 對齊（修正後）</text>
+  <text x="790" y="74" font-size="11" text-anchor="middle" fill="#5b6472">線與格線同一個父容器</text>
+  <path d="M780 122 L 790 94" fill="none" stroke="#0B6E4F" stroke-width="2" marker-end="url(#c7a)"/>
+</svg></div>
+
+<h3>7.2　需求二：篩選 → 排序 → 渲染管線</h3>
+<div class="fig"><svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="c7b" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+
+  <rect x="20" y="110" width="130" height="56" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="85" y="134" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">pt（本專案）</text>
+  <text x="85" y="152" font-size="11" text-anchor="middle" fill="#5b6472">依開始日（現況）</text>
+
+  <rect x="200" y="110" width="160" height="56" rx="8" fill="#dbe7f4" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="280" y="134" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">filterProjectTasks</text>
+  <text x="280" y="152" font-size="11" text-anchor="middle" fill="#5b6472">欄位內 OR · 欄位間 AND</text>
+
+  <rect x="410" y="110" width="160" height="56" rx="8" fill="#dbe7f4" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="490" y="134" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">sortProjectTasks</text>
+  <text x="490" y="152" font-size="11" text-anchor="middle" fill="#5b6472">穩定排序 · 單一欄位</text>
+
+  <rect x="620" y="110" width="150" height="56" rx="8" fill="#e6f3e9" stroke="#0B6E4F" stroke-width="1.5"/>
+  <text x="695" y="134" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">渲染 Tasks 列表</text>
+  <text x="695" y="152" font-size="11" text-anchor="middle" fill="#5b6472">顯示 n / total</text>
+
+  <path d="M150 138 L 196 138" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7b)"/>
+  <path d="M360 138 L 406 138" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7b)"/>
+  <path d="M570 138 L 616 138" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7b)"/>
+
+  <rect x="200" y="26" width="370" height="54" rx="8" fill="#fff9e8" stroke="#9A6410" stroke-width="1.5"/>
+  <text x="385" y="48" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">projectTaskView（user_settings · 全域一組）</text>
+  <text x="385" y="68" font-size="11" text-anchor="middle" fill="#5b6472">{ sort:{field,dir}, status:[], owner:[], priority:[] }</text>
+  <path d="M280 80 L 280 106" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7b)"/>
+  <path d="M490 80 L 490 106" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c7b)"/>
+
+  <rect x="20" y="210" width="750" height="66" rx="8" fill="#fbf0ee" stroke="#A62B1F" stroke-width="1.5"/>
+  <text x="36" y="232" font-size="12" font-weight="700" fill="#1a1a1a">刻意不接進這條管線的東西</text>
+  <text x="36" y="252" font-size="11" fill="#1a1a1a">Progress ／ Subtasks ／ Tasks 狀態數字 ／ 上方甘特條 —— 一律讀<b>未篩選</b>的整專案資料</text>
+  <text x="36" y="270" font-size="11" fill="#5b6472">理由：那是專案的客觀狀態。跟著篩選一起變，會讓「47%」隨著我點了什麼而跳動，沒有人看得懂。</text>
+  <path d="M85 166 C 85 190, 85 196, 85 206" fill="none" stroke="#A62B1F" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#c7b)"/>
+</svg></div>
+
+<!-- ══ 8 時序圖 ══ -->
+<h2 id="seq">8 時序圖</h2>
+<p class="hint">使用者改一次篩選，到設定被寫回 DB 為止。</p>
+<div class="fig"><svg viewBox="0 0 900 350" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="c8s" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#3b6ea5"/></marker>
+       <marker id="c8d" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5b6472"/></marker></defs>
+
+  <rect x="20" y="20" width="110" height="34" rx="7" fill="#eef2f7" stroke="#8a94a6"/><text x="75" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">使用者</text>
+  <rect x="200" y="20" width="140" height="34" rx="7" fill="#dbe7f4" stroke="#3b6ea5"/><text x="270" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">ProjectsTab</text>
+  <rect x="410" y="20" width="140" height="34" rx="7" fill="#dbe7f4" stroke="#3b6ea5"/><text x="480" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">Dashboard</text>
+  <rect x="620" y="20" width="150" height="34" rx="7" fill="#fff9e8" stroke="#9A6410"/><text x="695" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">useUserSettings</text>
+  <rect x="810" y="20" width="80" height="34" rx="7" fill="#e6f3e9" stroke="#0B6E4F"/><text x="850" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">Neon</text>
+
+  <line x1="75" y1="54" x2="75" y2="330" stroke="#dde3ec" stroke-width="2"/>
+  <line x1="270" y1="54" x2="270" y2="330" stroke="#dde3ec" stroke-width="2"/>
+  <line x1="480" y1="54" x2="480" y2="330" stroke="#dde3ec" stroke-width="2"/>
+  <line x1="695" y1="54" x2="695" y2="330" stroke="#dde3ec" stroke-width="2"/>
+  <line x1="850" y1="54" x2="850" y2="330" stroke="#dde3ec" stroke-width="2"/>
+
+  <path d="M75 86 L 264 86" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#c8s)"/>
+  <text x="168" y="78" font-size="11.5" text-anchor="middle" fill="#1a1a1a">點「進行中」chip</text>
+
+  <path d="M270 118 C 306 118, 306 132, 276 132" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#c8s)"/>
+  <text x="316" y="126" font-size="11" fill="#33414f">filter → sort → 立即重畫（樂觀）</text>
+
+  <path d="M270 168 L 474 168" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#c8s)"/>
+  <text x="372" y="160" font-size="11.5" text-anchor="middle" fill="#1a1a1a">onChange(projectTaskView)</text>
+
+  <path d="M480 200 L 689 200" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#c8s)"/>
+  <text x="584" y="192" font-size="11.5" text-anchor="middle" fill="#1a1a1a">updateSetting()</text>
+
+  <path d="M695 232 L 844 232" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#c8s)"/>
+  <text x="770" y="224" font-size="11.5" text-anchor="middle" fill="#1a1a1a">UPSERT user_settings</text>
+
+  <path d="M850 264 L 701 264" fill="none" stroke="#5b6472" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#c8d)"/>
+  <text x="776" y="256" font-size="11" text-anchor="middle" fill="#5b6472">ok</text>
+
+  <rect x="200" y="284" width="500" height="42" rx="6" fill="none" stroke="#c9d2de" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="212" y="300" font-size="10.5" fill="#5b6472">alt 寫入失敗</text>
+  <text x="212" y="318" font-size="11" fill="#a34a4a">畫面維持已篩選（本地 state 為準），showToast 提示設定未存</text>
+</svg></div>
+<p class="hint">畫面先動、DB 後寫，與既有的樂觀更新慣例一致。寫失敗不回滾畫面——使用者已經在看篩選後的結果，
+   把它抽掉比「設定沒存到」更難理解；改用 toast 告知。</p>
+
+<!-- ══ 9 資料庫串接圖 ══ -->
+<h2 id="db">9 資料庫串接圖</h2>
+<p class="hint">Neon PostgreSQL（full-stack 版）11 張表中與本次相關的部分。灰框為<b>唯讀、不修改</b>的來源；黃框是本次唯一會寫入的表。</p>
+<div class="fig"><svg viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="c9a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+
+  <rect x="20" y="30" width="210" height="120" rx="9" fill="#f3f1ec" stroke="#5C6B66" stroke-width="1.5"/>
+  <text x="125" y="54" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">projects</text>
+  <text x="36" y="78" font-size="11" fill="#1a1a1a">id · name · sortOrder</text>
+  <text x="36" y="98" font-size="11" fill="#1a1a1a">bannerR2Key</text>
+  <text x="36" y="118" font-size="11" fill="#5b6472">createdBy → users.id</text>
+  <text x="36" y="140" font-size="10.5" fill="#5b6472">唯讀</text>
+
+  <rect x="300" y="30" width="240" height="170" rx="9" fill="#f3f1ec" stroke="#5C6B66" stroke-width="1.5"/>
+  <text x="420" y="54" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">tasks</text>
+  <text x="316" y="78" font-size="11" fill="#1a1a1a">projectId → projects.id</text>
+  <text x="316" y="100" font-size="11" fill="#1a1a1a">startDate · endDate · duration</text>
+  <text x="316" y="118" font-size="10.5" fill="#A62B1F">↑ 時間線 mn / mx / td 的唯一來源</text>
+  <text x="316" y="140" font-size="11" fill="#1a1a1a">status · priority · owner</text>
+  <text x="316" y="158" font-size="10.5" fill="#3b6ea5">↑ 排序／篩選的三個維度</text>
+  <text x="316" y="178" font-size="10.5" fill="#5b6472">owner 為逗號分隔多人字串 → 比對用「包含」</text>
+  <text x="316" y="194" font-size="10.5" fill="#5b6472">sortOrder＝穩定排序的第二層</text>
+
+  <rect x="610" y="30" width="250" height="120" rx="9" fill="#f3f1ec" stroke="#5C6B66" stroke-width="1.5"/>
+  <text x="735" y="54" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">subtasks</text>
+  <text x="626" y="78" font-size="11" fill="#1a1a1a">taskId → tasks.id</text>
+  <text x="626" y="100" font-size="11" fill="#1a1a1a">done · doneDate</text>
+  <text x="626" y="120" font-size="10.5" fill="#5b6472">供 computeAllProgress 算 %</text>
+  <text x="626" y="140" font-size="10.5" fill="#5b6472">無子任務時改用時間進度</text>
+
+  <rect x="300" y="236" width="240" height="76" rx="9" fill="#fff9e8" stroke="#9A6410" stroke-width="1.5"/>
+  <text x="420" y="260" font-size="13" text-anchor="middle" font-weight="700" fill="#1a1a1a">user_settings</text>
+  <text x="316" y="282" font-size="11" fill="#1a1a1a">key = "projectTaskView"（本次新增）</text>
+  <text x="316" y="300" font-size="10.5" fill="#5b6472">UNIQUE(userId, key) · value 為 JSON 字串</text>
+
+  <rect x="610" y="236" width="250" height="76" rx="9" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="735" y="260" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">不落地的狀態</text>
+  <text x="626" y="282" font-size="11" fill="#1a1a1a">TODAY 線＝ new Date()，不存任何表</text>
+  <text x="626" y="300" font-size="10.5" fill="#5b6472">dash-timelineCollapsed 走 localStorage</text>
+
+  <rect x="20" y="236" width="210" height="76" rx="9" fill="#e6f3e9" stroke="#0B6E4F" stroke-width="1.5"/>
+  <text x="125" y="260" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">users</text>
+  <text x="36" y="282" font-size="11" fill="#1a1a1a">id · email · role</text>
+  <text x="36" y="300" font-size="10.5" fill="#5b6472">owner 下拉的唯一來源</text>
+
+  <path d="M230 84 L 296 84" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c9a)"/>
+  <text x="263" y="76" font-size="11" text-anchor="middle" fill="#33414f">1 : N</text>
+  <path d="M540 84 L 606 84" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c9a)"/>
+  <text x="573" y="76" font-size="11" text-anchor="middle" fill="#33414f">1 : N</text>
+  <path d="M420 232 L 420 204" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c9a)"/>
+  <text x="434" y="222" font-size="11" fill="#33414f">篩選／排序</text>
+  <path d="M230 274 L 296 274" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#c9a)"/>
+  <text x="263" y="266" font-size="11" text-anchor="middle" fill="#33414f">userId</text>
+</svg></div>
+
+<!-- ══ 10 相關文件 ══ -->
+<h2 id="docs">10 相關文件（按主題歸檔）</h2>
+<table>
+  <tr><th style="width:38%">文件</th><th>內容</th></tr>
+
+  <tr><td colspan="2" style="background:#eef2f7;font-weight:700">📐 主題：Tasks 排序／篩選規格裁決（2026-09-04）</td></tr>
+  <tr><td><a href="./dawin-dash-task-sortfilter-q-scope.html"><code>dawin-dash-task-sortfilter-q-scope.html</code></a></td>
+      <td>設定記憶範圍三選一 → 裁決：<b>全域一組</b></td></tr>
+  <tr><td><a href="./dawin-dash-task-sortfilter-q-ui.html"><code>dawin-dash-task-sortfilter-q-ui.html</code></a></td>
+      <td>控制元件版型三選一 → 裁決：<b>chip 即篩選 + 排序下拉</b></td></tr>
+  <tr><td><a href="./dawin-dash-task-sortfilter-q-multi.html"><code>dawin-dash-task-sortfilter-q-multi.html</code></a></td>
+      <td>單一 vs 多重排序、單選 vs 多選篩選 → 裁決：<b>單一排序 + 全多選</b></td></tr>
+  <tr><td><a href="./dawin-dash-task-sortfilter-q-statesync.html"><code>dawin-dash-task-sortfilter-q-statesync.html</code></a></td>
+      <td>上方全域篩選與下方專案內篩選的不一致 → 裁決：<b>B 分工（甘特連動下方）＋ 補範圍標籤</b></td></tr>
+
+  <tr><td colspan="2" style="background:#eef2f7;font-weight:700">📐 主題：Mobile RWD（2026-09-04）</td></tr>
+  <tr><td><a href="./dawin-dash-mobile-q-audit.html"><code>dawin-dash-mobile-q-audit.html</code></a></td>
+      <td>390px 全站量測稽核 → 裁決：<b>做「名稱換行」與「觸控目標 44×44」，Data 表格暫不改版型</b></td></tr>
+  <tr><td><a href="./dawin-dash-gantt-q-rowheight.html"><code>dawin-dash-gantt-q-rowheight.html</code></a></td>
+      <td>甘特列高浪費（每列寫死 72px）→ 裁決：<b>B 左欄 sticky、左右合併成同一列</b></td></tr>
+
+  <tr><td colspan="2" style="background:#eef2f7;font-weight:700">📐 主題：專案開發指引（既有，非本次產出）</td></tr>
+  <tr><td><code>full-stack/CLAUDE.md</code></td><td>Neon 版技術棧、schema、Server Action 慣例、既有技術債</td></tr>
+  <tr><td><code>gws/CLAUDE.md</code></td><td>Google Sheets 版技術棧與 DAL</td></tr>
+  <tr><td><code>chatbot/README.md</code></td><td>LINE / Telegram bot 架構與部署</td></tr>
+</table>
+<p class="hint">之後產出的 html 一律登記在此並<b>歸進所屬主題列</b>（colspan 分組，沒有就開新主題列），
+   同時加進最上面的目錄列——這就是「wiki」的實作方式。<br>
+   註：上面三份問答檔在單檔模式下直接登記於此（沒有功能子檔可放）；
+   之後若拆功能子檔，應搬進該子檔的「相關問答歸檔」章。</p>
+
+</main>
+
+<script type="module">
+  const boxes = [...document.querySelectorAll('#tasktree li')]
+        .filter(li => !li.querySelector('ul'))
+        .map(li => li.querySelector('input[type=checkbox]'))
+        .filter(Boolean);
+  const done  = boxes.filter(b => b.checked).length;
+  document.getElementById('pct').textContent = Math.round(done / boxes.length * 100) + '%';
+  document.getElementById('cnt').textContent = `（${done} / ${boxes.length} 項，含 subtask）`;
+  document.getElementById('fill').style.width = (done / boxes.length * 100) + '%';
+</script>
+</html>

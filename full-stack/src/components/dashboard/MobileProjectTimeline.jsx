@@ -12,7 +12,7 @@ export default function MobileProjectTimeline({ projBars }) {
         <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: X.surfaceLight, borderRadius: 10, border: `1px solid ${X.border}` }}>
           <div style={{ width: 4, height: 36, borderRadius: 2, background: p.color, flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: X.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: X.text, overflowWrap: "anywhere" }}>{p.name}</div>
             <div style={{ fontSize: 12, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{fmtD(p.start)} → {fmtD(p.end)}</div>
           </div>
           <div style={{ width: 60 }}>

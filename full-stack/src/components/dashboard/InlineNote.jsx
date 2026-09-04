@@ -31,7 +31,9 @@ export default function InlineNote({ value, onSave }) {
 
   return (
     <span onClick={e => { e.stopPropagation(); setEditing(true); }}
-      style={{ flex: 1, fontSize: 12, color: value ? X.textDim : X.textDim + "60", fontStyle: value ? "normal" : "italic", cursor: "text", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "1px 4px", borderRadius: 4, minWidth: 0 }}
+      // minWidth floor: at `0` the note shrinks to a few pixels on narrow/zoomed rows,
+      // so the ellipsis has nothing to show and the note reads as missing.
+      style={{ flex: "1 1 80px", fontSize: 12, color: value ? X.textDim : X.textDim + "60", fontStyle: value ? "normal" : "italic", cursor: "text", overflowWrap: "anywhere", padding: "1px 4px", borderRadius: 4, minWidth: 60 }}
       onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
     >{value || "add note..."}</span>

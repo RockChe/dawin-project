@@ -14,10 +14,10 @@ function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, set
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
       <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.accent, borderRadius: 2 }} />Categories</h3>
-        {configCats.map((cat, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        {configCats.map((cat, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: CC[cat] || X.accent, flexShrink: 0 }} />
-          <span style={{ fontSize: 14, color: X.text, flex: 1 }}>{cat}</span>
-          <button onClick={() => { saveConfigCats(configCats.filter((_, j) => j !== i)); showToast("Category removed", "error"); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
+          <span style={{ fontSize: 14, color: X.text, flex: "1 1 80px", minWidth: 60, overflowWrap: "anywhere" }}>{cat}</span>
+          <button className="dash-tap" onClick={() => { saveConfigCats(configCats.filter((_, j) => j !== i)); showToast("Category removed", "error"); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.5 }}>×</button>
         </div>))}
         <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
           <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category" onKeyDown={e => { if (e.key === "Enter" && newCat.trim()) { saveConfigCats([...configCats, newCat.trim()]); setNewCat(""); showToast("Category added", "success"); } }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px" }} />
@@ -26,7 +26,7 @@ function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, set
       </div>
       <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.purple, borderRadius: 2 }} />Owners</h3>
-        {configOwners.map((ow, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        {configOwners.map((ow, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: PJC[i % PJC.length], flexShrink: 0 }} />
           <span style={{ fontSize: 14, color: X.text, flex: 1 }}>{ow}</span>
         </div>))}

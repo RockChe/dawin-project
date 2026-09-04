@@ -29,7 +29,7 @@ export default function Sidebar({ user }) {
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded text-xs"
+          className="p-1 rounded text-xs dash-tap"
           style={{ color: X.textSec, background: hoverToggle ? X.surfaceHover : 'transparent' }}
           onMouseEnter={() => setHoverToggle(true)}
           onMouseLeave={() => setHoverToggle(false)}
@@ -49,7 +49,7 @@ export default function Sidebar({ user }) {
         <form action={logout}>
           <button
             type="submit"
-            className="w-full text-xs py-1.5 px-2 rounded text-left"
+            className="w-full text-xs py-1.5 px-2 rounded text-left dash-tap"
             style={{ color: X.red, background: hoverLogout ? X.surfaceHover : 'transparent' }}
             onMouseEnter={() => setHoverLogout(true)}
             onMouseLeave={() => setHoverLogout(false)}

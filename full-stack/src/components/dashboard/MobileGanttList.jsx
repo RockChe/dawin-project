@@ -39,7 +39,7 @@ export default function MobileGanttList({ tasks, subtasks, fp, fs, fpr, timeDim 
                   <div style={{ width: 4, borderRadius: 2, background: bc, flexShrink: 0, alignSelf: "stretch" }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: X.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{t.task}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: X.text, overflowWrap: "anywhere", flex: 1 }}>{t.task}</span>
                       <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 8, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{t.status}</span>
                     </div>
                     <div style={{ fontSize: 12, color: X.textDim, marginBottom: 5, display: "flex", alignItems: "center", gap: 4 }}>

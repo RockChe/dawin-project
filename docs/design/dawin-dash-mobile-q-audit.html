@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<title>Mobile RWD 稽核 · 390px</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{ color-scheme:light; --bg:#f4f6f9; --fg:#1a1a1a; --muted:#5b6472; --line:#dde3ec; --accent:#3b6ea5; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--fg);
+        font:15px/1.75 "Segoe UI","Noto Sans TC",system-ui,sans-serif; }
+  main{ max-width:1000px; margin:0 auto; padding:28px 24px 80px; }
+  h1{ font-size:24px; margin:0 0 4px; }
+  .meta{ color:var(--muted); font-size:13px; margin:0 0 20px; }
+  h2{ font-size:18px; margin:32px 0 10px; padding-left:11px; border-left:4px solid var(--accent); }
+  h3{ font-size:14.5px; margin:20px 0 8px; color:#33414f; }
+  .fig{ background:#fff; padding:12px; border-radius:8px; border:1px solid var(--line); overflow-x:auto; }
+  .fig svg{ display:block; min-width:860px; height:auto; }
+  table{ border-collapse:collapse; width:100%; background:#fff; border:1px solid var(--line);
+         border-radius:10px; overflow:hidden; margin-top:12px; }
+  th,td{ padding:8px 12px; text-align:left; border-bottom:1px solid #e7ecf3; font-size:13.5px; vertical-align:top; }
+  th{ background:#eef2f7; font-weight:600; }
+  tr:last-child td{ border-bottom:none; }
+  code{ background:#eef2f7; padding:1px 5px; border-radius:4px; font-size:12.5px; }
+  .ok{ background:#e6f3e9; border:1px solid #9cc7a6; border-radius:8px; padding:12px 16px; margin-top:14px; font-size:14px; }
+  .rec{ background:#fff9e8; border:1px solid #e0c88a; border-radius:8px; padding:12px 16px; margin-top:14px; font-size:14px; }
+  .hint{ color:var(--muted); font-size:12.5px; margin:8px 0 0; }
+  blockquote{ margin:0 0 18px; padding:12px 16px; background:#fff9e8; border-left:4px solid #c9a227;
+              border-radius:0 8px 8px 0; white-space:pre-wrap; font-size:13.5px; }
+  .n{font-family:ui-monospace,monospace}
+</style>
+<main>
+<h1>Mobile RWD 稽核 —— 390px（iPhone 12 Pro）</h1>
+<p class="meta">2026-09-04 · 全分頁 DOM 量測，非目視推測 · 未經 confer（先出事實清單）</p>
+
+<h2>問題來源（Rock 原話）</h2>
+<blockquote>time line 我不希望task 名稱被切
+
+rwd 全站mobile 都要優化</blockquote>
+
+<h2>先講已經修好的</h2>
+<div class="ok"><b>橫向溢出 0、版面崩塌 0、甘特名稱截斷 0。</b>
+  六個分頁在 390px 都沒有橫向捲軸；先前 8 處「被壓成零寬」的元素已全數修正；
+  Timeline 的 67 個 task 名稱在三行內全部完整顯示，左右兩欄 75 列高度完全相同、位移 0px。</div>
+
+<h2>剩下兩類問題</h2>
+<table>
+  <tr><th style="width:16%">分頁</th><th style="width:12%">文字被截</th><th style="width:14%">觸控目標過小</th><th>備註</th></tr>
+  <tr><td>Overview</td><td class="n">8</td><td class="n">3</td><td>專案名稱</td></tr>
+  <tr><td>Projects 列表</td><td class="n">6</td><td class="n">6</td><td>你截圖那頁</td></tr>
+  <tr><td>Projects 詳情</td><td class="n">8</td><td class="n">6</td><td></td></tr>
+  <tr><td>Timeline</td><td class="n">8</td><td class="n">3</td><td>甘特名稱已修，剩其他文字</td></tr>
+  <tr><td>Data</td><td class="n">8</td><td class="n">6</td><td>表格在 390px 本來就窄</td></tr>
+  <tr><td>Settings</td><td class="n">0</td><td class="n">6</td><td>唯一沒有截字的分頁</td></tr>
+</table>
+
+<h3>A · 文字被截（實測隱藏字寬）</h3>
+<div class="fig"><svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <text x="16" y="22" font-size="12" fill="#5b6472">灰＝看得到的部分，紅＝被 ellipsis 切掉的部分（等比例，單位 px）</text>
+  <g font-size="12">
+    <text x="16" y="52" fill="#1a1a1a">大雲Youtube Channel</text>
+    <rect x="230" y="40" width="160" height="16" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <rect x="390" y="40" width="43" height="16" fill="#fbdcd7" stroke="#A62B1F"/>
+    <text x="445" y="52" fill="#A62B1F">切掉 43</text>
+
+    <text x="16" y="82" fill="#1a1a1a">Baby Shark 小鯊魚</text>
+    <rect x="230" y="70" width="160" height="16" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <rect x="390" y="70" width="22" height="16" fill="#fbdcd7" stroke="#A62B1F"/>
+    <text x="424" y="82" fill="#A62B1F">切掉 22</text>
+
+    <text x="16" y="112" fill="#1a1a1a">兒少內容有限合夥</text>
+    <rect x="230" y="100" width="160" height="16" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <rect x="390" y="100" width="12" height="16" fill="#fbdcd7" stroke="#A62B1F"/>
+    <text x="414" y="112" fill="#A62B1F">切掉 12</text>
+
+    <text x="16" y="152" fill="#5b6472">— Data 分頁 —</text>
+
+    <text x="16" y="182" fill="#1a1a1a">文化部動畫補助 - 第二期履約30%</text>
+    <rect x="230" y="170" width="160" height="16" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <rect x="390" y="170" width="105" height="16" fill="#fbdcd7" stroke="#A62B1F"/>
+    <text x="507" y="182" fill="#A62B1F">切掉 105 ← 最嚴重</text>
+
+    <text x="16" y="212" fill="#1a1a1a">NO.5 富邦兒少內容審議會</text>
+    <rect x="230" y="200" width="160" height="16" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <rect x="390" y="200" width="59" height="16" fill="#fbdcd7" stroke="#A62B1F"/>
+    <text x="461" y="212" fill="#A62B1F">切掉 59</text>
+  </g>
+</svg></div>
+<p class="hint">專案名稱那幾筆只差 10–22px，換行成兩行就完整；Data 分頁差 59–105px，那是表格欄寬本身不夠，
+  不是換行能解決的——手機上表格要改成卡片式堆疊才會好看。</p>
+
+<h3>B · 觸控目標過小</h3>
+<div class="fig"><svg viewBox="0 0 900 210" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <text x="16" y="22" font-size="12" fill="#5b6472">實際尺寸等比繪製。虛線框＝ iOS HIG 建議的 44×44 最小可點區</text>
+  <g>
+    <rect x="40" y="40" width="44" height="44" fill="none" stroke="#A62B1F" stroke-dasharray="4 3"/>
+    <rect x="53" y="50" width="18" height="24" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <text x="62" y="102" font-size="11" text-anchor="middle" fill="#1a1a1a">▸ 側欄</text>
+    <text x="62" y="118" font-size="11" text-anchor="middle" fill="#A62B1F">18×24</text>
+
+    <rect x="160" y="40" width="44" height="44" fill="none" stroke="#A62B1F" stroke-dasharray="4 3"/>
+    <rect x="164" y="48" width="35" height="28" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <text x="182" y="102" font-size="11" text-anchor="middle" fill="#1a1a1a">⏻ 登出</text>
+    <text x="182" y="118" font-size="11" text-anchor="middle" fill="#A62B1F">35×28</text>
+
+    <rect x="280" y="40" width="58" height="44" fill="none" stroke="#A62B1F" stroke-dasharray="4 3"/>
+    <rect x="280" y="47" width="58" height="29" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <text x="309" y="102" font-size="11" text-anchor="middle" fill="#1a1a1a">☀️ 主題</text>
+    <text x="309" y="118" font-size="11" text-anchor="middle" fill="#A62B1F">58×29</text>
+
+    <rect x="410" y="40" width="44" height="44" fill="none" stroke="#A62B1F" stroke-dasharray="4 3"/>
+    <rect x="422" y="45" width="19" height="34" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <text x="432" y="102" font-size="11" text-anchor="middle" fill="#1a1a1a">⠿ 拖曳</text>
+    <text x="432" y="118" font-size="11" text-anchor="middle" fill="#A62B1F">19×34</text>
+
+    <rect x="530" y="40" width="44" height="44" fill="none" stroke="#A62B1F" stroke-dasharray="4 3"/>
+    <rect x="544" y="54" width="16" height="16" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <text x="552" y="102" font-size="11" text-anchor="middle" fill="#1a1a1a">子任務勾選</text>
+    <text x="552" y="118" font-size="11" text-anchor="middle" fill="#A62B1F">16×16 ← 最小</text>
+
+    <rect x="650" y="40" width="44" height="44" fill="none" stroke="#A62B1F" stroke-dasharray="4 3"/>
+    <rect x="657" y="47" width="29" height="24" fill="#dbe7f4" stroke="#3b6ea5"/>
+    <text x="672" y="102" font-size="11" text-anchor="middle" fill="#1a1a1a">狀態卡</text>
+    <text x="672" y="118" font-size="11" text-anchor="middle" fill="#A62B1F">29×24</text>
+  </g>
+  <rect x="40" y="146" width="820" height="48" rx="8" fill="#f7f9fc" stroke="#dde3ec"/>
+  <text x="56" y="168" font-size="12" fill="#1a1a1a">拖曳把手 <tspan font-family="ui-monospace">⠿</tspan> 19px 寬特別要注意——它需要「按住並拖」，比單純點擊更需要面積，太小會誤觸到整列的點擊。</text>
+  <text x="56" y="186" font-size="12" fill="#5b6472">子任務勾選框 16×16 是原生 checkbox 的預設大小，手機上很難點準。</text>
+</svg></div>
+
+<h2>建議的修法</h2>
+<table>
+  <tr><th style="width:8%">優先</th><th style="width:26%">問題</th><th style="width:34%">修法</th><th>影響</th></tr>
+  <tr><td><b>1</b></td><td>專案名稱被截（Projects／Overview）</td>
+      <td>mobile 下名稱改兩行換行，「N tasks · M subtasks」與進度條垂直堆疊</td>
+      <td>只動 mobile 斷點，desktop 不變</td></tr>
+  <tr><td><b>2</b></td><td>觸控目標 &lt; 32px</td>
+      <td>mobile 下把 <code>⠿</code>／<code>▸</code>／<code>⏻</code>／狀態卡／子任務 checkbox 的可點區補到 44×44（用 padding 擴大命中區，視覺大小可不變）</td>
+      <td>只動 mobile 斷點</td></tr>
+  <tr><td><b>3</b></td><td>Data 分頁表格截字最嚴重（105px）</td>
+      <td>mobile 下把表格改成卡片式堆疊（一列一張卡）</td>
+      <td>工作量最大，等同重寫該分頁的 mobile 版型</td></tr>
+</table>
+
+<div class="rec"><b>建議先做 1 + 2。</b>
+  兩者都只動 mobile 斷點、不碰 desktop，改完你截圖那頁就正常了。<br>
+  <b>3 要單獨決定</b>——把表格改成卡片是版型重寫，不是調樣式；而且「在手機上看 Data 分頁」到底是不是真的使用情境，
+  值得先確認再花力氣。</div>
+
+</main>
+</html>

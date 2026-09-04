@@ -18,6 +18,7 @@ export function EyeToggle({ hidden, onToggle, style }) {
   return (
     <button
       type="button"
+      className="dash-tap"
       onClick={e => { e.stopPropagation(); onToggle(); }}
       title={action}
       aria-label="在 Timeline 顯示此專案"
@@ -50,7 +51,7 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
       <div onClick={onSelect} style={{ background: X.surface, borderRadius: 16, border: `1px solid ${X.border}`, overflow: "hidden", transition: "border-color 0.2s, box-shadow 0.2s", boxShadow: X.surfaceShadow, cursor: "pointer", position: "relative" }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = c; e.currentTarget.style.boxShadow = X.surfaceShadowHover; }} onMouseLeave={e => { e.currentTarget.style.borderColor = X.border; e.currentTarget.style.boxShadow = X.surfaceShadow; }}>
         {dragEnabled && (
-          <span {...attributes} {...listeners} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 10, right: 12, cursor: "grab", fontSize: 16, color: X.textDim, userSelect: "none", zIndex: 2, padding: "2px 4px", borderRadius: 4 }}
+          <span className="dash-tap" {...attributes} {...listeners} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 10, right: 12, cursor: "grab", fontSize: 16, color: X.textDim, userSelect: "none", zIndex: 2, padding: "2px 4px", borderRadius: 4 }}
             onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>⠿</span>
         )}
         {onToggleHidden && (
@@ -73,8 +74,10 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
                   title="刪除圖示">×</button>
               )}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pn}</div>
+            {/* floor the name block: `minWidth: 0` alone lets it shrink to zero width
+                on narrow/zoomed layouts and the text then spills over its siblings. */}
+            <div style={{ flex: "1 1 120px", minWidth: 100 }}>
+              <div className="dash-name-1line" style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>{pn}</div>
               <div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks</div>
             </div>
             <span style={{ fontSize: 20, color: X.textDim }}>›</span>
