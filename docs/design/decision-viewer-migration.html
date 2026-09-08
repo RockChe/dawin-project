@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>決策：viewer 的資料庫上線</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f7f9; --card:#fff; --ink:#1a1d21; --ink2:#4a5159; --ink3:#767e88;
+  --line:#dfe3e8; --line2:#eef1f4;
+  --accent:#2f6df6; --accentbg:#eaf1ff;
+  --red:#c0392b; --redbg:#fdecea;
+  --green:#1f7a4d; --greenbg:#e7f6ee;
+  --amber:#9a6a00; --amberbg:#fdf3dd;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:25px;margin:0 0 4px}
+.sub{color:var(--ink3);font-size:13px;margin-bottom:26px}
+h2{font-size:17px;margin:36px 0 12px;padding-top:18px;border-top:1px solid var(--line)}
+h2 .n{display:inline-block;width:23px;height:23px;line-height:23px;text-align:center;border-radius:6px;
+  background:var(--accentbg);color:var(--accent);font-size:12px;font-weight:700;margin-right:8px;vertical-align:2px}
+h3{font-size:14.5px;margin:20px 0 8px}
+p{margin:9px 0}
+code{background:var(--line2);padding:1px 5px;border-radius:4px;font-size:12.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:#1e2229;color:#e6e9ee;padding:14px 16px;border-radius:9px;overflow-x:auto;
+  font-size:12.5px;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre .c{color:#8b95a5}
+pre .k{color:#7fb3ff}
+pre .s{color:#9ae6a4}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 17px;margin:12px 0}
+blockquote{margin:0;padding:13px 16px;background:var(--card);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--ink2)}
+blockquote p{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;background:var(--card);
+  border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:top}
+th{background:#f0f2f5;color:var(--ink2);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+.scroll{overflow-x:auto}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.t-red{background:var(--redbg);color:var(--red)}
+.t-green{background:var(--greenbg);color:var(--green)}
+.t-amber{background:var(--amberbg);color:var(--amber)}
+.alert{background:var(--redbg);border:1px solid #f2c6c0;border-left:4px solid var(--red);
+  border-radius:0 8px 8px 0;padding:14px 16px;margin:12px 0}
+.alert h3{margin:0 0 6px;color:var(--red);font-size:14.5px}
+.alert p{margin:5px 0;color:#6d2019;font-size:13.5px}
+.ok{background:var(--greenbg);border:1px solid #b8e0ca;border-left:4px solid var(--green);
+  border-radius:0 8px 8px 0;padding:14px 16px;margin:12px 0}
+.ok h3{margin:0 0 6px;color:var(--green);font-size:14.5px}
+.ok p{margin:5px 0;color:#155c39;font-size:13.5px}
+.rec{border:2px solid var(--accent);background:var(--accentbg)}
+.rec .lbl{display:inline-block;background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+  padding:2px 9px;border-radius:20px;margin-bottom:8px}
+ul{margin:8px 0;padding-left:20px} li{margin:5px 0}
+.small{font-size:12.5px;color:var(--ink3)}
+figcaption{font-size:12px;color:var(--ink3);margin-top:8px;text-align:center}
+svg{max-width:100%;height:auto;display:block;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>viewer 的資料庫上線</h1>
+<div class="sub">dawin-dash · 2026-09-08 · 程式碼全部完成、363 測試綠 · 只剩這一步，而它不可逆</div>
+
+<h2><span class="n">1</span>先講結論</h2>
+
+<div class="alert">
+<h3>不要直接跑 <code>npm run db:migrate</code></h3>
+<p>不是因為 <code>viewer</code> 那一行有問題——那一行很安全。
+是因為<strong>你會一次套用三支 migration，而其中兩支的實際狀態沒人確定</strong>。</p>
+<p>真正不可逆的不是「加一個 enum 值」，是<strong>在一段不確定的歷史上，把三支 migration 當成一個原子操作推下去</strong>。</p>
+</div>
+
+<h2><span class="n">2</span>查證：實際會發生什麼事</h2>
+
+<p>我原本以為這步是「產生一支只有一行的 migration，跑掉就好」。查證後不是。</p>
+
+<div class="scroll"><table>
+<tr><th style="width:9%">支數</th><th style="width:26%">內容</th><th>狀態</th></tr>
+<tr>
+  <td><strong>0003</strong></td>
+  <td><code>user_settings</code> 表 ＋ FK ＋ <strong>7 個 index</strong>（共 9 個物件）</td>
+  <td><span class="tag t-amber">不確定</span> CLAUDE.md 說正式環境未套用</td>
+</tr>
+<tr>
+  <td><strong>0004</strong></td>
+  <td><code>task_status</code> 加「暫緩」（<code>BEFORE '提案中'</code>）</td>
+  <td><span class="tag t-amber">不確定</span> 同上</td>
+</tr>
+<tr>
+  <td><strong>0005</strong></td>
+  <td><strong>本次要的：</strong><code>role</code> 加 <code>viewer</code><br>
+      <strong>附帶的：</strong>2 個 <code>ADD COLUMN</code> ＋ 5 個 <code>CREATE INDEX</code></td>
+  <td><span class="tag t-green">新產生</span> 但夾帶了既有欠帳</td>
+</tr>
+</table></div>
+
+<p>0005 的後七句<strong>不是這次改動引入的</strong>。<code>source</code> 欄位與那些 index 早就寫在
+<code>schema.js</code> 裡了（git 追出來是「負責人彩色標籤／建立者來源追蹤」和「全站效能優化 — DB index」
+那兩個 commit 加的），只是當時沒人補跑 <code>db:generate</code>。這次一跑就全被打包進來。</p>
+
+<h3>0005 的完整內容</h3>
+<pre><span class="k">ALTER TYPE</span> "public"."role" <span class="k">ADD VALUE</span> <span class="s">'viewer'</span>;              <span class="c">← 本次唯一要的</span>
+<span class="k">ALTER TABLE</span> "projects" <span class="k">ADD COLUMN</span> "source" varchar(50);      <span class="c">← 既有欠帳</span>
+<span class="k">ALTER TABLE</span> "tasks" <span class="k">ADD COLUMN</span> "source" varchar(50);         <span class="c">← 既有欠帳</span>
+<span class="k">CREATE INDEX</span> "audit_log_action_created_at_idx" ...           <span class="c">← 既有欠帳</span>
+<span class="k">CREATE INDEX</span> "backup_history_status_idx" ...                 <span class="c">← 既有欠帳</span>
+<span class="k">CREATE INDEX</span> "backup_history_created_at_idx" ...             <span class="c">← 既有欠帳</span>
+<span class="k">CREATE INDEX</span> "subtasks_sort_order_idx" ...                   <span class="c">← 既有欠帳</span>
+<span class="k">CREATE INDEX</span> "tasks_sort_order_idx" ...                      <span class="c">← 既有欠帳</span></pre>
+
+<div class="alert">
+<h3>全部語句都沒有 <code>IF NOT EXISTS</code></h3>
+<p>如果正式環境已經有這些欄位或 index（例如有人用過 <code>db:push</code>——
+CLAUDE.md 自己就留了「正式環境若曾 db:push 過需先核對」這句警告），
+<strong>第一句衝突就會中止整支 migration</strong>，而且部分套用後重跑會直接死在同一句。</p>
+</div>
+
+<div class="alert">
+<h3>而且文件本身不可信</h3>
+<p>CLAUDE.md 說「<code>scripts/baseline-migrations.mjs</code> 已就緒」——<strong>那支腳本已經不在 repo 裡了</strong>。
+它說「0003/0004 production apply 尚未執行」，但既然文件在別處已被證實過期，這句也不能當真。</p>
+<p>（同一份文件說測試有 89 個，實際是 363 個。）</p>
+</div>
+
+<h2><span class="n">3</span>問題結構</h2>
+
+<figure>
+<svg viewBox="0 0 900 300" role="img" aria-label="migration 狀態不確定性圖">
+  <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#767e88"/></marker></defs>
+
+  <text x="16" y="24" font-size="13" font-weight="700" fill="#1a1d21">你以為的狀態</text>
+  <rect x="16" y="36" width="380" height="56" rx="8" fill="#e7f6ee" stroke="#b8e0ca"/>
+  <text x="206" y="58" font-size="12" text-anchor="middle" fill="#155c39">正式環境停在 0002</text>
+  <text x="206" y="76" font-size="11" text-anchor="middle" fill="#155c39">跑 migrate → 乖乖套 0003 → 0004 → 0005</text>
+
+  <text x="470" y="24" font-size="13" font-weight="700" fill="#1a1d21">實際可能的三種狀態</text>
+  <rect x="470" y="36" width="414" height="24" rx="6" fill="#e7f6ee" stroke="#b8e0ca"/>
+  <text x="482" y="52" font-size="11.5" fill="#155c39">A · journal 空、物件也空 → 真的落後，原樣跑可以</text>
+  <rect x="470" y="66" width="414" height="24" rx="6" fill="#fdecea" stroke="#f2c6c0"/>
+  <text x="482" y="82" font-size="11.5" fill="#6d2019">B · journal 空、物件已在（曾 db:push）→ 原樣跑必爆</text>
+  <rect x="470" y="96" width="414" height="24" rx="6" fill="#fdecea" stroke="#f2c6c0"/>
+  <text x="482" y="112" font-size="11.5" fill="#6d2019">C · journal 有、物件缺（套到一半）→ 原樣跑也爆</text>
+
+  <line x1="16" y1="146" x2="884" y2="146" stroke="#dfe3e8"/>
+
+  <text x="16" y="172" font-size="13" font-weight="700" fill="#1a1d21">關鍵：db:push 不會寫 __drizzle_migrations</text>
+  <rect x="16" y="184" width="200" height="52" rx="8" fill="#fff" stroke="#dfe3e8"/>
+  <text x="116" y="204" font-size="12" text-anchor="middle" fill="#1a1d21">db:push</text>
+  <text x="116" y="221" font-size="10.5" text-anchor="middle" fill="#767e88">直接改 schema</text>
+
+  <line x1="220" y1="210" x2="264" y2="210" stroke="#767e88" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="268" y="184" width="200" height="52" rx="8" fill="#e7f6ee" stroke="#b8e0ca"/>
+  <text x="368" y="204" font-size="12" text-anchor="middle" fill="#155c39">物件真的存在了</text>
+  <text x="368" y="221" font-size="10.5" text-anchor="middle" fill="#155c39">欄位、index 都有</text>
+
+  <rect x="268" y="246" width="200" height="40" rx="8" fill="#fdecea" stroke="#f2c6c0"/>
+  <text x="368" y="264" font-size="12" text-anchor="middle" fill="#6d2019">但 journal 空白</text>
+  <text x="368" y="279" font-size="10.5" text-anchor="middle" fill="#6d2019">drizzle 以為沒套過</text>
+
+  <line x1="472" y1="230" x2="516" y2="230" stroke="#767e88" stroke-width="1.5" marker-end="url(#ar)"/>
+  <rect x="520" y="196" width="364" height="68" rx="8" fill="#fdecea" stroke="#f2c6c0"/>
+  <text x="702" y="220" font-size="12.5" text-anchor="middle" font-weight="700" fill="#c0392b">drizzle 重跑已存在的 DDL</text>
+  <text x="702" y="240" font-size="11" text-anchor="middle" fill="#6d2019">「column already exists」→ 整支中止</text>
+  <text x="702" y="256" font-size="11" text-anchor="middle" fill="#6d2019">可能留下部分套用的殘局</text>
+</svg>
+<figcaption>唯一能分辨這三種狀態的方法是去問資料庫，不是讀文件</figcaption>
+</figure>
+
+<h2><span class="n">4</span>confer 三方意見</h2>
+
+<div class="ok">
+<h3>一個技術爭議，雙G 給了相反答案，codex 裁了</h3>
+<p><strong>gemini：</strong><code>ALTER TYPE ... ADD VALUE ... BEFORE</code>「絕對不能」在 transaction 裡跑，
+所以 0004 必定失敗 rollback。</p>
+<p><strong>grok：</strong>PG12 起可以，限制只是「同一交易內不能使用新值」，而 0004/0005 後續語句都沒用到新值。</p>
+<p><strong>codex 裁決（信心 0.999）：grok 對。</strong>gemini 描述的是 PostgreSQL 11 以前的限制，
+PG12 起正式改為允許，<code>BEFORE</code>/<code>AFTER</code> 只是同一個語法的排序選項，沒有另行禁止。
+Neon 是 PG16/17，這一項不會失敗。</p>
+</div>
+
+<div class="scroll"><table>
+<tr><th style="width:13%">來源</th><th>關鍵貢獻</th></tr>
+<tr><td>gemini</td>
+  <td>指出 <code>db:push</code> 不會寫 <code>__drizzle_migrations</code>，所以「journal 空」不代表「物件不存在」。
+      也指出 <code>CREATE INDEX</code> 沒帶 <code>CONCURRENTLY</code> 會阻斷寫入。
+      <span class="small">（它對 transaction 那題判錯，見上。）</span></td></tr>
+<tr><td>grok</td>
+  <td>擔心 0004 改變 <code>task_status</code> 的 enum 排序會影響 <code>ORDER BY status</code>。<br>
+      <strong>我實查排除了這一項</strong>——本專案狀態排序全在 JS 端用 <code>STATUSES.indexOf()</code> 做，
+      全 repo 沒有任何 DB 層的 <code>ORDER BY status</code>。這個風險對我們不成立。<br>
+      另提出「以資料庫為準、不信文件」的盤點 SQL，以及先 migrate 再部署 writer 的順序。</td></tr>
+<tr><td>codex<br><span class="tag t-amber">需修正</span> 0.97</td>
+  <td><strong>抓到我盤點不足：</strong>我以為 0003 只是一個 <code>CREATE TABLE</code>，
+      <strong>實際有 9 個物件</strong>（表 ＋ FK ＋ 7 個 index）。已驗證屬實。<br>
+      <strong>指出 <code>IF NOT EXISTS</code> 不夠：</strong>它只跳過同名物件，不驗證定義是否一致——
+      同名 index 可能欄位順序不同、同名 column 可能型別不同。要比對完整定義。<br>
+      <strong>反駁「絕不拆 migration」：</strong>新增一支 forward-only 修復 migration 不會讓 journal 歪，
+      通常才是最穩健的 drift 修法。真正的原則是「不改已被任何環境套用過的歷史」。</td></tr>
+</table></div>
+
+<h2><span class="n">5</span>要你裁的</h2>
+
+<div class="card rec">
+<span class="lbl">我的建議</span>
+<h3>先做唯讀盤點，看清楚再決定怎麼跑</h3>
+<p>理由一句：現在沒有任何人——包括文件——知道正式資料庫的真實狀態，
+而這一步<strong>錯了就拔不掉</strong>（Postgres 不支援 <code>DROP VALUE</code>，回滾要整表型別重建或 PITR）。</p>
+<p>盤點是<strong>唯讀的、零風險的</strong>，跑完就知道是 A/B/C 哪一種狀態，才有辦法選對做法。</p>
+<p class="small">我可以把盤點 SQL 準備好給你貼進 Neon console，或你給我一條唯讀連線我來跑。</p>
+</div>
+
+<div class="card">
+<h3>選項二：你確定正式環境是乾淨的，直接跑</h3>
+<p>如果你很清楚沒人用過 <code>db:push</code>、0003/0004 確實沒套過，那原樣 <code>db:migrate</code> 可以。
+<strong>但請先從正式環境開一個 Neon branch 演練一次</strong>——那是免費的、兩秒的事，
+而且能在真實資料上驗證，比任何推理可靠。</p>
+</div>
+
+<div class="card">
+<h3>選項三：viewer 這步先不上，只交付程式碼</h3>
+<p>程式碼側已經全部完成且測試全綠。授權層、護欄、前端全部就緒，
+<strong>而且三個既存安全漏洞已經修好了</strong>——那三個跟 enum 完全無關，不需要這支 migration 就能上線受益。</p>
+<p>viewer 帳號等你有空處理資料庫時再開。代價：viewer 功能暫時不能用。</p>
+</div>
+
+<h2><span class="n">6</span>不做什麼</h2>
+<ul>
+<li><strong>不用 <code>db:push</code> 救正式環境。</strong>那正是造成這團 drift 的原因。</li>
+<li><strong>不手動拆 0005 成兩支。</strong>journal、snapshot、檔名必須一對一，手動拆會讓之後的
+  <code>generate</code> 誤判狀態、產生更難查的漂移。（若要分離，正確做法是<strong>新增</strong>一支修復 migration，不是拆舊的。）</li>
+<li><strong>不改已經被任何環境套用過的 migration 檔。</strong><code>__drizzle_migrations</code> 存的是 SQL hash，
+  改了會 hash 分裂。</li>
+<li><strong>不在確認 DB 狀態前偽造 journal 紀錄。</strong>手動 insert 已套用紀錄可能永久掩蓋沒執行或只執行一半的 DDL。</li>
+<li><strong>不為了這支 migration 引入 <code>CONCURRENTLY</code>。</strong>codex 判定：對小型低寫入的內部看板，
+  普通 <code>CREATE INDEX</code> 通常可接受，而且包在 transaction 裡失敗還能整體 rollback。
+  但上線前該用實際表大小確認，不能只憑「內部看板」四個字認定。</li>
+</ul>
+
+<h2><span class="n">7</span>不管選哪個，這幾件事都成立</h2>
+<ul>
+<li>程式碼側<strong>完全不需要這支 migration 就能上線</strong>——沒有 viewer 帳號時，
+  admin 與 super_admin 的行為和現在一模一樣。三個安全漏洞的修補也一樣立即生效。</li>
+<li>順序必須是<strong>先 migrate、再部署會寫入 <code>viewer</code> 的程式</strong>。反過來的話建立 viewer 帳號會 500。</li>
+<li>執行前先從正式環境開 Neon branch（那等於一個快照），確保 PITR 視窗還在。</li>
+<li>migrate 要走 <strong>direct 連線</strong>（非 <code>-pooler</code>）——pooler 跑 DDL/交易語意不可靠。</li>
+</ul>
+
+</div>
+</body>
+</html>
