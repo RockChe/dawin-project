@@ -31,17 +31,28 @@ src/
 │   └── api/                   # API routes (upload, upload-banner, download, backup, fetch-csv, health)
 ├── components/
 │   ├── ThemeProvider.jsx      # 主題 Context Provider + useTheme hook
-│   └── dashboard/             # 17 個元件 + tabs/ (6 個子元件)
+│   ├── PermissionProvider.jsx # role Context + useCan(cap) hook（預設 role=null → 全部 false，fail-closed）
+│   └── dashboard/             # 18 個元件 + tabs/ (6 個子元件)
 ├── hooks/
 │   ├── useTaskManager.js      # 核心狀態管理 hook
-│   └── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）；管理 zoom / projectsView / hiddenProjects / timelineSort 等 key
+│   ├── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）；管理 zoom / projectsView / hiddenProjects / timelineSort 等 key
+│   ├── useForbiddenHandler.js # 收到 { error: 'FORBIDDEN' } 時 toast + router.refresh()（處理被降級成 viewer 但畫面還是舊快照）
+│   └── reorderProjects.js     # Projects 拖曳排序的純函式（無 React 依賴）
 ├── lib/
 │   ├── auth.js                # Session 認證（7 天過期）
 │   ├── constants.js           # 全域常數（STATUSES 狀態順序、STATUS_FILTERS 篩選選項）
 │   ├── audit.js               # 審計日誌記錄（logAudit）
 │   ├── backup.js              # 備份導出/上傳/清理（R2 + Google Drive）
+│   ├── backupRunner.js        # 備份執行核心（server-only）。不做授權，授權由呼叫端負責：
+│   │                          #   triggerBackup → withCap('manage')／POST /api/backup → CRON_SECRET
 │   ├── crypto.js              # AES-256-GCM 加密解密（敏感設定保護）
+│   ├── permissions.js         # 角色權限單一真相源：ROLES、CAPABILITIES（allowlist 制）、can(role, cap)
+│   ├── permissionsMatrix.js   # 每支 server action / API route 的 capability 分類 inventory；
+│   │                          #   authzCoverage.test.js 拿它跟原始碼比對，未分類的新 export 會讓測試紅
+│   ├── withCap.js             # 授權 wrapper：withCap(cap, fn) 給 Server Action、withRouteCap(cap, handler) 給 API route
 │   ├── r2.js                  # R2 檔案操作
+│   ├── tableColumns.js        # DataTab 鍵盤格的欄位設定（與可編輯欄位/DB 欄位的一致性由測試 assert）
+│   ├── taskUpdates.js         # 表單欄位名 → DB 欄位名映射
 │   ├── theme.js               # 主題常數與工廠函式（THEMES, F, FM, mkSC 等）
 │   └── utils.js               # 日期格式化、進度計算（子任務/時間雙模式）、CSV 工具
 ├── server/
@@ -62,7 +73,7 @@ scripts/
 
 | Enum | 名稱 | 值 |
 |------|------|-----|
-| roleEnum | `'role'` | `'super_admin'`, `'admin'` |
+| roleEnum | `'role'` | `'super_admin'`, `'admin'`, `'viewer'`（2026-09-08 新增；viewer 只有 read/self/己方 user_settings，無 write/export/manage，見下方「授權層」） |
 | statusEnum | `'task_status'` | `'已完成'`, `'進行中'`, `'待辦'`, `'暫緩'`, `'提案中'`, `'待確認'` |
 | priorityEnum | `'priority'` | `'高'`, `'中'`, `'低'` |
 
@@ -80,29 +91,50 @@ scripts/
 | files | 檔案記錄 | id, taskId→tasks, name, size, mimeType, r2Key, createdBy→users |
 | audit_log | 操作審計 | id, action, userId→users, resourceType, resourceId, detail, createdAt |
 | backup_history | 備份記錄 | id, target, fileName, fileSize, status, error, durationMs, tableCounts, createdAt |
-| user_settings | 個人設定（per-account） | id, userId→users(cascade), key(varchar100), value(JSON text), updatedAt；UNIQUE(userId, key)。**Migration 0003 已合併程式碼，production apply 待執行** |
+| user_settings | 個人設定（per-account） | id, userId→users(cascade), key(varchar100), value(JSON text), updatedAt；UNIQUE(userId, key)。Migration 0003 已於 production apply（2026-09-09 唯讀盤點確認：表與 7 個 index 全在） |
 
 定義在 `src/server/db/schema.js`（Drizzle schema）。
+
+### 授權層（2026-09-08 新增，viewer 角色）
+
+capability 制，allowlist、fail-closed（沒被列進 `CAPABILITIES` 的角色一律沒有該能力）：
+
+| Capability | 角色 | 用途 |
+|---|---|---|
+| `read` | viewer, admin, super_admin | 讀資料 |
+| `self` | viewer, admin, super_admin | 改自己的密碼／自己的 `user_settings` |
+| `export` | admin, super_admin | 匯出全量資料（`/api/download`、備份 GET） |
+| `write` | admin, super_admin | 新增／修改／刪除共享資料 |
+| `manage` | super_admin | 使用者管理、備份設定、破壞性操作 |
+
+- `src/lib/permissions.js`：`can(role, cap)`，單一真相源，前後端共用
+- `src/lib/withCap.js`：`withCap(cap, fn)`（Server Action 用，回傳 `{ error: 'FORBIDDEN' }`）／
+  `withRouteCap(cap, handler)`（API route 用，回傳 403 `NextResponse`）
+- `src/lib/permissionsMatrix.js`：每支對外入口（server action + API route）的 capability 分類 inventory，
+  `src/__tests__/authzCoverage.test.js` 拿它跟原始碼比對，default-deny——新 export 沒分類就紅
+- `src/components/PermissionProvider.jsx` + `useCan(cap)`：前端依 role 藏編輯 UI（純 UI policy，見下方注意事項）
+- `src/hooks/useForbiddenHandler.js`：收到 `{ error: 'FORBIDDEN' }` 統一 toast + `router.refresh()`
 
 ## 開發慣例
 
 ### Server Actions 模式
-所有 Server Action 遵循統一模式：
+所有 Server Action 統一包一層 `withCap`（結構上不可能忘記授權——callback 只有授權通過才會被呼叫）：
 ```javascript
 export async function actionName(params) {
-  const { session, error } = await safeRequireAuth();
-  if (error) return { error };
-  try {
-    // DB 操作
-    return { success: true, data: result };
-  } catch (err) {
-    console.error("[actionName] error:", err);
-    return { error: err.message || "預設錯誤訊息" };
-  }
+  return withCap('write', async (session) => {
+    try {
+      // DB 操作
+      return { success: true, data: result };
+    } catch (err) {
+      console.error("[actionName] error:", err);
+      return { error: err.message || "預設錯誤訊息" };
+    }
+  });
 }
 ```
-- 使用 `safeRequireAuth()` 而非 `requireAuth()`（避免 digest error）
+- `withCap` 內部用 `safeRequireAuth()` 而非 `requireAuth()`（避免 digest error）
 - 回傳 `{ error }` 或 `{ success, data }`，不使用 throw
+- cap 依動作性質選：讀資料 `read`、改自己的東西 `self`、匯出全量 `export`、寫共享資料 `write`、破壞性/管理 `manage`
 
 ### useTaskManager Hook
 - 集中管理所有 CRUD 操作（tasks, subtasks, links, files, projects, config）
@@ -123,7 +155,7 @@ export async function actionName(params) {
 1. 前端 → `POST /api/upload`（FormData，含 taskId）
 2. API route → R2 `PutObjectCommand`
 3. 成功後呼叫 `createFileRecord()` Server Action 寫入 DB
-4. 下載透過 `GET /api/download?key=xxx`（R2 presigned URL 或直接串流）
+4. 下載透過 `GET /api/download?key=xxx`（R2 presigned URL 或直接串流），走 `withRouteCap('export', ...)`——viewer 打這支一律 403
 
 ## 注意事項
 
@@ -132,10 +164,13 @@ export async function actionName(params) {
 - **middleware 限制**：`middleware.js` 只檢查 cookie 是否存在，不驗證 session 有效性。實際驗證在各 Server Action 中進行
 - **SESSION_SECRET**：用於 AES-256-GCM 加密 configTable 中的敏感設定（備份 API Key 等），至少 32 字元隨機字串
 - **CRON_SECRET**：Vercel Cron 觸發 `/api/backup` POST 時的 Bearer token 驗證，防止未授權存取。需在 Vercel 環境變數中設定
-- **Migration 0003/0004**：Wave 1 新增 `user_settings` 表（0003）及 `task_status` enum 新增「暫緩」值（0004）的 migration 已合併至程式碼，**production apply 尚未執行**，須由 Rock 手動 `npm run db:migrate` 完成（0003 含 journal-drift 補建 index，正式環境若曾 `db:push` 過需先核對）
-- **Migration baseline（技術債）**：`scripts/baseline-migrations.mjs` 已就緒（idempotent：讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入 `__drizzle_migrations`，已存在則跳過），用來把 0000–0004 標記為「已套用」，之後 `db:migrate` 只會套 0005+。**待對 prod 執行（碰 prod = gated，須 Rock 確認）**，執行並驗證後刪除臨時腳本
+- **Migration 0003/0004**：Wave 1 新增 `user_settings` 表（0003）及 `task_status` enum 新增「暫緩」值（0004）**已於 production apply**（2026-09-09 對正式環境唯讀盤點確認：`__drizzle_migrations` journal 有 5 筆、`user_settings` 表與 7 個 index 全在）
+- **Migration 0005**：`roleEnum` 新增 `'viewer'` 值，改為冪等 migration（Postgres `ALTER TYPE ... ADD VALUE` 不可 `IF NOT EXISTS` 搭配 transaction，寫法見 `drizzle/migrations/0005_*.sql`），已套用至正式環境
+- **新增 server action / API route 必須包 `withCap` / `withRouteCap`**，並登記進 `src/lib/permissionsMatrix.js`——沒登記或漏包，`src/__tests__/authzCoverage.test.js` 會紅（default-deny 護欄）
+- **前端隱藏編輯按鈕只是 UI policy，不是安全邊界**：`getInitialData()` 會把全量任務資料送進任何登入者的瀏覽器（`useTaskManager` 的 `allT` state），DataTab 的 Export CSV 是純前端從 `allT` 產生——藏按鈕擋不住 DevTools。真正的牆是後端的 `withCap` / `withRouteCap`；前端隱藏只是避免使用者對著點不動的按鈕困惑
+- **Migration baseline（技術債，已解決）**：曾用一支臨時 idempotent 腳本把 0000–0004 標記為「已套用」到 `__drizzle_migrations`（讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入，已存在則跳過），已對 prod 執行並驗證、**腳本已刪除，不在 repo 中**；之後 `db:migrate` 只會套 0005+
 - **Wave 2 個人化（工單 0531）**：Projects 卡片/明細（精簡列表）切換（`projectsView`，user_settings）、Timeline 隱藏專案眼睛 toggle（`hiddenProjects`=project.id 陣列，user_settings；**Dashboard 掛 `useUserSettings` 為單一真相**，以 props 同時傳 ProjectsTab 顯示眼睛狀態 + TimelineTab 過濾，W2-2 不自呼叫 hook）、Timeline 排序（`timelineSort`，user_settings）。ephemeral UI state 走 localStorage：active tab（`dash-activeTab`）、Timeline 收折（`dash-timelineCollapsed`）
-- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），Wave 2 後共 89 個測試全綠
+- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），viewer 角色（2026-09-08）落地後共 **363 個測試 / 31 個檔**全綠
 
 ## 關鍵參考檔案
 
@@ -148,8 +183,13 @@ export async function actionName(params) {
 - `src/components/dashboard/Dashboard.jsx` — 主元件（187 行）
 - `src/components/dashboard/tabs/` — 6 個 tab 子元件
 - `src/lib/backup.js` — 備份核心函式庫（導出/上傳/清理）
+- `src/lib/backupRunner.js` — 備份執行核心（server-only，不含授權）
 - `src/server/actions/backup.js` — 備份 Server Actions（設定/觸發/歷史/審計）
 - `src/app/(admin)/backup/page.jsx` — 備份管理 UI
+- `src/lib/permissions.js` — 角色權限單一真相源（`can(role, cap)`）
+- `src/lib/withCap.js` — 授權 wrapper（`withCap` / `withRouteCap`）
+- `src/lib/permissionsMatrix.js` — 對外入口 capability 分類 inventory
+- `src/__tests__/authzCoverage.test.js` — default-deny 護欄測試
 
 ---
 
