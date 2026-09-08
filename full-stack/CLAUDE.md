@@ -165,7 +165,15 @@ export async function actionName(params) {
 - **SESSION_SECRET**：用於 AES-256-GCM 加密 configTable 中的敏感設定（備份 API Key 等），至少 32 字元隨機字串
 - **CRON_SECRET**：Vercel Cron 觸發 `/api/backup` POST 時的 Bearer token 驗證，防止未授權存取。需在 Vercel 環境變數中設定
 - **Migration 0003/0004**：Wave 1 新增 `user_settings` 表（0003）及 `task_status` enum 新增「暫緩」值（0004）**已於 production apply**（2026-09-09 對正式環境唯讀盤點確認：`__drizzle_migrations` journal 有 5 筆、`user_settings` 表與 7 個 index 全在）
-- **Migration 0005**：`roleEnum` 新增 `'viewer'` 值，改為冪等 migration（Postgres `ALTER TYPE ... ADD VALUE` 不可 `IF NOT EXISTS` 搭配 transaction，寫法見 `drizzle/migrations/0005_*.sql`），已套用至正式環境
+- **Migration 0005**：`roleEnum` 新增 `'viewer'` 值，已套用至正式環境（2026-09-09）。
+  **全部語句改寫成冪等（`IF NOT EXISTS`）**，包含 `ALTER TYPE ... ADD VALUE IF NOT EXISTS 'viewer'`——
+  該寫法在 PG12+ 於 transaction 內合法（本專案是 PG 17.0011），實測通過。
+  **為什麼要改寫**：drizzle 產出的原版會失敗。0005 的 7 個非 enum 物件（`projects.source`／`tasks.source`
+  兩個欄位 + 5 個 index）**在資料庫裡早就存在**——先前有人用 `db:push` 推過 schema，
+  而 `db:push` 不會寫 `__drizzle_migrations`，所以 journal 顯示未套用、物件卻已存在。
+  照原版跑會在第二句 `ADD COLUMN` 撞 `column already exists`，整支 transaction rollback，連 viewer 都加不進去。
+  **教訓**：這個 repo 有 `db:push` 造成的 drift，動 migration 前先用 `docs/migration-audit.sql`
+  對正式環境做唯讀盤點，不要相信文件或 journal 單方面的說法
 - **新增 server action / API route 必須包 `withCap` / `withRouteCap`**，並登記進 `src/lib/permissionsMatrix.js`——沒登記或漏包，`src/__tests__/authzCoverage.test.js` 會紅（default-deny 護欄）
 - **前端隱藏編輯按鈕只是 UI policy，不是安全邊界**：`getInitialData()` 會把全量任務資料送進任何登入者的瀏覽器（`useTaskManager` 的 `allT` state），DataTab 的 Export CSV 是純前端從 `allT` 產生——藏按鈕擋不住 DevTools。真正的牆是後端的 `withCap` / `withRouteCap`；前端隱藏只是避免使用者對著點不動的按鈕困惑
 - **Migration baseline（技術債，已解決）**：曾用一支臨時 idempotent 腳本把 0000–0004 標記為「已套用」到 `__drizzle_migrations`（讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入，已存在則跳過），已對 prod 執行並驗證、**腳本已刪除，不在 repo 中**；之後 `db:migrate` 只會套 0005+
