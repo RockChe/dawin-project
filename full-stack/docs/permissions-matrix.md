@@ -129,7 +129,7 @@ NODE_ENV 判斷不是 session 授權，必須跑在 `withRouteCap` 之前；但�
 4. **自我驗證（負向 fixture）**：測試檔內建一段刻意寫錯的 fixture 原始碼（未分類、
    沒包、死分支、cap 錯、arrow function、`export { name }` 等各種繞過形式），用
    **跟正式檢查完全同一組 helper** 去驗證這些壞例子真的會被抓到。這是護欄的護欄——
-   如果 fixture 改用另一套 regex，测试可能綠但正式邏輯其實沒在驗證。
+   如果 fixture 改用另一套 regex，測試可能綠但正式邏輯其實沒在驗證。
 
 新增 action / route 時：
 1. 用 `withCap('<cap>', ...)` 或 `withRouteCap('<cap>', ...)` 包起來，且必須是
