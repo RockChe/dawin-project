@@ -25,8 +25,11 @@ export async function getConfig(key) {
 
 export async function getConfigs(keys) {
   return withCap('read', async () => {
+    // 空陣列沒有東西可查，且 `[].every(...)` vacuously true 會放行到 inArray(col, [])——
+    // drizzle 在部分版本對空陣列會 throw，這裡沒有 try/catch，會變成 digest error。
+    if (!Array.isArray(keys) || keys.length === 0) return {};
     // 整批拒絕，不靜默過濾——否則呼叫端會拿到少一半的結果卻不知道。
-    if (!Array.isArray(keys) || !keys.every(isPublicKey)) return { error: 'FORBIDDEN' };
+    if (!keys.every(isPublicKey)) return { error: 'FORBIDDEN' };
     const rows = await db.select().from(config).where(inArray(config.key, keys));
     const result = {};
     for (const row of rows) {

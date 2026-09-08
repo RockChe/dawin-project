@@ -42,6 +42,15 @@ describe('config key 白名單（漏洞 C）', () => {
     expect(selectSpy).not.toHaveBeenCalled();
   });
 
+  // 空陣列時 `[].every(...)` vacuously true 會放行去查 DB，而 drizzle 的
+  // `inArray(col, [])` 在部分版本會 throw（沒有 try/catch，變成 digest error）。
+  // 空陣列本來就沒有東西可查，應該在白名單檢查之前直接短路回傳 {}。
+  it('getConfigs([]) 直接回傳 {}，不查 DB', async () => {
+    currentSession = { userId: 'u1', role: 'admin' };
+    expect(await getConfigs([])).toEqual({});
+    expect(selectSpy).not.toHaveBeenCalled();
+  });
+
   it('白名單內的 key 正常可讀', async () => {
     currentSession = { userId: 'u1', role: 'admin' };
     const r = await getConfig('owners');
