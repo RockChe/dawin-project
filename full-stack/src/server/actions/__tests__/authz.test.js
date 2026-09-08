@@ -54,3 +54,30 @@ describe('tasks.js：viewer 不能執行任何寫入', () => {
     await expect(call()).resolves.toEqual({ error: 'UNAUTHORIZED' });
   });
 });
+
+const projects = await import('@/server/actions/projects');
+
+const PROJECT_WRITE_ACTIONS = [
+  ['createProject',       () => { const fd = new FormData(); fd.set('name', 'P'); return projects.createProject(fd); }],
+  ['updateProject',       () => projects.updateProject('11111111-1111-1111-1111-111111111111', { name: 'P' })],
+  ['deleteProject',       () => projects.deleteProject('11111111-1111-1111-1111-111111111111')],
+  ['deleteProjectBanner', () => projects.deleteProjectBanner('11111111-1111-1111-1111-111111111111')],
+  ['reorderProjects',     () => projects.reorderProjects(['11111111-1111-1111-1111-111111111111'])],
+];
+
+describe('projects.js：viewer 不能執行任何寫入', () => {
+  it.each(PROJECT_WRITE_ACTIONS)('viewer 呼叫 %s → FORBIDDEN 且不碰 DB', async (_n, call) => {
+    currentSession = VIEWER;
+    await expect(call()).resolves.toEqual({ error: 'FORBIDDEN' });
+  });
+
+  // 這條鎖住「ownership 不得 bypass role」——
+  // 就算 viewer 是這個專案的 createdBy，也一樣不能改。
+  it('viewer 即使是專案的 createdBy 也不能改（角色是全域硬上限）', async () => {
+    currentSession = { userId: 'owner-1', role: 'viewer' };
+    await expect(
+      projects.updateProject('11111111-1111-1111-1111-111111111111', { name: 'X' })
+    ).resolves.toEqual({ error: 'FORBIDDEN' });
+    // db 全被設成會 throw，能回 FORBIDDEN 就證明沒去查 createdBy
+  });
+});
