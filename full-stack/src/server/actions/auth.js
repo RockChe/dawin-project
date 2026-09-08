@@ -5,6 +5,7 @@ import { users, sessions } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { createSession, destroySession, getSession } from '@/lib/auth';
+import { withCap } from '@/lib/withCap';
 import { redirect } from 'next/navigation';
 
 export async function login(prevState, formData) {
@@ -76,37 +77,37 @@ export async function getSessionInfo() {
 }
 
 export async function setPassword(prevState, formData) {
-  const session = await getSession();
-  if (!session) {
-    return { success: true, redirectTo: '/login' };
-  }
+  const result = await withCap('self', async (session) => {
+    const newPassword = formData.get('password')?.toString();
+    const confirmPassword = formData.get('confirmPassword')?.toString();
 
-  const newPassword = formData.get('password')?.toString();
-  const confirmPassword = formData.get('confirmPassword')?.toString();
+    if (!newPassword || newPassword.length < 8) {
+      return { error: '密碼至少需要 8 個字元' };
+    }
 
-  if (!newPassword || newPassword.length < 8) {
-    return { error: '密碼至少需要 8 個字元' };
-  }
+    if (newPassword !== confirmPassword) {
+      return { error: '兩次密碼輸入不一致' };
+    }
 
-  if (newPassword !== confirmPassword) {
-    return { error: '兩次密碼輸入不一致' };
-  }
+    try {
+      const hash = await bcrypt.hash(newPassword, 12);
 
-  try {
-    const hash = await bcrypt.hash(newPassword, 12);
+      await db
+        .update(users)
+        .set({
+          passwordHash: hash,
+          mustChangePassword: false,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, session.userId));
+    } catch (err) {
+      console.error('[setPassword] error:', err.message);
+      return { error: '設定密碼時發生錯誤，請稍後再試' };
+    }
 
-    await db
-      .update(users)
-      .set({
-        passwordHash: hash,
-        mustChangePassword: false,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, session.userId));
-  } catch (err) {
-    console.error('[setPassword] error:', err.message);
-    return { error: '設定密碼時發生錯誤，請稍後再試' };
-  }
-
-  return { success: true, redirectTo: '/' };
+    return { success: true, redirectTo: '/' };
+  });
+  // 未登入時維持原本導回登入頁的行為，不要改成錯誤訊息
+  if (result?.error === 'UNAUTHORIZED') return { success: true, redirectTo: '/login' };
+  return result;
 }

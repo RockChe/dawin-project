@@ -144,8 +144,8 @@ vi.mock('@/lib/auth', () => ({ safeRequireAuth: mockSafeRequireAuth }));
 const { getUserSettings, setUserSetting } = await import('@/server/actions/userSettings');
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-function authAs(userId) {
-  mockSafeRequireAuth.mockResolvedValue({ session: { userId }, error: null });
+function authAs(userId, role = 'admin') {
+  mockSafeRequireAuth.mockResolvedValue({ session: { userId, role }, error: null });
 }
 
 function noAuth() {
@@ -242,5 +242,14 @@ describe('per-user isolation', () => {
     authAs('user-B');
     const resB = await getUserSettings();
     expect(resB.data.theme).toBe('dark');
+  });
+});
+
+// ── 5. viewer 保有 self 能力 ───────────────────────────────────────────────
+describe('viewer 保有 self 能力（擋掉會鎖死首次登入與個人化）', () => {
+  it('viewer 可以寫自己的 UI 偏好', async () => {
+    authAs('viewer-1', 'viewer');
+    const r = await setUserSetting('timelineSort', 'date');
+    expect(r).not.toEqual({ error: 'FORBIDDEN' });
   });
 });
