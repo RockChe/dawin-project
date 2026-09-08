@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { withRouteCap } from '@/lib/withCap';
 import { getDownloadUrl } from '@/lib/r2';
 import { db } from '@/server/db';
 import { files } from '@/server/db/schema';
@@ -7,12 +7,7 @@ import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const GET = withRouteCap('export', async (request, ctx, session) => {
   const { searchParams } = new URL(request.url);
   const r2Key = searchParams.get('key');
 
@@ -50,4 +45,4 @@ export async function GET(request) {
       { status: 500 }
     );
   }
-}
+});

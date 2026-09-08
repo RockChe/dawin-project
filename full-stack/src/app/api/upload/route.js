@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { withRouteCap } from '@/lib/withCap';
 import { uploadToR2, deleteFromR2 } from '@/lib/r2';
 import { createFileRecord } from '@/server/actions/tasks';
 import { isValidUUID } from '@/lib/utils';
@@ -34,12 +34,7 @@ function sanitizeFilename(name) {
     .trim();
 }
 
-export async function POST(request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const POST = withRouteCap('write', async (request, ctx, session) => {
   const formData = await request.formData();
   const file = formData.get('file');
   const taskId = formData.get('taskId');
@@ -101,4 +96,4 @@ export async function POST(request) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { withRouteCap } from '@/lib/withCap';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,12 +32,7 @@ function isAllowedUrl(urlStr) {
   }
 }
 
-export async function POST(request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const POST = withRouteCap('write', async (request, ctx, session) => {
   try {
     const { url } = await request.json();
     if (!url || typeof url !== 'string') {
@@ -99,4 +94,4 @@ export async function POST(request) {
       { status: 500 }
     );
   }
-}
+});

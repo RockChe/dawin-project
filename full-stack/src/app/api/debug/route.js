@@ -3,20 +3,20 @@ import { cookies } from 'next/headers';
 import { db } from '@/server/db';
 import { sessions, users, projects, tasks } from '@/server/db/schema';
 import { eq, and, gt, sql } from 'drizzle-orm';
-import { getSession } from '@/lib/auth';
+import { withRouteCap } from '@/lib/withCap';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+// NODE_ENV 閘不是 session 授權，跟原本一樣放在 withRouteCap 之前——
+// 不管有沒有登入，正式環境一律 404，不讓 debug 端點暴露存在。
+export async function GET(request, ctx) {
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available' }, { status: 404 });
   }
+  return debugHandler(request, ctx);
+}
 
-  const session = await getSession();
-  if (!session || session.role !== 'super_admin') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+const debugHandler = withRouteCap('manage', async () => {
   const result = { timestamp: new Date().toISOString(), checks: {} };
 
   // 1. Check cookie
@@ -85,4 +85,4 @@ export async function GET() {
   }
 
   return NextResponse.json(result);
-}
+});
