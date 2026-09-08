@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'fs';
+import { describe, it, expect, afterEach } from 'vitest';
+import { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import { MATRIX, EXEMPT } from '@/lib/permissionsMatrix';
 
 const ACTIONS_DIR = 'src/server/actions';
@@ -15,13 +16,13 @@ const API_DIR = 'src/app/api';
  * 造成兩側掃描深度不對稱（route 那側 listRouteFiles 本來就是遞迴的）。
  * 排除 `__tests__`：那裡面的 export 是測試輔助，不是 action。
  */
-function listActionFiles(dir = ACTIONS_DIR, out = []) {
+function listActionFiles(dir = ACTIONS_DIR, out = [], base = dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.isDirectory()) {
       if (e.name === '__tests__') continue;
-      listActionFiles(join(dir, e.name), out);
-    } else if (e.name.endsWith('.js')) {
-      out.push(join(dir, e.name).replace(/\\/g, '/').slice(ACTIONS_DIR.length + 1));
+      listActionFiles(join(dir, e.name), out, base);
+    } else if (/\.(js|jsx|mjs|ts|tsx)$/.test(e.name)) {
+      out.push(join(dir, e.name).replace(/\\/g, '/').slice(base.length + 1));
     }
   }
   return out;
@@ -54,8 +55,8 @@ function listActionExports(src) {
 
 /** route 形式：export const GET = ... 或 export async function GET(...) */
 function listRouteExports(src) {
-  const named = [...src.matchAll(/^export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\b/gm)].map(m => m[1]);
-  const fns = [...src.matchAll(/^export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/gm)].map(m => m[1]);
+  const named = [...src.matchAll(/^export\s+const\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b/gm)].map(m => m[1]);
+  const fns = [...src.matchAll(/^export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b/gm)].map(m => m[1]);
   return [...new Set([...named, ...fns])];
 }
 
@@ -114,6 +115,10 @@ function routeAssignmentOf(src, method) {
   if (!fn) return null;
   const delegate = /return\s+(\w+)\s*\(/.exec(fn[0]);
   if (!delegate) return null;
+  // 委派前不得出現 db. 或 await——否則業務邏輯已經在授權檢查前跑掉了，
+  // 委派目標即使有包 withRouteCap 也救不回來。
+  const before = fn[0].slice(0, delegate.index);
+  if (/\bdb\.|\bawait\b/.test(before)) return null;
   const def = new RegExp(`const\\s+${delegate[1]}\\s*=\\s*([^\\n]*)`, 'm').exec(src);
   return def ? def[1].trim() : null;
 }
@@ -158,12 +163,12 @@ function hasDefaultExport(src) {
 }
 
 /**
- * 檔案開頭是否有頂層 `'use server'` 指令（只認前 3 行，避免誤判註解或字串裡的巧合）。
- * Next.js 判定 Server Action 看的是這個指令，跟目錄位置無關——
+ * 檔案開頭是否有頂層 `'use server'` 指令（掃前 20 行，容納版權/授權註解區塊
+ * 之後才出現的指令）。Next.js 判定 Server Action 看的是這個指令，跟目錄位置無關——
  * 把它放在 `ACTIONS_DIR` 之外，護欄的清點與 withCap 檢查會完全看不到它。
  */
 function hasUseServerDirective(src) {
-  return /^\s*(['"])use server\1\s*;?\s*$/m.test(src.split('\n').slice(0, 3).join('\n'));
+  return /^\s*(['"])use server\1\s*;?\s*$/m.test(src.split('\n').slice(0, 20).join('\n'));
 }
 
 /** 遞迴列出 src/ 下所有 js/jsx/mjs/ts/tsx 檔案（絕對排除 node_modules） */
@@ -369,6 +374,77 @@ describe('授權覆蓋率護欄', () => {
     it('抓得到沒包 withRouteCap 的 route handler', () => {
       expect(routeIsWrapped(ROUTE_FIXTURE, 'POST', 'write')).toBe(false);
       expect(routeIsWrapped(ROUTE_FIXTURE, 'GET', 'export')).toBe(true);
+    });
+
+    // fix wave finding B2-1：listActionFiles 只收 .js，src/server/actions/evil.jsx
+    // 開頭寫 'use server' 會完全不在 inventory 掃描範圍內。
+    describe('B2-1 listActionFiles 必須抓到 .jsx/.mjs/.ts/.tsx', () => {
+      let tmpDir;
+      afterEach(() => {
+        if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
+        tmpDir = undefined;
+      });
+
+      it('抓得到非 .js 副檔名的 action 檔', () => {
+        tmpDir = mkdtempSync(join(tmpdir(), 'authz-fixture-'));
+        writeFileSync(join(tmpDir, 'evil.jsx'), "'use server';\nexport async function evilThing() { return db.delete(x); }");
+        writeFileSync(join(tmpDir, 'normal.js'), "'use server';\nexport async function ok() { return withCap('write', async () => {}); }");
+        const found = listActionFiles(tmpDir);
+        expect(found).toContain('evil.jsx');
+        expect(found).toContain('normal.js');
+      });
+    });
+
+    // fix wave finding B2-2：Next.js 的 route handler 也支援 OPTIONS/HEAD，
+    // v1 的 listRouteExports 沒抓，這兩個 method 可以無聲繞過 inventory。
+    it('抓得到 OPTIONS 與 HEAD route handler', () => {
+      const FX = [
+        "export const OPTIONS = withRouteCap('write', async () => {});",
+        'export async function HEAD(req) { return new Response(null); }',
+      ].join('\n');
+      expect(listRouteExports(FX)).toEqual(expect.arrayContaining(['OPTIONS', 'HEAD']));
+    });
+
+    // fix wave finding B2-3：委派形狀 (b) 只找函式體內第一個 `return X(`，不檢查
+    // return 之前有沒有東西。`await db.delete(...)` 在委派之前執行，等於業務邏輯
+    // 已經在授權檢查之前跑完了。
+    it('委派前出現 db. 或 await 時，不得判定為已包（即使委派目標有 withRouteCap）', () => {
+      const EVIL_ROUTE_FIXTURE = [
+        'export async function POST(req) {',
+        '  await db.delete(tasks);',
+        '  return h(req);',
+        '}',
+        "const h = withRouteCap('write', async () => {});",
+      ].join('\n');
+      expect(routeAssignmentOf(EVIL_ROUTE_FIXTURE, 'POST')).toBeNull();
+      expect(routeIsWrapped(EVIL_ROUTE_FIXTURE, 'POST', 'write')).toBe(false);
+    });
+
+    it('委派前沒有 db./await 的合法形狀（如 /api/debug）仍判定為已包', () => {
+      const OK_ROUTE_FIXTURE = [
+        'export async function GET(request, ctx) {',
+        "  if (process.env.NODE_ENV === 'production') {",
+        "    return NextResponse.json({ error: 'Not available' }, { status: 404 });",
+        '  }',
+        '  return debugHandler(request, ctx);',
+        '}',
+        "const debugHandler = withRouteCap('manage', async () => {});",
+      ].join('\n');
+      expect(routeIsWrapped(OK_ROUTE_FIXTURE, 'GET', 'manage')).toBe(true);
+    });
+
+    // fix wave finding B2-4：hasUseServerDirective 只掃前 3 行，4 行版權註解後的
+    // 'use server' 就隱形，讓「所有 use server 檔案都必須位於 actions 目錄下」那條測不到它。
+    it('4 行註解區塊後的 use server 仍要被抓到', () => {
+      const FX = [
+        '// Copyright (c) 2026',
+        '// All rights reserved.',
+        '// Some more header comment',
+        '// Yet another line',
+        "'use server';",
+        'export async function evilThing() { return db.delete(x); }',
+      ].join('\n');
+      expect(hasUseServerDirective(FX)).toBe(true);
     });
   });
 });
