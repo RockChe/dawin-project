@@ -2,14 +2,14 @@
 
 import { db } from '@/server/db';
 import { users } from '@/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/audit';
 import { withCap } from '@/lib/withCap';
 import { ROLES } from '@/lib/permissions';
 
 export async function getUsers() {
-  return withCap('manage', async () => {
+  return withCap('manage', async (session) => {
     const result = await db
       .select({
         id: users.id,
@@ -21,7 +21,8 @@ export async function getUsers() {
       })
       .from(users)
       .orderBy(users.createdAt);
-    return result;
+    // currentUserId 讓前端知道「哪一列是自己」，藉此 disable 自己那列的角色下拉
+    return { users: result, currentUserId: session.userId };
   });
 }
 
@@ -99,20 +100,63 @@ export async function resetUserPassword(userId, newPassword) {
   });
 }
 
+// 保留最後一個 super_admin 的不變量：neon-http 這條 driver 不支援互動式 transaction
+// （db.transaction() 直接 throw「No transactions support」），所以「先數還剩幾個、
+// 再決定要不要放行」不能拆成兩支查詢——兩個 super_admin 同時互降，兩邊各自查到
+// 「還有 2 個」就都放行，系統會歸零。
+// 這裡改用「WITH ... FOR UPDATE + UPDATE/DELETE ... RETURNING」包成單一 SQL 陳述式：
+// FOR UPDATE 鎖住全部 super_admin 列，逼第二個請求排隊等第一個 commit 後才重新讀到
+// 更新後的計數，藉此在單一 statement 內做到跟 transaction 一樣的原子性。
+// 兩支語句共用同一段守護條件的文字，寫成 raw string 而非 sql fragment ——
+// drizzle 的 sql`` 樣板會把巢狀的 sql fragment 攤平成 query 的一部分，
+// 這裡故意用純字串內插（沒有使用者輸入、無 injection 疑慮）以維持兩支語句的
+// 參數順序單純好懂（UPDATE：[role, userId]；DELETE：[userId]）。
+const SUPER_ADMIN_LOCK_CTE = `WITH sa_lock AS (SELECT id FROM users WHERE role = 'super_admin' FOR UPDATE)`;
+const SUPER_ADMIN_GUARD = `(role <> 'super_admin' OR (SELECT count(*) FROM sa_lock) > 1)`;
+
 export async function updateUser(userId, data) {
   return withCap('manage', async (session) => {
     if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
 
-    const name = data?.name?.trim();
-    if (!name || name.length === 0) return { error: '姓名不可為空' };
-    if (name.length > 255) return { error: '姓名不可超過 255 字元' };
+    const hasName = data?.name !== undefined;
+    const hasRole = data?.role !== undefined;
+    if (!hasName && !hasRole) return { error: '沒有可更新的欄位' };
 
-    await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+    let name;
+    if (hasName) {
+      name = data.name?.trim();
+      if (!name || name.length === 0) return { error: '姓名不可為空' };
+      if (name.length > 255) return { error: '姓名不可超過 255 字元' };
+    }
+
+    if (hasRole) {
+      if (!ROLES.includes(data.role)) return { error: `無效的角色: ${data.role}` };
+      // 不可把自己降級：一旦畫面群組把自己擋在外面，就再也進不來改回去了
+      if (userId === session.userId && data.role !== session.role) {
+        return { error: '不能變更自己的角色' };
+      }
+    }
+
+    if (hasName) {
+      await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+    }
+
+    if (hasRole) {
+      const result = await db.execute(sql`
+        ${sql.raw(SUPER_ADMIN_LOCK_CTE)}
+        UPDATE users
+        SET role = ${data.role}, updated_at = now()
+        WHERE id = ${userId} AND ${sql.raw(SUPER_ADMIN_GUARD)}
+        RETURNING id, role
+      `);
+      const rows = result.rows ?? result;
+      if (rows.length === 0) return { error: '系統必須至少保留一個 Super Admin' };
+    }
 
     await logAudit('USER_UPDATE', session.userId, {
       resourceType: 'user',
       resourceId: userId,
-      detail: `name → ${name}`,
+      detail: [hasName && `name → ${name}`, hasRole && `role → ${data.role}`].filter(Boolean).join('; '),
     });
 
     return { success: true };
@@ -128,15 +172,19 @@ export async function deleteUser(userId) {
       return { error: '無法刪除自己的帳號' };
     }
 
-    // 先取得被刪除使用者的 email 供 audit log 記錄
-    const target = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
-
-    await db.delete(users).where(eq(users.id, userId));
+    const result = await db.execute(sql`
+      ${sql.raw(SUPER_ADMIN_LOCK_CTE)}
+      DELETE FROM users
+      WHERE id = ${userId} AND ${sql.raw(SUPER_ADMIN_GUARD)}
+      RETURNING id, email
+    `);
+    const rows = result.rows ?? result;
+    if (rows.length === 0) return { error: '系統必須至少保留一個 Super Admin' };
 
     await logAudit('USER_DELETE', session.userId, {
       resourceType: 'user',
       resourceId: userId,
-      detail: target[0]?.email,
+      detail: rows[0]?.email,
     });
 
     return { success: true };
