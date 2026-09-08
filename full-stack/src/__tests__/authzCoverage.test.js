@@ -60,19 +60,27 @@ function listRouteExports(src) {
 }
 
 /**
- * 取出 function body 的**第一個 statement**。
- * 這是護欄的關鍵：只看第一個 statement，`if (false) { return withCap(...) }`
+ * 取出 function body 的**第一個 statement**，回傳 `{ text, source }`。
+ * `source` 標記這個 statement 是從哪種形狀擷取出來的（'fn' = function 宣告、
+ * 'arrow' = const-arrow）——`actionIsWrapped` 要靠這個標記分開判定，
+ * 否則「裸呼叫 withCap（沒 return/await，結果被丟棄）」會被 function 宣告那條
+ * 誤判成「有包」，實際上後面的程式碼完全無授權執行。
+ * 這也是護欄的關鍵：只看第一個 statement，`if (false) { return withCap(...) }`
  * 這種死分支就不會被誤判成「有包」。
  */
 function firstStatementOf(src, name) {
   const decl = new RegExp(`export\\s+async\\s+function\\s+${name}\\s*\\([^)]*\\)\\s*\\{`, 'm');
   const m = decl.exec(src);
-  if (!m) return constArrowBodyOf(src, name);
-  const body = src.slice(m.index + m[0].length);
-  // 第一個 statement = 到第一個分號或第一個 { 為止（去掉註解與空白）
-  const cleaned = body.replace(/^\s*(\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*\s*/, '');
-  const end = cleaned.search(/[;{]/);
-  return end < 0 ? cleaned.trim() : cleaned.slice(0, end + 1).trim();
+  if (m) {
+    const body = src.slice(m.index + m[0].length);
+    // 第一個 statement = 到第一個分號或第一個 { 為止（去掉註解與空白）
+    const cleaned = body.replace(/^\s*(\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*\s*/, '');
+    const end = cleaned.search(/[;{]/);
+    const text = end < 0 ? cleaned.trim() : cleaned.slice(0, end + 1).trim();
+    return { text, source: 'fn' };
+  }
+  const arrow = constArrowBodyOf(src, name);
+  return arrow ? { text: arrow, source: 'arrow' } : null;
 }
 
 /**
@@ -112,21 +120,25 @@ function routeAssignmentOf(src, method) {
 
 /**
  * 正式判定：這支 action 的第一個 statement 是不是對應的 withCap。
- * 只接受這三種形式——共同性質是「withCap 在第一個 statement，業務邏輯在 callback 裡」：
- *   return withCap('cap', ...)                 ← 絕大多數 action（function 宣告形式）
- *   const result = await withCap('cap', ...)   ← setPassword（外層要保留導回登入頁的行為）
- *   withCap('cap', ...)                        ← const-arrow 形式（inventory 也認得這種寫法，
- *                                                 驗證沒跟上會誤判成沒包，還會誘導人去加 EXEMPT）
- * 不要為了讓某支通過而再放寬——放寬到能通過死分支，自我驗證那幾條就會紅。
+ * 依 `firstStatementOf` 回傳的 `source` 分開判定——這條分岔是 fix round 2 的重點：
+ *   - function 宣告（source === 'fn'）：**必須把 withCap 的結果 return 或 await 出去**。
+ *     裸呼叫 `withCap('write', async () => {})`（沒有 return/await）不算，因為呼叫端
+ *     不會等那個 Promise，後面的程式碼會在授權檢查完成前就先執行——是貨真價實的繞過，
+ *     不是可接受的誤判。
+ *   - const-arrow（source === 'arrow'）：箭頭函式的 body 本身就是回傳值，
+ *     `withCap(...)` 或 `return withCap(...)`（block 形式）都算。
+ * 不要為了讓某支通過而再放寬——放寬到能通過死分支或裸呼叫，自我驗證那幾條就會紅。
  */
 function actionIsWrapped(src, name, cap) {
   const first = firstStatementOf(src, name);
   if (!first) return false;
   const c = `\\s*['"]${cap}['"]`;
-  return new RegExp(`^return\\s+withCap\\(${c}`).test(first)
-      || new RegExp(`^const\\s+\\w+\\s*=\\s*await\\s+withCap\\(${c}`).test(first)
-      // const-arrow 無 block／無 return 時，捕捉到的第一個 statement 直接就是 withCap(...)
-      || new RegExp(`^withCap\\(${c}`).test(first);
+  if (first.source === 'fn') {
+    return new RegExp(`^return\\s+withCap\\(${c}`).test(first.text)
+        || new RegExp(`^const\\s+\\w+\\s*=\\s*await\\s+withCap\\(${c}`).test(first.text);
+  }
+  return new RegExp(`^withCap\\(${c}`).test(first.text)
+      || new RegExp(`^return\\s+withCap\\(${c}`).test(first.text);
 }
 
 /** 正式判定：這支 route handler 是不是 `withRouteCap('<cap>'` 的產物 */
@@ -134,6 +146,38 @@ function routeIsWrapped(src, method, cap) {
   const assign = routeAssignmentOf(src, method);
   if (!assign) return false;
   return new RegExp(`^withRouteCap\\(\\s*['"]${cap}['"]`).test(assign);
+}
+
+/**
+ * 這支檔案有沒有頂層 `export default`。抽成共用函式而不是各處各寫一條 regex——
+ * 上一輪的自我驗證測試把同一條 regex 寫死在測試裡驗自己，是恆真句，
+ * 正式那條的 regex 被改壞也測不出來。正式檢查與自我驗證都必須呼叫這支。
+ */
+function hasDefaultExport(src) {
+  return /^export\s+default\b/m.test(src);
+}
+
+/**
+ * 檔案開頭是否有頂層 `'use server'` 指令（只認前 3 行，避免誤判註解或字串裡的巧合）。
+ * Next.js 判定 Server Action 看的是這個指令，跟目錄位置無關——
+ * 把它放在 `ACTIONS_DIR` 之外，護欄的清點與 withCap 檢查會完全看不到它。
+ */
+function hasUseServerDirective(src) {
+  return /^\s*(['"])use server\1\s*;?\s*$/m.test(src.split('\n').slice(0, 3).join('\n'));
+}
+
+/** 遞迴列出 src/ 下所有 js/jsx/mjs/ts/tsx 檔案（絕對排除 node_modules） */
+function listAllSrcFiles(dir = 'src', out = []) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name).replace(/\\/g, '/');
+    if (e.isDirectory()) {
+      if (e.name === 'node_modules') continue;
+      listAllSrcFiles(p, out);
+    } else if (/\.(js|jsx|mjs|ts|tsx)$/.test(e.name)) {
+      out.push(p);
+    }
+  }
+  return out;
 }
 
 describe('授權覆蓋率護欄', () => {
@@ -204,9 +248,21 @@ describe('授權覆蓋率護欄', () => {
     const offenders = [];
     for (const file of listActionFiles()) {
       const src = readFileSync(join(ACTIONS_DIR, file), 'utf8');
-      if (/^export\s+default\b/m.test(src)) offenders.push(file);
+      if (hasDefaultExport(src)) offenders.push(file);
     }
     expect(offenders, 'default export 在呼叫端沒有名字，無法納入授權 inventory').toEqual([]);
+  });
+
+  // fix round 2 finding 2：ACTIONS_DIR 是寫死的路徑，但 Next.js 判定 Server Action
+  // 看的是檔案有沒有頂層 'use server'，跟目錄位置無關。把它放在 ACTIONS_DIR 之外，
+  // 護欄的清點、withCap 檢查全部看不到——這條掃全部 src/ 堵住這個逃逸路徑。
+  it("所有 'use server' 檔案都必須位於 src/server/actions/ 底下", () => {
+    const strays = [];
+    for (const file of listAllSrcFiles()) {
+      const src = readFileSync(file, 'utf8');
+      if (hasUseServerDirective(src) && !file.includes(`${ACTIONS_DIR}/`)) strays.push(file);
+    }
+    expect(strays, "use server 檔案放在 actions 目錄外會讓授權護欄看不到它").toEqual([]);
   });
 
   // ── 負向 fixture：證明掃描器自己會紅 ──
@@ -230,6 +286,10 @@ describe('授權覆蓋率護欄', () => {
       // fix round 1 finding 3：inventory 說支援 const-arrow 形式，驗證卻只認 function 宣告——
       // 正確包了 withCap 的 const-arrow action 會被誤判成沒包，錯誤訊息還會誘導人開 EXEMPT 後門。
       "export const arrowGood = async (a) => withCap('write', async () => db.insert(x));",
+      // fix round 2 finding 1：function 宣告裡裸呼叫 withCap（沒有 return/await）——
+      // withCap 內部確實會檢查，但那個 Promise 被丟棄，呼叫端不會等它，
+      // 後面的程式碼會在授權檢查完成前就先執行，是貨真價實的繞過。
+      "export async function bareCall() { withCap('write', async () => {}); return db.insert(x); }",
     ].join('\n');
 
     const ROUTE_FIXTURE = [
@@ -281,9 +341,19 @@ describe('授權覆蓋率護欄', () => {
 
     // fix round 1 finding 1：export default 對三條 inventory 正則完全不匹配，
     // 連「未分類」都不會被抓到——這是該紅卻沒紅的靜默繞過。
+    // fix round 2：改呼叫 hasDefaultExport（正式檢查用的同一支），
+    // 上一輪把 regex 寫死在測試裡驗自己是恆真句，正式那條被改壞也測不出來。
     it('抓得到 export default（不得使用）', () => {
       const FX = 'export default async function evil() { return db.delete(x); }';
-      expect(/^export\s+default\b/m.test(FX)).toBe(true);
+      expect(hasDefaultExport(FX)).toBe(true);
+      expect(hasDefaultExport("export async function ok() { return withCap('write', async () => {}); }")).toBe(false);
+    });
+
+    // fix round 2 finding 1：裸呼叫 withCap（結果被丟棄）不算已包——
+    // withCap 回傳的 Promise 沒被 return/await，呼叫端不會等它，
+    // 後面的程式碼會在授權檢查完成前就先無授權執行。
+    it('裸呼叫 withCap（結果被丟棄）不算已包——後面的程式碼會無授權執行', () => {
+      expect(actionIsWrapped(FIXTURE, 'bareCall', 'write')).toBe(false);
     });
 
     // 端到端：未分類的 export 走完整比對流程後必須報錯，不能只驗 helper
