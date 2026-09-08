@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { FM } from "@/lib/theme";
 import { STATUSES } from "@/lib/constants";
 import { useTheme } from "@/components/ThemeProvider";
+import { useCan } from "@/components/PermissionProvider";
 import { pD, fD, toISO, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
 import EditableCell from "../EditableCell";
 import InlineNote from "../InlineNote";
@@ -14,6 +15,15 @@ import { getEditableCols } from "@/lib/tableColumns";
 
 const COL_POS = { project: 0, task: 1, name: 1, owner: 2, status: 3, priority: 4, category: 6, start: 7, end: 8, notes: 9 };
 
+// viewer 唯讀時取代 EditableCell：純文字、不掛 onClick，避免點了沒反應的格子。
+function ReadOnlyCell({ value, renderValue, style }) {
+  return (
+    <span style={{ display: "block", padding: "1px 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 20, ...style }}>
+      {renderValue ? renderValue(value) : (value || "—")}
+    </span>
+  );
+}
+
 function DataTab({
   filtered, allS, allT, twp, projects,
   updateTask, deleteTask, addTask, toggleSub, updateSub, addSub, deleteSub,
@@ -23,6 +33,9 @@ function DataTab({
   showToast, setModalTask,
 }) {
   const { X, SC, PC, CC, inputStyle } = useTheme();
+  const canWrite = useCan("write");
+  const canManage = useCan("manage");
+  const canExport = useCan("export");
   const [expanded, setExpanded] = useState(new Set());
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -162,24 +175,24 @@ function DataTab({
             {isMobile ? (
               <>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>Export</button>
-                  <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>
-                  <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>URL</button>
-                  {selectedRows.size > 0 && <select onChange={async e => { const v = e.target.value; if (!v) return; await updateManyTasks([...selectedRows], "owner", v); e.target.value = ""; }} style={{ borderRadius: 20, padding: "4px 8px", fontSize: 12, border: `1px solid ${X.accent}`, background: X.surface, color: X.accent, cursor: "pointer", fontWeight: 600 }}><option value="">指派 Owner ({selectedRows.size})</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>}
-                  {selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>刪除 ({selectedRows.size})</button>}
-                  {userRole === "super_admin" && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.red, cursor: "pointer" }}>Clean All</button>}
+                  {canExport && <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>Export</button>}
+                  {canWrite && <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>}
+                  {canWrite && <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>URL</button>}
+                  {canWrite && selectedRows.size > 0 && <select onChange={async e => { const v = e.target.value; if (!v) return; await updateManyTasks([...selectedRows], "owner", v); e.target.value = ""; }} style={{ borderRadius: 20, padding: "4px 8px", fontSize: 12, border: `1px solid ${X.accent}`, background: X.surface, color: X.accent, cursor: "pointer", fontWeight: 600 }}><option value="">指派 Owner ({selectedRows.size})</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>}
+                  {canWrite && selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>刪除 ({selectedRows.size})</button>}
+                  {canManage && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.red, cursor: "pointer" }}>Clean All</button>}
                 </div>
-                <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
+                {canWrite && <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>}
               </>
             ) : (
               <>
-                <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Export CSV</button>
-                <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import CSV<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>
-                <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Import URL</button>
-                {selectedRows.size > 0 && <select onChange={async e => { const v = e.target.value; if (!v) return; await updateManyTasks([...selectedRows], "owner", v); e.target.value = ""; }} style={{ borderRadius: 20, padding: "5px 12px", fontSize: 14, border: `1px solid ${X.accent}`, background: X.surface, color: X.accent, cursor: "pointer", fontWeight: 600 }}><option value="">指派 Owner ({selectedRows.size})</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>}
-                {selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>刪除已選 ({selectedRows.size})</button>}
-                {userRole === "super_admin" && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.red, cursor: "pointer" }}>Clean All</button>}
-                <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>
+                {canExport && <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Export CSV</button>}
+                {canWrite && <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import CSV<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>}
+                {canWrite && <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Import URL</button>}
+                {canWrite && selectedRows.size > 0 && <select onChange={async e => { const v = e.target.value; if (!v) return; await updateManyTasks([...selectedRows], "owner", v); e.target.value = ""; }} style={{ borderRadius: 20, padding: "5px 12px", fontSize: 14, border: `1px solid ${X.accent}`, background: X.surface, color: X.accent, cursor: "pointer", fontWeight: 600 }}><option value="">指派 Owner ({selectedRows.size})</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>}
+                {canWrite && selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>刪除已選 ({selectedRows.size})</button>}
+                {canManage && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.red, cursor: "pointer" }}>Clean All</button>}
+                {canWrite && <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>}
               </>
             )}
           </div>
@@ -216,7 +229,7 @@ function DataTab({
                 <div key={d.id} style={{ background: selectedRows.has(d.id) ? `${X.accent}10` : X.surface, borderRadius: 12, border: `1px solid ${selectedRows.has(d.id) ? X.accent + "40" : X.border}`, overflow: "hidden", marginBottom: 8 }}>
                   <div onClick={() => toggle(d.id)} style={{ padding: "12px 14px", cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { e.stopPropagation(); setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} onClick={e => e.stopPropagation()} style={{ cursor: "pointer", accentColor: X.accent, flexShrink: 0 }} />
+                      {canWrite && <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { e.stopPropagation(); setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} onClick={e => e.stopPropagation()} style={{ cursor: "pointer", accentColor: X.accent, flexShrink: 0 }} />}
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.task}</span>
                       <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{d.status}</span>
@@ -238,19 +251,22 @@ function DataTab({
                       {d.notes && <div style={{ padding: "8px 14px", fontSize: 13, color: X.textSec, background: X.surfaceLight }}>{d.notes}</div>}
                       {tSubs.map(sub => (
                         <div key={sub.id} style={{ padding: "8px 14px", background: X.surfaceLight, borderTop: `1px solid ${X.border}22`, display: "flex", alignItems: "center", gap: 8 }}>
-                          <span onClick={e => { e.stopPropagation(); toggleSub(sub.id); }} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: "pointer" }}>{sub.done ? "✓" : ""}</span>
-                          <span style={{ flexShrink: 0 }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
+                          <span onClick={canWrite ? e => { e.stopPropagation(); toggleSub(sub.id); } : undefined} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: canWrite ? "pointer" : "default" }}>{sub.done ? "✓" : ""}</span>
+                          <span style={{ flexShrink: 0 }}>{canWrite
+                            ? <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} />
+                            : <ReadOnlyCell value={sub.name} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, display: "inline" }} />}</span>
                           <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
-                          <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
+                          {canWrite && <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
                             {editingSubOwner === sub.id
                               ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 12, minWidth: 140 }} />
                               : <span onClick={() => setEditingSubOwner(sub.id)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
                             }
-                          </span>
-                          <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.6 }}>×</button>
+                          </span>}
+                          {!canWrite && <OwnerTags value={sub.owner} configOwners={configOwners} />}
+                          {canWrite && <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.6 }}>×</button>}
                         </div>
                       ))}
-                      {showSubAdd === d.id
+                      {canWrite && (showSubAdd === d.id
                         ? <div onClick={e => e.stopPropagation()} style={{ padding: "8px 14px", background: X.surfaceLight, borderTop: `1px solid ${X.border}22`, display: "flex", flexWrap: "wrap", gap: 6 }}>
                           <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px", minWidth: 120 }} />
                           <div style={{ flex: "0 0 140px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
@@ -260,10 +276,10 @@ function DataTab({
                         : <div onClick={e => { e.stopPropagation(); setShowSubAdd(d.id); setSubDraft({ name: "", owner: "" }); }} style={{ padding: "8px 14px", background: X.surfaceLight, borderTop: `1px solid ${X.border}22`, cursor: "pointer", opacity: 0.7 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}>
                           <span style={{ fontSize: 13, color: X.accent, fontWeight: 500 }}>+ Add subtask</span>
                         </div>
-                      }
-                      <div style={{ padding: "8px 14px", borderTop: `1px solid ${X.border}`, display: "flex", justifyContent: "flex-end" }}>
+                      )}
+                      {canWrite && <div style={{ padding: "8px 14px", borderTop: `1px solid ${X.border}`, display: "flex", justifyContent: "flex-end" }}>
                         <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(d.id); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 16, padding: "3px 12px", fontSize: 12, color: X.red, cursor: "pointer" }}>Delete</button>
-                      </div>
+                      </div>}
                     </div>
                   )}
                 </div>
@@ -274,7 +290,7 @@ function DataTab({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead><tr style={{ background: X.surfaceLight }}>
                 <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}`, textAlign: "center" }}>
-                  <input type="checkbox" checked={paged.length > 0 && paged.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(paged.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />
+                  {canWrite && <input type="checkbox" checked={paged.length > 0 && paged.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(paged.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />}
                 </th>
                 {[{ k: "project", l: "Project" }, { k: "task", l: "Task" }, { k: "owner", l: "Owner" }, { k: "status", l: "Status" }, { k: "priority", l: "Pri" }, { k: "progress", l: "Progress" }, { k: "category", l: "Category" }, { k: "start", l: "Start" }, { k: "end", l: "End" }, { k: "notes", l: "Notes" }, { k: "creatorName", l: "Creator" }].map(col => (
                   <th key={col.k} onClick={() => handleSort(col.k)} style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: X.textDim, fontSize: 13, borderBottom: `1px solid ${X.border}`, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>{col.l}<SI col={col.k} /></th>
@@ -286,44 +302,46 @@ function DataTab({
                 {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = subsByTaskId[d.id] || [];
                   return [
                     <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}`, background: selectedRows.has(d.id) ? `${X.accent}10` : "transparent" }} onMouseEnter={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = X.surfaceHover; }} onMouseLeave={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = "transparent"; }}>
-                      <td style={{ padding: "9px 6px", textAlign: "center" }}><input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} /></td>
+                      <td style={{ padding: "9px 6px", textAlign: "center" }}>{canWrite && <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} />}</td>
                       <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.project}>{d.project || "—"}</div></div></td>
-                      <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}><EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /></div></div></td>
-                      <td style={{ padding: "9px 8px", fontSize: 14 }}><EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /></td>
-                      <td style={{ padding: "9px 8px" }}><EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={STATUSES} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /></td>
-                      <td style={{ padding: "9px 8px" }}><EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /></td>
+                      <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}>{canWrite ? <EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /> : <ReadOnlyCell value={d.task} />}</div></div></td>
+                      <td style={{ padding: "9px 8px", fontSize: 14 }}>{canWrite ? <EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /> : <ReadOnlyCell value={d.owner} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} />}</td>
+                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={STATUSES} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /> : <ReadOnlyCell value={d.status} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} />}</td>
+                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /> : <ReadOnlyCell value={d.priority} style={{ display: "inline-block", color: pc.color, fontSize: 14, fontWeight: 600 }} />}</td>
                       <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></td>
-                      <td style={{ padding: "9px 8px" }}><EditableCell value={d.category} onSave={v => updateTask(d.id, "category", v)} {...cellP(d.id, "category")} options={configCats} style={{ padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} /></td>
-                      <td style={{ padding: "9px 8px" }}><EditableCell value={d.start} onSave={v => updateTask(d.id, "start", v)} {...cellP(d.id, "start")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /></td>
-                      <td style={{ padding: "9px 8px" }}><EditableCell value={d.end} onSave={v => updateTask(d.id, "end", v)} {...cellP(d.id, "end")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /></td>
-                      <td style={{ padding: "9px 8px", maxWidth: 180 }}><EditableCell value={d.notes} onSave={v => updateTask(d.id, "notes", v)} {...cellP(d.id, "notes")} style={{ fontSize: 14, color: X.textSec }} /></td>
+                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.category} onSave={v => updateTask(d.id, "category", v)} {...cellP(d.id, "category")} options={configCats} style={{ padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} /> : <ReadOnlyCell value={d.category} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} />}</td>
+                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.start} onSave={v => updateTask(d.id, "start", v)} {...cellP(d.id, "start")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /> : <ReadOnlyCell value={fD(d.start)} style={{ fontFamily: FM, fontSize: 14, color: X.text }} />}</td>
+                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.end} onSave={v => updateTask(d.id, "end", v)} {...cellP(d.id, "end")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /> : <ReadOnlyCell value={fD(d.end)} style={{ fontFamily: FM, fontSize: 14, color: X.text }} />}</td>
+                      <td style={{ padding: "9px 8px", maxWidth: 180 }}>{canWrite ? <EditableCell value={d.notes} onSave={v => updateTask(d.id, "notes", v)} {...cellP(d.id, "notes")} style={{ fontSize: 14, color: X.textSec }} /> : <ReadOnlyCell value={d.notes} style={{ fontSize: 14, color: X.textSec }} />}</td>
                       <td style={{ padding: "9px 8px", fontSize: 12, color: X.textDim, whiteSpace: "nowrap" }}>{d.creatorName || "—"}{d.source && <span style={{ marginLeft: 4, padding: "0 4px", borderRadius: 4, background: d.source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: d.source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{d.source === 'csv_import' ? 'CSV' : '手動'}</span>}</td>
-                      <td style={{ padding: "6px", textAlign: "center" }}><button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(d.id); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: X.red, fontSize: 14, padding: "2px 6px" }}>×</button></td>
+                      <td style={{ padding: "6px", textAlign: "center" }}>{canWrite && <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(d.id); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: X.red, fontSize: 14, padding: "2px 6px" }}>×</button>}</td>
                     </tr>,
                     ...(isE ? [...tSubs.map(sub => (
                       <tr key={sub.id} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
                         <td />
                         <td />
                         <td style={{ padding: "7px 8px 7px 30px", fontSize: 14 }}>
-                          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={e => { e.stopPropagation(); toggleSub(sub.id); }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: canWrite ? "pointer" : "default" }} onClick={canWrite ? e => { e.stopPropagation(); toggleSub(sub.id); } : undefined}>
                             <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff" }}>{sub.done ? "✓" : ""}</span>
-                            <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} {...cellP(sub.id, "name")} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />
+                            {canWrite
+                              ? <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} {...cellP(sub.id, "name")} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />
+                              : <ReadOnlyCell value={sub.name} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />}
                           </label>
                         </td>
                         <td style={{ padding: "7px 8px", fontSize: 14 }}>
-                          <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative", display: "inline-block" }}>
+                          {canWrite ? <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative", display: "inline-block" }}>
                             {editingSubOwner === sub.id
                               ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13, minWidth: 140 }} />
                               : <span onClick={() => setEditingSubOwner(sub.id)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
                             }
-                          </span>
+                          </span> : <OwnerTags value={sub.owner} configOwners={configOwners} />}
                         </td>
                         <td colSpan={2} style={{ padding: "7px 8px" }}>{sub.done ? <span style={{ fontSize: 14, color: X.green, fontWeight: 600 }}>Done</span> : <span style={{ fontSize: 14, color: X.textDim }}>Pending</span>}</td>
-                        <td style={{ padding: "7px 8px", fontFamily: FM, fontSize: 14, color: sub.done ? X.green : X.textDim }}>{sub.done_date ? fD(sub.done_date) : "\u2014"}</td>
-                        <td colSpan={5} style={{ padding: "7px 8px", fontSize: 14 }}><EditableCell value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} {...cellP(sub.id, "notes")} style={{ color: X.textDim }} /></td>
-                        <td style={{ padding: "4px", textAlign: "center" }}><button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button></td>
+                        <td style={{ padding: "7px 8px", fontFamily: FM, fontSize: 14, color: sub.done ? X.green : X.textDim }}>{sub.done_date ? fD(sub.done_date) : "—"}</td>
+                        <td colSpan={5} style={{ padding: "7px 8px", fontSize: 14 }}>{canWrite ? <EditableCell value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} {...cellP(sub.id, "notes")} style={{ color: X.textDim }} /> : <ReadOnlyCell value={sub.notes} style={{ color: X.textDim }} />}</td>
+                        <td style={{ padding: "4px", textAlign: "center" }}>{canWrite && <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>}</td>
                       </tr>)),
-                      <tr key={d.id + "_addsub"} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
+                      ...(canWrite ? [<tr key={d.id + "_addsub"} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
                         <td />
                         <td />
                         <td colSpan={11} style={{ padding: "6px 8px 6px 30px" }}>
@@ -337,7 +355,7 @@ function DataTab({
                             : <span onClick={e => { e.stopPropagation(); setShowSubAdd(d.id); setSubDraft({ name: "", owner: "" }); }} style={{ fontSize: 13, color: X.accent, fontWeight: 500, cursor: "pointer", opacity: 0.7 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}>+ Add subtask</span>
                           }
                         </td>
-                      </tr>
+                      </tr>] : [])
                     ] : [])
                   ]; })}
               </tbody>
