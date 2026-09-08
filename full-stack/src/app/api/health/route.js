@@ -14,5 +14,7 @@ export async function GET() {
     checks.status = 'degraded';
     checks.db = false;
   }
+  checks.cronSecret = Boolean(process.env.CRON_SECRET && process.env.CRON_SECRET.length >= 32);
+  if (!checks.cronSecret) checks.status = 'degraded';
   return NextResponse.json(checks);
 }
