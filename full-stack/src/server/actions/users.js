@@ -29,12 +29,12 @@ export async function createUser(formData) {
     const email = formData.get('email')?.toString().trim().toLowerCase();
     const name = formData.get('name')?.toString().trim();
     const password = formData.get('password')?.toString();
-    const role = formData.get('role')?.toString() || 'admin';
+    const role = formData.get('role')?.toString();
 
-    // Validate role enum
-    const VALID_ROLES = ['super_admin', 'admin'];
-    if (!VALID_ROLES.includes(role)) {
-      return { error: `無效的角色: ${role}` };
+    // Validate role enum：漏傳 role 應該是錯誤，不是靜默給出寫入權限
+    const VALID_ROLES = ['super_admin', 'admin', 'viewer'];
+    if (!role || !VALID_ROLES.includes(role)) {
+      return { error: `無效的角色: ${role ?? '(未指定)'}` };
     }
 
     if (!email || !name || !password) {

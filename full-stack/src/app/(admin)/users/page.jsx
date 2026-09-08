@@ -139,6 +139,7 @@ export default function UsersPage() {
               <select name="role" style={{ ...inputStyle, cursor: 'pointer' }}>
                 <option value="admin">Admin</option>
                 <option value="super_admin">Super Admin</option>
+                <option value="viewer">Viewer</option>
               </select>
             </div>
           </div>
@@ -181,10 +182,14 @@ export default function UsersPage() {
                 <td style={{ padding: '12px 16px' }}>
                   <span style={{
                     padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                    background: user.role === 'super_admin' ? `${X.purple}15` : `${X.accent}15`,
-                    color: user.role === 'super_admin' ? X.purple : X.accent,
+                    background: user.role === 'super_admin' ? `${X.purple}15`
+                              : user.role === 'admin'       ? `${X.accent}15`
+                              :                               `${X.textDim}15`,
+                    color: user.role === 'super_admin' ? X.purple
+                         : user.role === 'admin'       ? X.accent
+                         :                               X.textDim,
                   }}>
-                    {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                    {user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'Viewer'}
                   </span>
                 </td>
                 <td style={{ padding: '12px 16px' }}>

@@ -36,6 +36,13 @@
       "when": 1780198195987,
       "tag": "0004_aberrant_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788881285868,
+      "tag": "0005_nostalgic_lord_hawal",
+      "breakpoints": true
     }
   ]
 }
