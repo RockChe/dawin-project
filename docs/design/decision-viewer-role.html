@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>決策：新增 viewer 唯讀角色</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1a1d21; --ink2:#4a5159; --ink3:#767e88;
+  --line:#dfe3e8; --line2:#eef1f4;
+  --accent:#2f6df6; --accentbg:#eaf1ff;
+  --red:#c0392b; --redbg:#fdecea;
+  --green:#1f7a4d; --greenbg:#e7f6ee;
+  --amber:#9a6a00; --amberbg:#fdf3dd;
+  --purple:#6b3fa0; --purplebg:#f2ecfb;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.2px}
+.sub{color:var(--ink3);font-size:13px;margin-bottom:28px}
+h2{font-size:18px;margin:38px 0 12px;padding-top:18px;border-top:1px solid var(--line);letter-spacing:-.1px}
+h2 .n{display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:6px;
+  background:var(--accentbg);color:var(--accent);font-size:12px;font-weight:700;margin-right:8px;vertical-align:2px}
+h3{font-size:15px;margin:22px 0 8px;color:var(--ink)}
+p{margin:9px 0}
+code{background:var(--line2);color:var(--ink);padding:1px 5px;border-radius:4px;font-size:12.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}
+blockquote{margin:0;padding:14px 16px;background:var(--card);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--ink2)}
+blockquote p{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;background:var(--card);
+  border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:top}
+th{background:#f0f2f5;color:var(--ink2);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.t-red{background:var(--redbg);color:var(--red)}
+.t-green{background:var(--greenbg);color:var(--green)}
+.t-amber{background:var(--amberbg);color:var(--amber)}
+.t-blue{background:var(--accentbg);color:var(--accent)}
+.t-purple{background:var(--purplebg);color:var(--purple)}
+.t-gray{background:var(--line2);color:var(--ink3)}
+.alert{background:var(--redbg);border:1px solid #f2c6c0;border-left:4px solid var(--red);
+  border-radius:0 8px 8px 0;padding:14px 16px;margin:12px 0}
+.alert h3{margin:0 0 6px;color:var(--red);font-size:14.5px}
+.alert p{margin:5px 0;color:#6d2019;font-size:13.5px}
+.ok{background:var(--greenbg);border:1px solid #b8e0ca;border-left:4px solid var(--green);
+  border-radius:0 8px 8px 0;padding:14px 16px;margin:12px 0}
+.ok h3{margin:0 0 6px;color:var(--green);font-size:14.5px}
+.ok p{margin:5px 0;color:#155c39;font-size:13.5px}
+.rec{border:2px solid var(--accent);background:var(--accentbg)}
+.rec .lbl{display:inline-block;background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+  padding:2px 9px;border-radius:20px;margin-bottom:8px}
+ul{margin:8px 0;padding-left:20px}
+li{margin:5px 0}
+.small{font-size:12.5px;color:var(--ink3)}
+.flow{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:14px 0}
+.node{flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px 13px}
+.node .h{font-weight:700;font-size:13px;margin-bottom:5px}
+.node .d{font-size:12.5px;color:var(--ink2);line-height:1.5}
+.arrow{display:flex;align-items:center;color:var(--ink3);font-size:20px;padding:0 2px}
+figcaption{font-size:12px;color:var(--ink3);margin-top:8px;text-align:center}
+svg{max-width:100%;height:auto;display:block;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>新增 viewer 唯讀角色</h1>
+<div class="sub">dawin-dash · 2026-09-08 · 已完成 confer（gemini + grok → codex 三輪）· <strong>已裁定，等實作核准</strong></div>
+
+<h2><span class="n">1</span>你的原話</h2>
+<blockquote>
+<p>「目前 member 的權限如何區分?」</p>
+<p>「我想加一個 viewer，就是只能看，無法操作任何的編輯功能」</p>
+</blockquote>
+<p class="small">以上為 L1 錨點，逐字保留。以下為我的解讀與設計，非你的原話。</p>
+
+<h2><span class="n">2</span>查證結果：現況與缺口</h2>
+
+<p>系統目前<strong>沒有 member 這個角色</strong>，只有兩級 <code>super_admin</code> / <code>admin</code>。
+「負責人 owner」是任務上的自由文字標籤，不影響權限。</p>
+
+<div class="scroll"><table>
+<tr><th>面向</th><th>現況</th></tr>
+<tr><td>角色</td><td><code>roleEnum = ['super_admin','admin']</code>，預設 <code>admin</code></td></tr>
+<tr><td>Session</td><td>DB-backed（每次請求 join <code>users</code> 撈即時 role）→ <span class="tag t-green">改角色立即生效</span></td></tr>
+<tr><td>授權層數</td><td>只有兩個：<code>safeRequireAuth()</code>（登入即可）、<code>safeRequireAdmin()</code>（實為 super_admin）</td></tr>
+<tr><td>寫入 action</td><td>約 20 支，<strong>全部只擋「有沒有登入」</strong>——沒有「能不能寫」這一層</td></tr>
+<tr><td>admin 之間</td><td>無資料隔離。任何 admin 都能改彼此的任務；只有「專案本身」的改名/刪除有 owner 檢查</td></tr>
+</table></div>
+
+<h3>查證途中挖出三個既存漏洞（與 viewer 無關，但擋在路上）</h3>
+
+<div class="alert">
+<h3>A · <code>cronBackup</code> 是無守衛的 server action</h3>
+<p><code>backup.js</code> 開頭是 <code>'use server'</code>，<code>cronBackup()</code> 是 export 且刻意不做授權
+（註解寫「cron uses CRON_SECRET」）。但 <code>CRON_SECRET</code> 只保護 <code>/api/backup</code> 這條 HTTP 路徑；
+Next.js 會為 <code>'use server'</code> 檔的<strong>每一支 export</strong> 註冊可從瀏覽器呼叫的 endpoint，
+而該檔又被 client 邊界的 <code>(admin)/backup/page.jsx</code> 引用。</p>
+<p><strong>後果：存在第二條不需任何憑證即可觸發整庫匯出並上傳到 R2/GDrive 的入口。</strong></p>
+</div>
+
+<div class="alert">
+<h3>B · <code>CRON_SECRET</code> 沒設定時等於不設防</h3>
+<p><code>api/backup/route.js:14</code> — <code>const expected = `Bearer ${process.env.CRON_SECRET}`</code>。
+環境變數未設定時，<code>expected</code> 就是字串 <code>"Bearer undefined"</code>，
+攻擊者送同一個 header 就通過比對。全 repo 沒有任何對該變數的存在性檢查。</p>
+</div>
+
+<div class="alert">
+<h3>C · 備份憑證跟一般設定放在同一張表，讀寫只要登入</h3>
+<p><code>config</code> 表同時存 <code>owners</code>/<code>categories</code> 與備份憑證。
+其中 <code>backup_r2_bucket</code>、<code>backup_r2_account_id</code>、<code>backup_gdrive_email</code>、
+<code>backup_gdrive_folder</code> 是<strong>明文</strong>（金鑰本身有加密）。</p>
+<p>而 <code>getConfig(key)</code> 只要登入就能讀<strong>任意 key</strong>，
+<code>saveConfig(key,value)</code> 只要登入就能覆寫<strong>任意 key</strong>——包含把備份目標改指向攻擊者的 bucket。</p>
+<p><strong>開 viewer 這扇門之前必須先關這扇窗</strong>，否則等於是我親手把它暴露給最不受信任的帳號。</p>
+</div>
+
+<h2><span class="n">3</span>問題結構：授權要擋在哪一層</h2>
+
+<figure>
+<svg viewBox="0 0 940 400" role="img" aria-label="三種授權放置位置的比較圖">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#767e88"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="26" font-size="13" font-weight="700" fill="#1a1d21">瀏覽器請求</text>
+  <rect x="16" y="38" width="112" height="52" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="72" y="60" font-size="12" text-anchor="middle" fill="#1a1d21">前端 UI</text>
+  <text x="72" y="77" font-size="11" text-anchor="middle" fill="#767e88">按鈕/表單</text>
+
+  <line x1="132" y1="64" x2="176" y2="64" stroke="#767e88" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="180" y="38" width="120" height="52" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="240" y="60" font-size="12" text-anchor="middle" fill="#1a1d21">middleware</text>
+  <text x="240" y="77" font-size="11" text-anchor="middle" fill="#767e88">只看 cookie 在不在</text>
+
+  <line x1="304" y1="64" x2="348" y2="64" stroke="#767e88" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="352" y="24" width="150" height="38" rx="8" fill="#eaf1ff" stroke="#2f6df6"/>
+  <text x="427" y="41" font-size="12" text-anchor="middle" fill="#2f6df6">server action</text>
+  <text x="427" y="55" font-size="10.5" text-anchor="middle" fill="#2f6df6">約 20 支寫入</text>
+
+  <rect x="352" y="70" width="150" height="38" rx="8" fill="#eaf1ff" stroke="#2f6df6"/>
+  <text x="427" y="87" font-size="12" text-anchor="middle" fill="#2f6df6">API route</text>
+  <text x="427" y="101" font-size="10.5" text-anchor="middle" fill="#2f6df6">upload / csv</text>
+
+  <line x1="506" y1="64" x2="550" y2="64" stroke="#767e88" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="554" y="38" width="112" height="52" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="610" y="60" font-size="12" text-anchor="middle" fill="#1a1d21">DB / R2</text>
+  <text x="610" y="77" font-size="11" text-anchor="middle" fill="#767e88">副作用發生</text>
+
+  <line x1="16" y1="130" x2="924" y2="130" stroke="#dfe3e8"/>
+
+  <text x="20" y="158" font-size="13" font-weight="700" fill="#1a1d21">三種放法的差別</text>
+
+  <rect x="16" y="172" width="292" height="96" rx="9" fill="#fdecea" stroke="#f2c6c0"/>
+  <text x="32" y="194" font-size="12.5" font-weight="700" fill="#c0392b">① 只擋前端（藏按鈕）</text>
+  <text x="32" y="214" font-size="11.5" fill="#6d2019">viewer 直接送請求就寫進去了。</text>
+  <text x="32" y="231" font-size="11.5" fill="#6d2019">這不是牆，是窗簾。</text>
+  <text x="32" y="255" font-size="11" fill="#c0392b" font-weight="700">✗ 不採用</text>
+
+  <rect x="324" y="172" width="292" height="96" rx="9" fill="#fdf3dd" stroke="#ecd9a4"/>
+  <text x="340" y="194" font-size="12.5" font-weight="700" fill="#9a6a00">② 每支自己加一行 guard</text>
+  <text x="340" y="214" font-size="11.5" fill="#7a5400">漏改一支就破。而且靠掃描</text>
+  <text x="340" y="231" font-size="11.5" fill="#7a5400">證明不了 guard 跑在寫入之前。</text>
+  <text x="340" y="255" font-size="11" fill="#9a6a00" font-weight="700">△ 我前兩版的方案，被 codex 打掉</text>
+
+  <rect x="632" y="172" width="292" height="96" rx="9" fill="#e7f6ee" stroke="#b8e0ca"/>
+  <text x="648" y="194" font-size="12.5" font-weight="700" fill="#1f7a4d">③ 包在 wrapper 裡</text>
+  <text x="648" y="214" font-size="11.5" fill="#155c39">業務邏輯變成 callback，</text>
+  <text x="648" y="231" font-size="11.5" fill="#155c39">授權沒過就根本不會被呼叫。</text>
+  <text x="648" y="255" font-size="11" fill="#1f7a4d" font-weight="700">✓ 定案</text>
+
+  <line x1="16" y1="292" x2="924" y2="292" stroke="#dfe3e8"/>
+  <text x="20" y="318" font-size="12.5" font-weight="700" fill="#1a1d21">定案寫法</text>
+  <rect x="16" y="330" width="908" height="54" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="34" y="352" font-size="12" font-family="monospace" fill="#4a5159">export async function updateTask(id, data) {</text>
+  <text x="52" y="370" font-size="12" font-family="monospace" fill="#2f6df6">return withCap('write', async (session) =&gt; { …原本的邏輯… });  }</text>
+</svg>
+<figcaption>授權從「函式體裡的一行」改成「包住函式體的一層」——差別是後者在結構上不可能被繞過</figcaption>
+</figure>
+
+<h2><span class="n">4</span>覆蓋表：你的需求 vs 誰負責</h2>
+
+<div class="scroll"><table>
+<tr><th style="width:30%">需求項（來自你的原話）</th><th style="width:32%">現況</th><th>誰負責</th></tr>
+<tr>
+  <td><strong>只能看</strong></td>
+  <td><span class="tag t-red">缺</span> 沒有唯讀角色</td>
+  <td>新增 <code>viewer</code> enum + capability 表（§2.1）</td>
+</tr>
+<tr>
+  <td><strong>無法操作任何編輯功能</strong>（後端真的擋住）</td>
+  <td><span class="tag t-red">缺</span> 20 支寫入只擋登入</td>
+  <td><code>withCap('write', …)</code> 包住每支 action；<code>withRouteCap</code> 包住每支 API route</td>
+</tr>
+<tr>
+  <td><strong>無法操作任何編輯功能</strong>（畫面上看不到）</td>
+  <td><span class="tag t-amber">部分</span> 只有 Clean All 按 role 隱藏</td>
+  <td><code>PermissionContext</code> + 逐處隱藏；拖拉整個 bypass <code>DndContext</code></td>
+</tr>
+<tr>
+  <td>viewer 仍要能登入、改自己密碼</td>
+  <td><span class="tag t-green">已有</span> <code>setPassword</code> 硬綁自己的 userId</td>
+  <td>歸類為 <code>self</code>，不擋。<strong>擋了會鎖死首次登入流程</strong></td>
+</tr>
+<tr>
+  <td>viewer 仍要能用排序/篩選（你上一輪做的功能）</td>
+  <td><span class="tag t-green">已有</span> <code>setUserSetting</code> 只寫自己的偏好</td>
+  <td>歸類為 <code>self</code>，不擋。擋了那個功能對 viewer 就廢了</td>
+</tr>
+<tr>
+  <td>不能讓 viewer 讀到備份憑證</td>
+  <td><span class="tag t-red">漏洞 C</span> 任何登入者可讀寫任意 config key</td>
+  <td>config key 白名單，備份設定改由 <code>manage</code> 獨佔</td>
+</tr>
+<tr>
+  <td>（順帶）不能有無憑證的備份觸發入口</td>
+  <td><span class="tag t-red">漏洞 A+B</span></td>
+  <td>備份拆三層 + <code>CRON_SECRET</code> 存在性檢查</td>
+</tr>
+</table></div>
+
+<h2><span class="n">5</span>confer 三方意見</h2>
+
+<h3>gemini（架構視角）</h3>
+<ul>
+<li><strong>採納</strong>：我原本寫 <code>role === 'viewer'</code> 才擋，是黑名單反模式——未來第四個角色會預設可寫。改成白名單。</li>
+<li><strong>採納</strong>：靠函式名 regex 猜哪些是寫入，是 security theater。</li>
+<li><strong>採納</strong>：Postgres enum 加值後不可刪，回滾要整表重建。</li>
+<li><strong>採納</strong>：dnd 給空 sensors 只廢滑鼠，抓手游標和鍵盤排序還在，要整個 bypass。</li>
+<li><strong>反駁</strong>：說 <code>setPassword</code> 可能有 IDOR（改到別人密碼）——實查兩支都硬綁 session，不收 client 傳的 id。</li>
+</ul>
+
+<h3>grok（安全視角）</h3>
+<ul>
+<li><strong>採納</strong>：安全文件不該寫「約 20 支」，要完整 inventory。</li>
+<li><strong>採納</strong>：靜態掃描漏了 <code>app/api</code>；需要負向 fixture 驗證掃描器自己會紅。</li>
+<li><strong>採納且證實</strong>：它把「<code>getConfig</code> 不含密鑰」列為隱藏假設——我去查，<strong>假設不成立</strong>，就是上面的漏洞 C。這是整輪 confer 最大的收穫。</li>
+<li><strong>採納</strong>：我說 <code>useTaskManager</code> 是「天然收斂點」講過頭了——它只收斂 task/subtask，專案/config/upload 都不經過。</li>
+<li><strong>反駁</strong>：說 <code>users.js</code> 可被 viewer 打、能自我升級——實查全部已是 super_admin-only，且系統中根本沒有「改他人角色」的路徑。codex 覆核同意我的反駁。</li>
+</ul>
+
+<h3>codex（品質閘，三輪）</h3>
+<div class="scroll"><table>
+<tr><th>輪次</th><th>verdict</th><th>關鍵發現</th></tr>
+<tr><td>第 1 輪</td><td><span class="tag t-red">有嚴重問題</span> 0.98</td>
+  <td>P0：<code>cronBackup</code> 是無守衛的 server action（＝漏洞 A）。<br>
+      P1：我的掃描規則抓不到 <code>db.execute</code> 寫入（<code>reorderProjects</code> 實例）。<br>
+      P1：我寫「viewer 對所有 <code>get*</code> 應成功」會誤放 <code>getUsers</code>/<code>getAuditLogs</code>，跟自己前一節矛盾。</td></tr>
+<tr><td>第 2 輪</td><td><span class="tag t-red">有嚴重問題</span> 0.97</td>
+  <td>P1：<strong>我兩輪硬拗「掃描等於 fail-closed」站不住</strong>——證明不了 guard 跑在副作用之前、error 有被 return。我認了，改用 wrapper。<br>
+      P1：<code>CRON_SECRET</code> 缺失時 <code>Bearer undefined</code> 可通行（＝漏洞 B）。<br>
+      P1：我把 cron 與手動備份合併會讓管理員手動備份被頻率擋掉。</td></tr>
+<tr><td>第 3 輪</td><td><span class="tag t-amber">剩 2 項</span> 0.97</td>
+  <td>確認 wrapper <strong>對 server action 已達成執行期 fail-closed</strong>、備份三層拆分<strong>語意正確</strong>。<br>
+      剩：API route 沒有同等 wrapper（<code>/api/upload</code> 甚至先傳 R2 才呼叫 action）；<code>CRON_SECRET</code> 用 throw 會回 500 而非 401。</td></tr>
+</table></div>
+
+<div class="ok">
+<h3>目前狀態</h3>
+<p>第 3 輪剩的 2 項已照 codex 的建議補進 v4.1（新增 <code>withRouteCap</code>、上傳順序改成授權後才寫 R2、cron secret 改回傳布林）。
+<strong>這兩處未經第 4 輪覆核</strong>（confer SOP 上限 3 輪）——都是照建議直接補，非新設計，但我不宣稱它們被驗過。</p>
+</div>
+
+<h3>三方分歧點</h3>
+<p>雙G 與 codex 都推薦 <code>defineAction</code> factory（<code>export const updateTask = defineAction(…)</code>）。
+我採納了它的<strong>實質</strong>（執行期強制），但換成 <code>withCap</code> callback 寫法——
+因為 <code>'use server'</code> 檔能不能 export 高階函式的產物，官方文件<strong>沒有明確回答</strong>
+（只寫「every exported function must be async」），SWC 可能擋。
+我的寫法 export 仍是字面 <code>async function</code> 宣告，繞開這個未知數，不需要先做 spike。</p>
+
+<h2><span class="n">6</span>你的裁定</h2>
+
+<div class="ok">
+<h3>題目一 · 匯出權限 → <strong>擋掉匯出</strong></h3>
+<p>viewer 不得使用 <code>/api/download</code> 與 <code>/api/backup</code> GET。</p>
+<p>實作上仍做成獨立的 <code>export</code> capability（不硬編角色字串），
+所以日後若要放寬，只需改 <code>permissions.js</code> 的一行。</p>
+<p>連帶影響測試：標 <code>export</code> 的入口，反向測試要斷言 viewer <strong>失敗</strong>而非成功。</p>
+</div>
+
+<div class="ok">
+<h3>題目二 · 既存漏洞 → <strong>跟 viewer 一起修</strong></h3>
+<p>A（無憑證的備份 action 入口）、B（<code>CRON_SECRET</code> 缺失即通行）、C（任何登入者可讀寫備份憑證）
+全部納入本次範圍。</p>
+</div>
+
+<h2><span class="n">7</span>不做什麼（三方都同意排除）</h2>
+<ul>
+<li><strong>不做 Postgres RLS</strong>——現階段 CP 不夠。（更正我第一版寫的否決理由：grok 正確指出
+  <code>user_settings</code> 用 <code>current_setting('app.user_id')</code> 是可以表達的，不是技術不可行。）</li>
+<li><strong>不用 middleware 統一擋</strong>——Next.js 的讀取與寫入 action 在網路層長得一樣
+  （都是帶 <code>Next-Action</code> header 的 POST），action id 是編譯期 hash，
+  middleware 分不出讀寫，一律擋會連載入畫面都掛掉。</li>
+<li><strong>不改 <code>safeRequireAdmin</code> 的名字</strong>——它檢查的其實是 <code>super_admin</code>，命名早就負債，
+  但改名會把 diff 擴散到一堆不相干的檔案。用 <code>permissions.js</code> 的語意名把意圖釘死就夠。</li>
+<li><strong>不做「不可自我升級」防護</strong>——系統裡根本沒有「改他人角色」的功能路徑，
+  現在加是防一個不存在的攻擊。日後真要做改角色功能時再補。</li>
+<li><strong>不做欄位級遮蔽</strong>——viewer 看得到 <code>owner</code>、<code>notes</code> 全部欄位。
+  若之後要給公司外的人用才需要，明確記錄為已知邊界。</li>
+<li><strong>不自動降級既有帳號</strong>——現有帳號一律維持 <code>admin</code>，要誰變 viewer 由你指定。</li>
+</ul>
+
+<h2><span class="n">8</span>裁定後的工作量估計</h2>
+<div class="scroll"><table>
+<tr><th>階段</th><th>內容</th><th>風險</th></tr>
+<tr><td>1</td><td>完整 inventory（50 支 export + 全部 route 逐支分類，產 <code>permissions-matrix.md</code>）</td><td><span class="tag t-gray">低</span> 純盤點</td></tr>
+<tr><td>2</td><td>修漏洞 A/B/C（備份拆三層、cron secret、config 白名單）</td><td><span class="tag t-amber">中</span> 動到備份，要驗手動備份沒被改壞</td></tr>
+<tr><td>3</td><td><code>permissions.js</code> + <code>withCap</code> / <code>withRouteCap</code>，包住每支 action 與 route</td><td><span class="tag t-gray">低</span> 機械改動，淨增行數接近 0</td></tr>
+<tr><td>4</td><td>enum migration（單支 <code>ALTER TYPE ADD VALUE</code>）</td><td><span class="tag t-red">高</span> 不可逆；要人工審 drizzle 產出的 SQL、先在 preview DB 跑</td></tr>
+<tr><td>5</td><td>前端 <code>PermissionContext</code> + 逐處隱藏 + 唯讀徽章</td><td><span class="tag t-gray">低</span> 漏一處只是體驗瑕疵，後端仍擋</td></tr>
+<tr><td>6</td><td>測試：coverage 斷言 + 四個負向 fixture + table-driven 正反向</td><td><span class="tag t-gray">低</span></td></tr>
+</table></div>
+<p class="small">階段 4 的 migration 動到正式 DB 且不可逆——依規矩那一步我會停下來問你才執行。</p>
+
+</div>
+</body>
+</html>
