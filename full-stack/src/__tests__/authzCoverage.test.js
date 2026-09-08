@@ -9,8 +9,22 @@ const API_DIR = 'src/app/api';
 // ── 掃描核心。正式檢查與負向 fixture 走「完全同一組 helper」──
 // 這點很重要：v1 的寫法讓 fixture 用另一條 regex 驗證，結果測試綠但沒驗到正式邏輯。
 
-function listActionFiles() {
-  return readdirSync(ACTIONS_DIR).filter(f => f.endsWith('.js'));
+/**
+ * 遞迴列出 action 檔（相對於 ACTIONS_DIR 的路徑，例如 "tasks.js" 或 "admin/hidden.js"）。
+ * 必須遞迴——否則子目錄裡的 action（如 `admin/hidden.js`）對 inventory 完全隱形，
+ * 造成兩側掃描深度不對稱（route 那側 listRouteFiles 本來就是遞迴的）。
+ * 排除 `__tests__`：那裡面的 export 是測試輔助，不是 action。
+ */
+function listActionFiles(dir = ACTIONS_DIR, out = []) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) {
+      if (e.name === '__tests__') continue;
+      listActionFiles(join(dir, e.name), out);
+    } else if (e.name.endsWith('.js')) {
+      out.push(join(dir, e.name).replace(/\\/g, '/').slice(ACTIONS_DIR.length + 1));
+    }
+  }
+  return out;
 }
 
 function listRouteFiles(dir = API_DIR, out = []) {
@@ -53,12 +67,23 @@ function listRouteExports(src) {
 function firstStatementOf(src, name) {
   const decl = new RegExp(`export\\s+async\\s+function\\s+${name}\\s*\\([^)]*\\)\\s*\\{`, 'm');
   const m = decl.exec(src);
-  if (!m) return null;
+  if (!m) return constArrowBodyOf(src, name);
   const body = src.slice(m.index + m[0].length);
   // 第一個 statement = 到第一個分號或第一個 { 為止（去掉註解與空白）
   const cleaned = body.replace(/^\s*(\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*\s*/, '');
   const end = cleaned.search(/[;{]/);
   return end < 0 ? cleaned.trim() : cleaned.slice(0, end + 1).trim();
+}
+
+/**
+ * `export const NAME = async (...) => withCap(...)` 或
+ * `export const NAME = async (...) => { return withCap(...); }` 形式的第一個 statement。
+ * 沒有這個 fallback，inventory 說支援 const-arrow 形式，但驗證只認 `export async function`，
+ * 正確包了 withCap 的 const-arrow action 會被誤判成沒包，錯誤訊息還會誘導人去加 EXEMPT 開後門。
+ */
+function constArrowBodyOf(src, name) {
+  const m = new RegExp(`export\\s+const\\s+${name}\\s*=\\s*(?:async\\s*)?\\(?[^)]*\\)?\\s*=>\\s*\\{?\\s*(?:return\\s+)?([^\\n]*)`, 'm').exec(src);
+  return m ? m[1].trim() : null;
 }
 
 /**
@@ -87,9 +112,11 @@ function routeAssignmentOf(src, method) {
 
 /**
  * 正式判定：這支 action 的第一個 statement 是不是對應的 withCap。
- * 只接受這兩種形式——共同性質是「withCap 在第一個 statement，業務邏輯在 callback 裡」：
- *   return withCap('cap', ...)                 ← 絕大多數 action
+ * 只接受這三種形式——共同性質是「withCap 在第一個 statement，業務邏輯在 callback 裡」：
+ *   return withCap('cap', ...)                 ← 絕大多數 action（function 宣告形式）
  *   const result = await withCap('cap', ...)   ← setPassword（外層要保留導回登入頁的行為）
+ *   withCap('cap', ...)                        ← const-arrow 形式（inventory 也認得這種寫法，
+ *                                                 驗證沒跟上會誤判成沒包，還會誘導人去加 EXEMPT）
  * 不要為了讓某支通過而再放寬——放寬到能通過死分支，自我驗證那幾條就會紅。
  */
 function actionIsWrapped(src, name, cap) {
@@ -97,7 +124,9 @@ function actionIsWrapped(src, name, cap) {
   if (!first) return false;
   const c = `\\s*['"]${cap}['"]`;
   return new RegExp(`^return\\s+withCap\\(${c}`).test(first)
-      || new RegExp(`^const\\s+\\w+\\s*=\\s*await\\s+withCap\\(${c}`).test(first);
+      || new RegExp(`^const\\s+\\w+\\s*=\\s*await\\s+withCap\\(${c}`).test(first)
+      // const-arrow 無 block／無 return 時，捕捉到的第一個 statement 直接就是 withCap(...)
+      || new RegExp(`^withCap\\(${c}`).test(first);
 }
 
 /** 正式判定：這支 route handler 是不是 `withRouteCap('<cap>'` 的產物 */
@@ -168,6 +197,18 @@ describe('授權覆蓋率護欄', () => {
     expect(leaks).toEqual([]);
   });
 
+  // fix round 1 finding 1：export default 對 listActionExports 的三條正則完全不匹配，
+  // 連「未分類」都不會被抓到——這是該紅卻沒紅的靜默繞過，不是可接受的誤判。
+  // 'use server' 檔的 default export 在呼叫端沒有名字，本來就無法納入授權 inventory，直接禁用。
+  it('server action 檔不得使用 export default（無法被 inventory 追蹤）', () => {
+    const offenders = [];
+    for (const file of listActionFiles()) {
+      const src = readFileSync(join(ACTIONS_DIR, file), 'utf8');
+      if (/^export\s+default\b/m.test(src)) offenders.push(file);
+    }
+    expect(offenders, 'default export 在呼叫端沒有名字，無法納入授權 inventory').toEqual([]);
+  });
+
   // ── 負向 fixture：證明掃描器自己會紅 ──
   // 每一條都呼叫「上面正式檢查用的同一個 helper」，不另寫 regex。
   describe('掃描器自我驗證', () => {
@@ -186,6 +227,9 @@ describe('授權覆蓋率護欄', () => {
       'async function hiddenMutate() { return db.delete(x); }',
       'export { hiddenMutate };',
       "export async function selfShaped() { const result = await withCap('self', async () => 1); return result; }",
+      // fix round 1 finding 3：inventory 說支援 const-arrow 形式，驗證卻只認 function 宣告——
+      // 正確包了 withCap 的 const-arrow action 會被誤判成沒包，錯誤訊息還會誘導人開 EXEMPT 後門。
+      "export const arrowGood = async (a) => withCap('write', async () => db.insert(x));",
     ].join('\n');
 
     const ROUTE_FIXTURE = [
@@ -226,6 +270,20 @@ describe('授權覆蓋率護欄', () => {
     it('接受 const result = await withCap(...) 形式（setPassword 用的）', () => {
       expect(actionIsWrapped(FIXTURE, 'selfShaped', 'self')).toBe(true);
       expect(actionIsWrapped(FIXTURE, 'selfShaped', 'write')).toBe(false); // cap 不符仍要判紅
+    });
+
+    // fix round 1 finding 3：inventory 抓得到 const-arrow 形式，但 v1 的 actionIsWrapped
+    // 只認得 function 宣告——正確包了 withCap 的 const-arrow action 會被誤判成沒包。
+    it('const-arrow 形式且正確包了 withCap → 判定為已包', () => {
+      expect(actionIsWrapped(FIXTURE, 'arrowGood', 'write')).toBe(true);
+      expect(actionIsWrapped(FIXTURE, 'arrowGood', 'read')).toBe(false); // cap 不符仍要判紅
+    });
+
+    // fix round 1 finding 1：export default 對三條 inventory 正則完全不匹配，
+    // 連「未分類」都不會被抓到——這是該紅卻沒紅的靜默繞過。
+    it('抓得到 export default（不得使用）', () => {
+      const FX = 'export default async function evil() { return db.delete(x); }';
+      expect(/^export\s+default\b/m.test(FX)).toBe(true);
     });
 
     // 端到端：未分類的 export 走完整比對流程後必須報錯，不能只驗 helper
