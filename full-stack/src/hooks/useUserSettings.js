@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getUserSettings, setUserSetting } from '@/server/actions/userSettings';
+import useForbiddenHandler from './useForbiddenHandler';
 
-export default function useUserSettings(defaults = {}) {
+export default function useUserSettings(defaults = {}, showToast) {
+  const handleForbidden = useForbiddenHandler(showToast || (() => {}));
   const [settings, setSettings] = useState(defaults);
   // Keep a ref to the latest settings so we can read current value synchronously
   // before any async gap (needed for optimistic-update rollback).
@@ -25,9 +27,12 @@ export default function useUserSettings(defaults = {}) {
     const res = await setUserSetting(key, value);
     // Rollback on error — key-scoped so a failed update for one key doesn't
     // clobber other keys' concurrent optimistic updates.
-    if (res?.error) setSettings(s => ({ ...s, [key]: prev[key] }));
+    if (res?.error) {
+      setSettings(s => ({ ...s, [key]: prev[key] }));
+      handleForbidden(res);
+    }
     return res;
-  }, []);
+  }, [handleForbidden]);
 
   return { settings, updateSetting: update };
 }

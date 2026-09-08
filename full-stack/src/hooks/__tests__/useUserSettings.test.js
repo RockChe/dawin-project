@@ -17,6 +17,11 @@ vi.mock('@/server/actions/userSettings', () => ({
   setUserSetting: mockSetUserSetting,
 }));
 
+// useUserSettings now runs FORBIDDEN results through useForbiddenHandler,
+// which calls next/navigation's useRouter() — not mounted in a bare
+// renderHook, so stub it the same way forbiddenHandler.test.js does.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 // ── Import under test ─────────────────────────────────────────────────────
 const { default: useUserSettings } = await import('@/hooks/useUserSettings');
 

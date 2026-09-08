@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { F, FM } from "@/lib/theme";
 import { STATUS_FILTERS } from "@/lib/constants";
 import { useTheme } from "@/components/ThemeProvider";
+import { PermissionProvider, useCan } from "@/components/PermissionProvider";
 import useTaskManager from "@/hooks/useTaskManager";
 import useUserSettings from "@/hooks/useUserSettings";
 import TaskModal from "./TaskModal";
@@ -32,7 +33,7 @@ export default function Dashboard({ initialData }) {
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
-  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: false, projectTaskView: PROJECT_TASK_VIEW_DEFAULT });
+  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: false, projectTaskView: PROJECT_TASK_VIEW_DEFAULT }, showToast);
   const zoom = userSettings.zoom ?? 150;
   const onZoomChange = useCallback(v => updateSetting('zoom', v), [updateSetting]);
   // #4a Projects card/list view (per-account)
@@ -168,8 +169,10 @@ export default function Dashboard({ initialData }) {
   }
 
   return (
+    <PermissionProvider role={userRole}>
     <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s", zoom: zoom / 100 }}>
       <style>{`::selection{background:${X.selectionBg}} *{box-sizing:border-box} ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:${X.scrollThumb};border-radius:5px} ::-webkit-scrollbar-track{background:transparent} input,select,button{font-family:'Noto Sans TC',-apple-system,sans-serif}`}</style>
+      <ReadOnlyBadge X={X} />
       <DashboardHeader themeKey={themeKey} cycleTheme={cycleTheme} isMobile={isMobile} scrolled={scrolled} searchInput={searchInput} handleSearch={handleSearch} searchQ={searchQ} clearSearch={clearSearch} avgProg={avgProg} filtered={filtered} />
 
       <div className="dash-content" style={{ maxWidth: 1400, margin: "0 auto" }}>
@@ -246,6 +249,18 @@ export default function Dashboard({ initialData }) {
         <div style={{ width: 4, height: 24, borderRadius: 2, background: toast.type === "error" ? X.red : toast.type === "warn" ? X.amber : X.green }} />
         <span style={{ fontSize: 14, fontWeight: 500, color: X.text, whiteSpace: "nowrap" }}>{toast.msg}</span>
       </div>}
+    </div>
+    </PermissionProvider>
+  );
+}
+
+// 唯讀模式徽章：viewer 沒有 write 能力時顯示，讓人知道不是壞了。
+function ReadOnlyBadge({ X }) {
+  const canWrite = useCan("write");
+  if (canWrite) return null;
+  return (
+    <div style={{ background: `${X.amber}18`, borderBottom: `1px solid ${X.amber}40`, color: X.amber, fontSize: 13, fontWeight: 600, textAlign: "center", padding: "6px 12px" }}>
+      👁 唯讀模式 — 你目前的權限只能檢視，無法編輯
     </div>
   );
 }
