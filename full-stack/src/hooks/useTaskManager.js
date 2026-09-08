@@ -364,9 +364,11 @@ export default function useTaskManager(initialData) {
       setAllS(p => [...p, result.subtask]);
       invalidateCache();
       showToast('子任務已新增', 'success');
+    } else if (result?.error) {
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const deleteSub = useCallback(async (id) => {
     const idx = allSRef.current.findIndex(s => s.id === id);
@@ -393,9 +395,11 @@ export default function useTaskManager(initialData) {
       setAllL(p => [...p, result.link]);
       invalidateCache();
       showToast('連結已新增', 'success');
+    } else if (result?.error) {
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const deleteLink = useCallback(async (id) => {
     const idx = allLRef.current.findIndex(l => l.id === id);
@@ -452,7 +456,7 @@ export default function useTaskManager(initialData) {
     }
     invalidateCache();
     showToast('專案已重新命名', 'success');
-  }, [projects, showToast, invalidateCache]);
+  }, [projects, showToast, invalidateCache, handleForbidden]);
 
   const addProject = useCallback(async (name) => {
     const formData = new FormData();
@@ -463,9 +467,11 @@ export default function useTaskManager(initialData) {
       setProjects(p => [...p, result.project]);
       invalidateCache();
       showToast('專案已建立', 'success');
+    } else if (result?.error) {
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const deleteProjectHandler = useCallback(async (id) => {
     const prevProjSnap = projectsRef.current;
@@ -549,7 +555,7 @@ export default function useTaskManager(initialData) {
       invalidateCache();
       showToast('所有任務已清除', 'error');
     } else if (result?.error) {
-      handleForbidden(result);
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
   }, [showToast, invalidateCache, handleForbidden]);
