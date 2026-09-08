@@ -46,8 +46,19 @@ export async function POST(request) {
   return NextResponse.json(results);
 }
 
-// GET — 手動下載。Rock 裁定：viewer 不得匯出，所以是 export capability。
-export const GET = withRouteCap('export', async () => {
-  const data = await exportAllTables(db);
-  return NextResponse.json(data);
+// GET — 手動下載整庫備份。原本就是 super_admin only，所以是 manage（不是 export）。
+// 它傾印整個資料庫，含 users 表與密碼雜湊——用 export 會讓 admin 也拿得到，是權限放寬。
+export const GET = withRouteCap('manage', async () => {
+  // 以下與原實作完全相同：pretty-print + 帶時間戳的附件檔名。
+  // 不可簡化成 NextResponse.json(data)——那會讓瀏覽器直接顯示 JSON 而非存檔。
+  const backupData = await exportAllTables(db);
+  const content = JSON.stringify(backupData, null, 2);
+  const ts = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, '');
+  const fileName = `dawin-backup-${ts}.json`;
+  return new Response(content, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+    },
+  });
 });
