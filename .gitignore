@@ -47,3 +47,6 @@ yarn-error.log*
 
 # infra notes containing credential handling details — keep local
 **/docs/infra-auth-notes.html
+
+# Wave 2 需求單，跟 viewer-role 分支無關，內容保留在本機、不進這個分支的 commit
+full-stack/工單需求/
