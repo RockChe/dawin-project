@@ -36,7 +36,9 @@ export default function SortableSubItem({ sub, toggleSub, updateSub, deleteSub, 
         {canWrite
           ? <span style={{ flex: "1 1 120px", minWidth: 100 }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
           : <span style={{ flex: "1 1 120px", minWidth: 100, fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }}>{sub.name || "—"}</span>}
-        <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
+        {canWrite
+          ? <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
+          : <span style={{ flex: "1 1 80px", fontSize: 12, color: sub.notes ? X.textDim : X.textDim + "60", fontStyle: sub.notes ? "normal" : "italic", overflowWrap: "anywhere", padding: "1px 4px", minWidth: 60 }}>{sub.notes || "—"}</span>}
         {canWrite && <span ref={ownerRef} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
           {editingOwner
             ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 12, minWidth: 140 }} />

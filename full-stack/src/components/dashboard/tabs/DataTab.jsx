@@ -28,7 +28,7 @@ function DataTab({
   filtered, allS, allT, twp, projects,
   updateTask, deleteTask, addTask, toggleSub, updateSub, addSub, deleteSub,
   configCats, configOwners,
-  isMobile, userRole, pcMap,
+  isMobile, pcMap,
   importTasks, deleteManyTasks, updateManyTasks, deleteAllTasks,
   showToast, setModalTask,
 }) {
@@ -255,7 +255,9 @@ function DataTab({
                           <span style={{ flexShrink: 0 }}>{canWrite
                             ? <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} />
                             : <ReadOnlyCell value={sub.name} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, display: "inline" }} />}</span>
-                          <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
+                          {canWrite
+                            ? <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
+                            : <ReadOnlyCell value={sub.notes} style={{ flex: "1 1 80px", fontSize: 12, minWidth: 60, display: "inline" }} />}
                           {canWrite && <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
                             {editingSubOwner === sub.id
                               ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 12, minWidth: 140 }} />

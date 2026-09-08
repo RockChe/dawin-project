@@ -5,6 +5,7 @@ import { useCan } from "@/components/PermissionProvider";
 import { pD, fD, toISO, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 import { planTaskUpdates } from "@/lib/taskUpdates";
 import { STATUSES } from "@/lib/constants";
+import useForbiddenHandler from "@/hooks/useForbiddenHandler";
 import CalendarPicker from "./CalendarPicker";
 import TagInput from "./TagInput";
 import EditableCell from "./EditableCell";
@@ -36,6 +37,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
   const { X, inputStyle: iS2 } = useTheme();
   const canWrite = useCan("write");
   const canExport = useCan("export");
+  const handleForbidden = useForbiddenHandler(showToast || (() => {}));
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   useEffect(() => { const h = e => { if (e.key === "Escape") onClose(); }; document.addEventListener("keydown", h); return () => document.removeEventListener("keydown", h); }, [onClose]);
   useEffect(() => {
@@ -111,7 +113,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
       try {
         const result = JSON.parse(xhr.responseText);
         if (result.success) { addFile(task.id, result.file); }
-        else if (result.error) { if (showToast) showToast(result.error, 'error'); }
+        else if (result.error) { if (!handleForbidden(result) && showToast) showToast(result.error, 'error'); }
       } catch { if (showToast) showToast('上傳失敗', 'error'); }
       setUploading(false);
     };
