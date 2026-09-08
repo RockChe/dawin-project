@@ -253,3 +253,30 @@ describe('viewer 保有 self 能力（擋掉會鎖死首次登入與個人化）
     expect(r).not.toEqual({ error: 'FORBIDDEN' });
   });
 });
+
+// ── 6. setUserSetting 的大小上限 ────────────────────────────────────────────
+describe('setUserSetting 的大小上限', () => {
+  it('界線內的值可以寫入', async () => {
+    authAs('user-A');
+    // JSON.stringify 會加上前後引號，所以扣掉 2
+    const value = 'a'.repeat(64 * 1024 - 2);
+    const r = await setUserSetting('bigButOk', value);
+    expect(r).toEqual({ success: true });
+  });
+
+  it('超過上限的值被拒絕', async () => {
+    authAs('user-A');
+    const value = 'a'.repeat(64 * 1024 + 100);
+    const r = await setUserSetting('tooBig', value);
+    expect(r).toEqual({ error: '設定值過大' });
+  });
+
+  // 這條是這次修正的重點：中文字 .length 算 1 但佔 3 bytes。
+  // 用 .length 判斷的話這個值會被放行（30000 < 65536），改用 byteLength 才會擋下（約 90000 bytes）。
+  it('中文內容依實際位元組數計算，不是字元數', async () => {
+    authAs('user-A');
+    const value = '中'.repeat(30000);
+    const r = await setUserSetting('cjkTooBig', value);
+    expect(r).toEqual({ error: '設定值過大' });
+  });
+});

@@ -24,7 +24,7 @@ export async function setUserSetting(key, value) {
   return withCap('self', async (session) => {
     try {
       const serialized = JSON.stringify(value);
-      if (serialized.length > MAX_SETTING_BYTES) return { error: '設定值過大' };
+      if (Buffer.byteLength(serialized, 'utf8') > MAX_SETTING_BYTES) return { error: '設定值過大' };
       // Single native upsert avoids the SELECT→INSERT/UPDATE TOCTOU race:
       // the (userId, key) unique index guarantees atomicity at the DB level.
       await db.insert(userSettings)
