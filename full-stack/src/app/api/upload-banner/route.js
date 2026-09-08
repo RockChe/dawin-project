@@ -5,6 +5,7 @@ import { db } from '@/server/db';
 import { projects } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { isValidUUID } from '@/lib/utils';
+import { can } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,7 @@ export const POST = withRouteCap('write', async (request, ctx, session) => {
     if (!proj[0]) {
       return NextResponse.json({ error: '專案不存在' }, { status: 404 });
     }
-    if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+    if (proj[0].createdBy !== session.userId && !can(session.role, 'manage')) {
       return NextResponse.json({ error: '無權限修改此專案' }, { status: 403 });
     }
 

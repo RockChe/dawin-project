@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { db } from '@/server/db';
 import { sessions, users } from '@/server/db/schema';
 import { eq, and, gt } from 'drizzle-orm';
-import { can } from '@/lib/permissions';
 
 const SESSION_COOKIE = 'session_token';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -99,23 +98,8 @@ export async function requireAuth() {
   return session;
 }
 
-export async function requireAdmin() {
-  const session = await requireAuth();
-  if (session.role !== 'super_admin') {
-    throw new Error('FORBIDDEN');
-  }
-  return session;
-}
-
 export async function safeRequireAuth() {
   const session = await getSession();
   if (!session) return { session: null, error: 'UNAUTHORIZED' };
-  return { session, error: null };
-}
-
-export async function safeRequireAdmin() {
-  const { session, error } = await safeRequireAuth();
-  if (error) return { session: null, error };
-  if (!can(session.role, 'manage')) return { session: null, error: 'FORBIDDEN' };
   return { session, error: null };
 }

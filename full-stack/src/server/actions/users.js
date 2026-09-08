@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/audit';
 import { withCap } from '@/lib/withCap';
+import { ROLES } from '@/lib/permissions';
 
 export async function getUsers() {
   return withCap('manage', async () => {
@@ -32,8 +33,7 @@ export async function createUser(formData) {
     const role = formData.get('role')?.toString();
 
     // Validate role enum：漏傳 role 應該是錯誤，不是靜默給出寫入權限
-    const VALID_ROLES = ['super_admin', 'admin', 'viewer'];
-    if (!role || !VALID_ROLES.includes(role)) {
+    if (!role || !ROLES.includes(role)) {
       return { error: `無效的角色: ${role ?? '(未指定)'}` };
     }
 

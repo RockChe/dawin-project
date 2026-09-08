@@ -7,6 +7,7 @@ import { isValidUUID } from '@/lib/utils';
 import { deleteFromR2 } from '@/lib/r2';
 import { logAudit } from '@/lib/audit';
 import { withCap } from '@/lib/withCap';
+import { can } from '@/lib/permissions';
 
 export async function getProjects() {
   return withCap('read', async () => {
@@ -51,7 +52,7 @@ export async function updateProject(id, data) {
       // Ownership check: only creator or super_admin can update
       const proj = await db.select({ createdBy: projects.createdBy }).from(projects).where(eq(projects.id, id)).limit(1);
       if (!proj[0]) return { error: '專案不存在' };
-      if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+      if (proj[0].createdBy !== session.userId && !can(session.role, 'manage')) {
         return { error: '無權限修改此專案' };
       }
 
@@ -79,7 +80,7 @@ export async function deleteProject(id) {
       // Ownership check: only creator or super_admin can delete
       const proj = await db.select({ createdBy: projects.createdBy, bannerR2Key: projects.bannerR2Key }).from(projects).where(eq(projects.id, id)).limit(1);
       if (!proj[0]) return { error: '專案不存在' };
-      if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+      if (proj[0].createdBy !== session.userId && !can(session.role, 'manage')) {
         return { error: '無權限刪除此專案' };
       }
 
@@ -113,7 +114,7 @@ export async function deleteProjectBanner(projectId) {
       const proj = await db.select({ bannerR2Key: projects.bannerR2Key, createdBy: projects.createdBy })
         .from(projects).where(eq(projects.id, projectId)).limit(1);
       if (!proj[0]) return { error: '專案不存在' };
-      if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+      if (proj[0].createdBy !== session.userId && !can(session.role, 'manage')) {
         return { error: '無權限修改此專案' };
       }
 
@@ -138,7 +139,7 @@ export async function reorderProjects(orderedIds) {
     if (!Array.isArray(orderedIds) || !orderedIds.every(isValidUUID)) return { error: 'Invalid project IDs' };
     try {
       // Verify ownership: user must own all projects or be super_admin
-      if (session.role !== 'super_admin') {
+      if (!can(session.role, 'manage')) {
         const projs = await db.select({ id: projects.id, createdBy: projects.createdBy })
           .from(projects).where(inArray(projects.id, orderedIds));
         const unauthorized = projs.filter(p => p.createdBy !== session.userId);
