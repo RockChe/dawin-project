@@ -33,41 +33,6 @@ export function toggleHidden(hiddenIds, id) {
   return list.includes(id) ? list.filter(x => x !== id) : [...list, id];
 }
 
-/**
- * 唯讀（viewer）版的專案卡片。跟 SortableProjectCard 同樣的資訊排版，但拿掉
- * Archive/Delete/icon 上傳這些寫入動作——SortableProjectCard.jsx 本身沒有唯讀
- * 分支（不在這次白名單內），所以 viewer 走這支平行元件，不掛 DndContext、
- * 不呼叫 useSortable，純展示。
- */
-function ReadOnlyProjectCard({ project, pn, pt, c, ts, avg, stC, icon, hidden, onToggleHidden, onSelect }) {
-  const { X, SC } = useTheme();
-  return (
-    <div onClick={onSelect} style={{ background: X.surface, borderRadius: 16, border: `1px solid ${X.border}`, overflow: "hidden", transition: "border-color 0.2s, box-shadow 0.2s", boxShadow: X.surfaceShadow, cursor: "pointer", position: "relative" }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = c; e.currentTarget.style.boxShadow = X.surfaceShadowHover; }} onMouseLeave={e => { e.currentTarget.style.borderColor = X.border; e.currentTarget.style.boxShadow = X.surfaceShadow; }}>
-      {onToggleHidden && <EyeToggle hidden={hidden} onToggle={onToggleHidden} style={{ position: "absolute", top: 8, left: 10, zIndex: 2 }} />}
-      <div style={{ padding: "18px 20px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={{ width: 72, height: 72, borderRadius: 16, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: c, flexShrink: 0, overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
-            {icon ? <img src={icon} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 16 }} /> : pn[0]}
-          </div>
-          <div style={{ flex: "1 1 120px", minWidth: 100 }}>
-            <div className="dash-name-1line" style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>{pn}</div>
-            <div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks</div>
-          </div>
-          <span style={{ fontSize: 20, color: X.textDim }}>›</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <div style={{ flex: 1, height: 5, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}><div style={{ height: "100%", width: `${avg}%`, background: c, borderRadius: 2, opacity: 0.8 }} /></div>
-          <span style={{ fontFamily: FM, fontSize: 14, fontWeight: 600, color: avg === 100 ? X.green : X.text }}>{avg}%</span>
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {Object.entries(stC).map(([st, cnt]) => { const sc = SC[st] || {}; return (<span key={st} style={{ fontSize: 14, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color }}>{st} {cnt}</span>); })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const PRIORITY_ORDER = ["高", "中", "低"];
 
 /** 排序欄位選單。預設 start ＝ 維持這個列表原本的開始日排序，不改既有行為。 */
@@ -332,56 +297,41 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
           <button onClick={() => { setShowCreateProj(false); setNewProjName(""); }} style={{ background: X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, cursor: "pointer" }}>Cancel</button>
         </div>))}
       </div>
-      {canWrite ? (
-        <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
-          <SortableContext items={sortedProjList.map(p => p.id)} strategy={projectsView === "list" ? verticalListSortingStrategy : rectSortingStrategy} disabled={sortMode !== "manual"}>
-            <div className={projectsView === "list" ? undefined : "dash-grid-cards"} style={projectsView === "list" ? { display: "flex", flexDirection: "column", gap: 8 } : undefined}>
-              {sortedProjList.map(proj => {
-                const pn = proj.name;
-                const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
-                const ts = allS.filter(s => pt.some(t => t.id === s.taskId));
-                const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
-                const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
-                const icn = projBanners[pn];
-                const isHidden = hiddenProjects.includes(proj.id);
-                const onToggle = onToggleHidden ? () => onToggleHidden(proj.id) : undefined;
-                return projectsView === "list" ? (
-                  <SortableProjectRow key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
-                    dragEnabled={sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} />
-                ) : (
-                  <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
-                    dragEnabled={sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
-                    onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} onIconRemove={() => handleIconRemove(pn)} />
-                );
-              })}
-            </div>
-          </SortableContext>
-        </DndContext>
-      ) : (
-        // viewer：不掛 DndContext，純展示——SortableProjectCard 的 Archive/Delete/
-        // icon 上傳是寫死渲染（該檔不在這次白名單內），所以卡片檢視改走
-        // ReadOnlyProjectCard；明細檢視的 SortableProjectRow 本身沒有編輯按鈕，
-        // 只要 dragEnabled=false 即可安全重用。
-        <div className={projectsView === "list" ? undefined : "dash-grid-cards"} style={projectsView === "list" ? { display: "flex", flexDirection: "column", gap: 8 } : undefined}>
-          {sortedProjList.map(proj => {
-            const pn = proj.name;
-            const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
-            const ts = allS.filter(s => pt.some(t => t.id === s.taskId));
-            const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
-            const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
-            const icn = projBanners[pn];
-            const isHidden = hiddenProjects.includes(proj.id);
-            const onToggle = onToggleHidden ? () => onToggleHidden(proj.id) : undefined;
-            return projectsView === "list" ? (
-              <SortableProjectRow key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
-                dragEnabled={false} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} />
-            ) : (
-              <ReadOnlyProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
-                hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} />
-            );
-          })}
-        </div>
-      )}
+      {(() => {
+        const cardList = sortedProjList.map(proj => {
+          const pn = proj.name;
+          const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
+          const ts = allS.filter(s => pt.some(t => t.id === s.taskId));
+          const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
+          const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
+          const icn = projBanners[pn];
+          const isHidden = hiddenProjects.includes(proj.id);
+          const onToggle = onToggleHidden ? () => onToggleHidden(proj.id) : undefined;
+          return projectsView === "list" ? (
+            <SortableProjectRow key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
+              dragEnabled={canWrite && sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} />
+          ) : (
+            <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
+              dragEnabled={canWrite && sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
+              onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} onIconRemove={() => handleIconRemove(pn)} />
+          );
+        });
+        const listClassName = projectsView === "list" ? undefined : "dash-grid-cards";
+        const listStyle = projectsView === "list" ? { display: "flex", flexDirection: "column", gap: 8 } : undefined;
+        // viewer：不掛 DndContext（唯讀時整個 bypass，而不是只清空 sensors）。
+        // SortableProjectCard/SortableProjectRow 本身已經用 useCan('write') 藏掉
+        // 編輯按鈕與拖拉把手，兩種角色重用同一份渲染邏輯，不重複維護。
+        if (!canWrite) {
+          return <div className={listClassName} style={listStyle}>{cardList}</div>;
+        }
+        return (
+          <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
+            <SortableContext items={sortedProjList.map(p => p.id)} strategy={projectsView === "list" ? verticalListSortingStrategy : rectSortingStrategy} disabled={sortMode !== "manual"}>
+              <div className={listClassName} style={listStyle}>{cardList}</div>
+            </SortableContext>
+          </DndContext>
+        );
+      })()}
       {showArch && archived.size > 0 && (<div style={{ marginTop: 24 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: X.textDim, marginBottom: 12 }}>Archived</div>
         <div className="dash-grid-2col" style={{ gap: 12 }}>
