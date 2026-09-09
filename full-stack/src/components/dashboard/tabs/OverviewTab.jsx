@@ -2,11 +2,26 @@
 import { useState, useMemo, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
-import { pD, fD } from "@/lib/utils";
+import { pD, fD, toBusinessDateString } from "@/lib/utils";
 import { getOwnerColor } from "@/lib/theme";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
 import OwnerTags from "../OwnerTags";
+
+/**
+ * Percent-of-timeline position of "today", quantized to the Asia/Taipei
+ * calendar day. TODAY is a day marker, not a this-instant marker: calling
+ * `new Date()` directly makes server render and client hydration compute
+ * different millisecond values → hydration mismatch. Vercel's server also
+ * runs in UTC, so an un-quantized "today" disagrees with the user's Taipei
+ * "today" before 08:00 local time.
+ * @param {Date} mn — timeline start date
+ * @param {number} td — timeline span in days
+ * @returns {number}
+ */
+export function computeTodayPct(mn, td) {
+  return ((pD(toBusinessDateString()) - mn) / 864e5) / td * 100;
+}
 
 function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5, configOwners = [] }) {
   const { X, SC } = useTheme();
@@ -65,7 +80,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
         const allDates = projBars.flatMap(p => [p.start, p.end]);
         const mn = new Date(Math.min(...allDates)), mx = new Date(Math.max(...allDates));
         const td = (mx - mn) / 864e5 + 1;
-        const todayPct = ((new Date() - mn) / 864e5) / td * 100;
+        const todayPct = computeTodayPct(mn, td);
         const months = computeScaleDivisions(mn, mx, td, timeDim);
         const ovGW = ganttWidths || { day: 20, week: 50, month: 50, quarter: 100 };
         const ovMinW = timeDim === "日" ? Math.max(700, td * ovGW.day) : timeDim === "週" ? Math.max(700, Math.ceil(td / 7) * ovGW.week) : timeDim === "季" ? Math.max(700, months.length * ovGW.quarter) : Math.max(700, months.length * ovGW.month);

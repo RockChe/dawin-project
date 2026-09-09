@@ -6,6 +6,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { PermissionProvider, useCan } from "@/components/PermissionProvider";
 import useTaskManager from "@/hooks/useTaskManager";
 import useUserSettings from "@/hooks/useUserSettings";
+import useLocalStorageState from "@/hooks/useLocalStorageState";
 import TaskModal from "./TaskModal";
 import FileManagerModal from "./FileManagerModal";
 import SettingsTab from "./tabs/SettingsTab";
@@ -56,11 +57,8 @@ export default function Dashboard({ initialData }) {
   const [fs, setFS] = useState("全部");
   const [fpr, setFPR] = useState("全部");
   // #5 persist active tab across refresh (per-device ephemeral → localStorage)
-  const [tab, setTab] = useState(() => {
-    try { const t = localStorage.getItem("dash-activeTab"); if (t && TAB_KEYS.includes(t)) return t; } catch {}
-    return "overview";
-  });
-  const changeTab = useCallback((t) => { setTab(t); try { localStorage.setItem("dash-activeTab", t); } catch {} }, []);
+  const [tab, changeTab] = useLocalStorageState("dash-activeTab", "overview",
+    raw => TAB_KEYS.includes(raw) ? raw : undefined);
   const [customProjects, setCustomProjects] = useState(new Set());
   const [modalTask, setModalTask] = useState(null);
   const [showFileManager, setShowFileManager] = useState(null);
@@ -83,17 +81,22 @@ export default function Dashboard({ initialData }) {
   useEffect(() => { return () => { if (searchTimer.current) clearTimeout(searchTimer.current); }; }, []);
   const clearSearch = useCallback(() => { setSearchInput(""); setSearchQ(""); }, []);
   const defaultGW = { day: 20, week: 50, month: 50, quarter: 100 };
-  const [ganttWidths, setGanttWidths] = useState(() => {
-    try { const s = localStorage.getItem("dash-ganttWidths"); if (s) { const parsed = JSON.parse(s); if (parsed.day !== undefined && !parsed.overview) { return { overview: { ...parsed }, project: { ...parsed }, timeline: { ...parsed } }; } return parsed; } } catch {}
-    return { overview: { ...defaultGW }, project: { ...defaultGW }, timeline: { ...defaultGW } };
+  const defaultGanttWidths = { overview: { ...defaultGW }, project: { ...defaultGW }, timeline: { ...defaultGW } };
+  const [ganttWidths, setGanttWidths] = useLocalStorageState("dash-ganttWidths", defaultGanttWidths, raw => {
+    const parsed = JSON.parse(raw);
+    // 舊格式遷移：早期版本只存單一組寬度（無 overview/project/timeline 分組），
+    // 攤成三份沿用，不然舊使用者的設定會壞掉。
+    if (parsed.day !== undefined && !parsed.overview) return { overview: { ...parsed }, project: { ...parsed }, timeline: { ...parsed } };
+    return parsed;
   });
-  const [ganttDraft, setGanttDraft] = useState(() => JSON.parse(JSON.stringify(ganttWidths)));
-  const saveGanttWidths = useCallback(() => { const filled = {}; for (const v of ["overview", "project", "timeline"]) { filled[v] = {}; for (const k of ["day", "week", "month", "quarter"]) { const val = ganttDraft[v]?.[k]; filled[v][k] = (val === '' || val == null) ? defaultGW[k] : Math.max(1, val); } } const deep = JSON.parse(JSON.stringify(filled)); setGanttWidths(deep); setGanttDraft(JSON.parse(JSON.stringify(deep))); localStorage.setItem("dash-ganttWidths", JSON.stringify(deep)); showToast("Timeline widths saved", "success"); }, [ganttDraft, showToast]);
-  const [timelineHeight, setTimelineHeight] = useState(() => { try { const s = localStorage.getItem("dash-timelineHeight"); if (s) return parseInt(s) || 100; } catch {} return 100; });
-  const saveTimelineHeight = useCallback((val) => { const v = Math.max(10, Math.min(200, parseInt(val) || 100)); setTimelineHeight(v); localStorage.setItem("dash-timelineHeight", JSON.stringify(v)); showToast("Timeline height saved", "success"); }, [showToast]);
-  const [upcomingDays, setUpcomingDays] = useState(() => { try { const s = localStorage.getItem("dash-upcomingDays"); if (s) return parseInt(s) || 30; } catch {} return 30; });
-  const [upcomingLimit, setUpcomingLimit] = useState(() => { try { const s = localStorage.getItem("dash-upcomingLimit"); if (s) return parseInt(s) || 5; } catch {} return 5; });
-  const saveUpcomingSettings = useCallback((days, limit) => { const d = Math.max(1, parseInt(days) || 30); const l = Math.max(1, parseInt(limit) || 5); setUpcomingDays(d); setUpcomingLimit(l); localStorage.setItem("dash-upcomingDays", JSON.stringify(d)); localStorage.setItem("dash-upcomingLimit", JSON.stringify(l)); showToast("Upcoming settings saved", "success"); }, [showToast]);
+  const [ganttDraft, setGanttDraft] = useState(() => JSON.parse(JSON.stringify(defaultGanttWidths)));
+  useEffect(() => { setGanttDraft(JSON.parse(JSON.stringify(ganttWidths))); }, [ganttWidths]);
+  const saveGanttWidths = useCallback(() => { const filled = {}; for (const v of ["overview", "project", "timeline"]) { filled[v] = {}; for (const k of ["day", "week", "month", "quarter"]) { const val = ganttDraft[v]?.[k]; filled[v][k] = (val === '' || val == null) ? defaultGW[k] : Math.max(1, val); } } const deep = JSON.parse(JSON.stringify(filled)); setGanttWidths(deep); setGanttDraft(JSON.parse(JSON.stringify(deep))); showToast("Timeline widths saved", "success"); }, [ganttDraft, showToast, setGanttWidths]);
+  const [timelineHeight, setTimelineHeightRaw] = useLocalStorageState("dash-timelineHeight", 100, raw => parseInt(raw) || 100);
+  const saveTimelineHeight = useCallback((val) => { const v = Math.max(10, Math.min(200, parseInt(val) || 100)); setTimelineHeightRaw(v); showToast("Timeline height saved", "success"); }, [showToast, setTimelineHeightRaw]);
+  const [upcomingDays, setUpcomingDaysRaw] = useLocalStorageState("dash-upcomingDays", 30, raw => parseInt(raw) || 30);
+  const [upcomingLimit, setUpcomingLimitRaw] = useLocalStorageState("dash-upcomingLimit", 5, raw => parseInt(raw) || 5);
+  const saveUpcomingSettings = useCallback((days, limit) => { const d = Math.max(1, parseInt(days) || 30); const l = Math.max(1, parseInt(limit) || 5); setUpcomingDaysRaw(d); setUpcomingLimitRaw(l); showToast("Upcoming settings saved", "success"); }, [showToast, setUpcomingDaysRaw, setUpcomingLimitRaw]);
   useEffect(() => { const h = () => setScrolled(window.scrollY > 10); window.addEventListener("scroll", h, { passive: true }); return () => window.removeEventListener("scroll", h); }, []);
   const [isMobile, setIsMobile] = useState(() => { try { return window.innerWidth <= 768; } catch { return false; } });
   useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
