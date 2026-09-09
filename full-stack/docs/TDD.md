@@ -180,7 +180,8 @@ xhr.upload.onprogress = (ev) => {
 
 **三種觸發方式**：
 1. **手動觸發**：管理員在 `/backup` 頁面點擊「立即備份」→ `triggerBackup()` Server Action
-2. **Cron 排程**：Vercel Cron `POST /api/backup`（Bearer CRON_SECRET）→ `cronBackup()`（檢查頻率間隔）
+2. **Cron 排程**：Vercel Cron `POST /api/backup`（驗 Bearer `CRON_SECRET`）→ `loadScheduleContext()` →
+   `shouldRunScheduledBackup()`（檢查頻率間隔）→ `performBackup()`（三支都在 `src/lib/backupRunner.js`）
 3. **CLI 指令**：`node scripts/backup.js [--r2] [--gdrive]`（開發環境）
 
 **備份流程**：

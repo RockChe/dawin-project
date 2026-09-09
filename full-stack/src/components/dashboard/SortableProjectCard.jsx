@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
+import { useCan } from "@/components/PermissionProvider";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -43,14 +44,19 @@ export function EyeToggle({ hidden, onToggle, style }) {
 
 export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, icon, dragEnabled, hidden, onToggleHidden, onSelect, onArchive, onDelete, onIconClick, onIconRemove }) {
   const { X, SC } = useTheme();
+  const canWrite = useCan("write");
   const [iconHover, setIconHover] = useState(false);
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id });
+  // useSortable 在沒有 DndContext 祖先時會落回 @dnd-kit 內建的預設 context（no-op，
+  // 不會炸），所以 viewer 唯讀時繞過 DndContext 直接重用這支元件是安全的
+  // （ProjectsTab.jsx 那層負責 bypass；這裡另外用 disabled 做第二層保險，
+  // 跟 SortableSubItem.jsx 同樣的模式）。
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: project.id, disabled: !canWrite });
   const sStyle = { transform: CSS.Transform.toString(transform), transition };
   return (
     <div ref={setNodeRef} style={sStyle}>
       <div onClick={onSelect} style={{ background: X.surface, borderRadius: 16, border: `1px solid ${X.border}`, overflow: "hidden", transition: "border-color 0.2s, box-shadow 0.2s", boxShadow: X.surfaceShadow, cursor: "pointer", position: "relative" }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = c; e.currentTarget.style.boxShadow = X.surfaceShadowHover; }} onMouseLeave={e => { e.currentTarget.style.borderColor = X.border; e.currentTarget.style.boxShadow = X.surfaceShadow; }}>
-        {dragEnabled && (
+        {canWrite && dragEnabled && (
           <span className="dash-tap" {...attributes} {...listeners} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 10, right: 12, cursor: "grab", fontSize: 16, color: X.textDim, userSelect: "none", zIndex: 2, padding: "2px 4px", borderRadius: 4 }}
             onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>⠿</span>
         )}
@@ -61,13 +67,13 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
             {/* Icon */}
             <div
-              onClick={e => { e.stopPropagation(); onIconClick(); }}
+              onClick={canWrite ? e => { e.stopPropagation(); onIconClick(); } : undefined}
               onMouseEnter={() => setIconHover(true)}
               onMouseLeave={() => setIconHover(false)}
-              title={icon ? "更換圖示" : "上傳圖示"}
-              style={{ position: "relative", width: 72, height: 72, borderRadius: 16, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: c, flexShrink: 0, cursor: "pointer", overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
+              title={canWrite ? (icon ? "更換圖示" : "上傳圖示") : undefined}
+              style={{ position: "relative", width: 72, height: 72, borderRadius: 16, background: icon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: c, flexShrink: 0, cursor: canWrite ? "pointer" : "default", overflow: "hidden", border: icon ? "none" : `1px dashed ${c}50` }}>
               {icon ? <img src={icon} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 16 }} /> : pn[0]}
-              {icon && iconHover && (
+              {canWrite && icon && iconHover && (
                 <button
                   onClick={e => { e.stopPropagation(); onIconRemove(); }}
                   style={{ position: "absolute", top: 3, right: 3, width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.5)", color: "#fff", border: "none", fontSize: 13, lineHeight: "20px", textAlign: "center", cursor: "pointer", padding: 0, zIndex: 2 }}
@@ -90,10 +96,10 @@ export default function SortableProjectCard({ project, pn, pt, c, ts, avg, stC, 
             {Object.entries(stC).map(([st, cnt]) => { const sc = SC[st] || {}; return (<span key={st} style={{ fontSize: 14, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color }}>{st} {cnt}</span>); })}
           </div>
         </div>
-        <div style={{ padding: "10px 20px 14px", display: "flex", gap: 8, justifyContent: "flex-end", borderTop: `1px solid ${X.border}` }}>
+        {canWrite && <div style={{ padding: "10px 20px 14px", display: "flex", gap: 8, justifyContent: "flex-end", borderTop: `1px solid ${X.border}` }}>
           <button onClick={e => { e.stopPropagation(); onArchive(); }} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "3px 12px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>
           <button onClick={e => { e.stopPropagation(); if (confirm(`確認刪除專案「${pn}」嗎？`)) onDelete(); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "3px 12px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>
-        </div>
+        </div>}
       </div>
     </div>
   );

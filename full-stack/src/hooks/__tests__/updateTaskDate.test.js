@@ -16,6 +16,11 @@ import { renderHook, act } from '@testing-library/react';
 
 const updateTaskAction = vi.fn(async () => ({ success: true }));
 
+// useTaskManager now runs FORBIDDEN results through useForbiddenHandler,
+// which calls next/navigation's useRouter() — stub it so renderHook doesn't
+// need a mounted Next.js app router.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 vi.mock('@/server/actions/tasks', () => ({
   createTask: vi.fn(async () => ({ success: true })),
   updateTask: (...a) => updateTaskAction(...a),

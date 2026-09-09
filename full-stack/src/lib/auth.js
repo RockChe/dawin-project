@@ -98,23 +98,8 @@ export async function requireAuth() {
   return session;
 }
 
-export async function requireAdmin() {
-  const session = await requireAuth();
-  if (session.role !== 'super_admin') {
-    throw new Error('FORBIDDEN');
-  }
-  return session;
-}
-
 export async function safeRequireAuth() {
   const session = await getSession();
   if (!session) return { session: null, error: 'UNAUTHORIZED' };
-  return { session, error: null };
-}
-
-export async function safeRequireAdmin() {
-  const { session, error } = await safeRequireAuth();
-  if (error) return { session: null, error };
-  if (session.role !== 'super_admin') return { session: null, error: 'FORBIDDEN' };
   return { session, error: null };
 }

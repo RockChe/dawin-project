@@ -5,9 +5,16 @@ import { getUsers, createUser, resetUserPassword, deleteUser, updateUser } from 
 import { useTheme } from '@/components/ThemeProvider';
 import { F } from '@/lib/theme';
 
+const ROLE_OPTIONS = [
+  { value: 'super_admin', label: 'Super Admin' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'viewer', label: 'Viewer' },
+];
+
 export default function UsersPage() {
   const { X } = useTheme();
   const [users, setUsers] = useState([]);
+  const [myUserId, setMyUserId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPw, setResetPw] = useState('');
@@ -19,7 +26,12 @@ export default function UsersPage() {
   const loadUsers = async () => {
     try {
       const data = await getUsers();
-      setUsers(data);
+      if (data?.error) {
+        setError(data.error);
+        return;
+      }
+      setUsers(data.users);
+      setMyUserId(data.currentUserId);
     } catch (err) {
       setError('載入失敗');
     }
@@ -73,6 +85,17 @@ export default function UsersPage() {
       setError(result.error);
     } else {
       setSuccess('姓名已更新');
+      loadUsers();
+    }
+  };
+
+  const handleRoleChange = async (userId, role) => {
+    setError(null);
+    const result = await updateUser(userId, { role });
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      setSuccess('角色已更新');
       loadUsers();
     }
   };
@@ -139,6 +162,7 @@ export default function UsersPage() {
               <select name="role" style={{ ...inputStyle, cursor: 'pointer' }}>
                 <option value="admin">Admin</option>
                 <option value="super_admin">Super Admin</option>
+                <option value="viewer">Viewer</option>
               </select>
             </div>
           </div>
@@ -179,13 +203,25 @@ export default function UsersPage() {
                 </td>
                 <td style={{ padding: '12px 16px', color: X.textSec }}>{user.email}</td>
                 <td style={{ padding: '12px 16px' }}>
-                  <span style={{
-                    padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                    background: user.role === 'super_admin' ? `${X.purple}15` : `${X.accent}15`,
-                    color: user.role === 'super_admin' ? X.purple : X.accent,
-                  }}>
-                    {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-                  </span>
+                  <select
+                    value={user.role}
+                    disabled={user.id === myUserId}
+                    title={user.id === myUserId ? '不能變更自己的角色' : undefined}
+                    onChange={e => handleRoleChange(user.id, e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      width: 'auto',
+                      padding: '4px 8px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: user.id === myUserId ? 'not-allowed' : 'pointer',
+                      opacity: user.id === myUserId ? 0.6 : 1,
+                    }}
+                  >
+                    {ROLE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 </td>
                 <td style={{ padding: '12px 16px' }}>
                   {user.mustChangePassword && (

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
+import { can } from '@/lib/permissions';
 import Sidebar from '@/components/dashboard/Sidebar';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ export default async function AdminLayout({ children }) {
     redirect('/login');
   }
 
-  if (session.role !== 'super_admin') {
+  if (!can(session.role, 'manage')) {
     redirect('/dashboard');
   }
 

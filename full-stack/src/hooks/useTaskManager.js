@@ -26,6 +26,7 @@ import {
 } from '@/server/actions/projects';
 import { saveConfig } from '@/server/actions/config';
 import { runReorder } from './reorderProjects';
+import useForbiddenHandler from './useForbiddenHandler';
 
 const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
 const CACHE_KEY = 'dash_cache';
@@ -33,8 +34,11 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // task columns backed by PG `date` — values get normalised to ISO on write
 const DATE_COLUMNS = new Set(['startDate', 'endDate']);
 
+// UNAUTHORIZED (session 過期/未登入) 才轉登入頁。FORBIDDEN（角色不足）交給
+// useForbiddenHandler 處理（toast + refresh），不趕人去登入——viewer 沒登出，
+// 只是這個角色做不了這件事。
 function checkAuthError(result) {
-  if (result?.error === 'UNAUTHORIZED' || result?.error === 'FORBIDDEN') {
+  if (result?.error === 'UNAUTHORIZED') {
     window.location.href = '/login';
     return true;
   }
@@ -86,6 +90,8 @@ export default function useTaskManager(initialData) {
       toastFadeTimer.current = setTimeout(() => setToast(null), 300);
     }, 2200);
   }, []);
+
+  const handleForbidden = useForbiddenHandler(showToast);
 
   const applyData = useCallback((data) => {
     if (checkAuthError(data)) return;
@@ -244,7 +250,7 @@ export default function useTaskManager(initialData) {
         // Roll back only this field, so a concurrent edit to another field
         // on the same task isn't clobbered.
         if (hadRow) setAllT(p => p.map(t => t.id === id ? { ...t, [dbField]: prevValue } : t));
-        showToast(result.error, 'error');
+        if (!handleForbidden(result)) showToast(result.error, 'error');
       } else {
         // The cached snapshot is now stale. loadData() short-circuits on a
         // cache younger than CACHE_TTL, so leaving it would make the next
@@ -254,7 +260,7 @@ export default function useTaskManager(initialData) {
     } finally {
       pendingUpdates.current.delete(key);
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const addTask = useCallback(async (projectId, data) => {
     const result = await createTaskAction({ projectId, ...data });
@@ -264,10 +270,10 @@ export default function useTaskManager(initialData) {
       invalidateCache();
       showToast('任務已建立', 'success');
     } else if (result?.error) {
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const deleteTask = useCallback(async (id) => {
     const prevTSnap = allTRef.current;
@@ -294,11 +300,11 @@ export default function useTaskManager(initialData) {
       if (removedS.length) setAllS(p => mergeRestore(p, prevSSnap, removedS));
       if (removedL.length) setAllL(p => mergeRestore(p, prevLSnap, removedL));
       if (removedF.length) setAllF(p => mergeRestore(p, prevFSnap, removedF));
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       showToast('任務已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Subtask CRUD ──
   const toggleSub = useCallback(async (id) => {
@@ -319,7 +325,7 @@ export default function useTaskManager(initialData) {
       if (checkAuthError(result)) return;
       if (result?.error) {
         if (prevRow) setAllS(p => p.map(s => s.id === id ? prevRow : s));
-        showToast(result.error, 'error');
+        if (!handleForbidden(result)) showToast(result.error, 'error');
         return;
       }
       // The server owns the day boundary, so adopt what it actually stored
@@ -335,7 +341,7 @@ export default function useTaskManager(initialData) {
     } finally {
       pendingUpdates.current.delete(key);
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const updateSub = useCallback(async (id, field, value) => {
     const prevRow = allSRef.current.find(s => s.id === id);
@@ -345,11 +351,11 @@ export default function useTaskManager(initialData) {
     if (checkAuthError(result)) return;
     if (result?.error) {
       if (prevRow) setAllS(p => p.map(s => s.id === id ? { ...s, [field]: prevValue } : s));
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       invalidateCache();
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const addSub = useCallback(async (taskId, data) => {
     const result = await createSubtaskAction({ taskId, ...data });
@@ -358,9 +364,11 @@ export default function useTaskManager(initialData) {
       setAllS(p => [...p, result.subtask]);
       invalidateCache();
       showToast('子任務已新增', 'success');
+    } else if (result?.error) {
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const deleteSub = useCallback(async (id) => {
     const idx = allSRef.current.findIndex(s => s.id === id);
@@ -372,12 +380,12 @@ export default function useTaskManager(initialData) {
       if (removed) {
         setAllS(p => p.some(s => s.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removed, ...p.slice(Math.min(idx, p.length))]);
       }
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       invalidateCache();
       showToast('子任務已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Link CRUD ──
   const addLink = useCallback(async (taskId, data) => {
@@ -387,9 +395,11 @@ export default function useTaskManager(initialData) {
       setAllL(p => [...p, result.link]);
       invalidateCache();
       showToast('連結已新增', 'success');
+    } else if (result?.error) {
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const deleteLink = useCallback(async (id) => {
     const idx = allLRef.current.findIndex(l => l.id === id);
@@ -401,12 +411,12 @@ export default function useTaskManager(initialData) {
       if (removed) {
         setAllL(p => p.some(l => l.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removed, ...p.slice(Math.min(idx, p.length))]);
       }
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       invalidateCache();
       showToast('連結已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── File CRUD ──
   const addFile = useCallback((taskId, fileData) => {
@@ -425,12 +435,12 @@ export default function useTaskManager(initialData) {
       if (removed) {
         setAllF(p => p.some(f => f.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removed, ...p.slice(Math.min(idx, p.length))]);
       }
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       invalidateCache();
       showToast('檔案已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Project CRUD ──
   const renameProject = useCallback(async (id, newName) => {
@@ -441,12 +451,12 @@ export default function useTaskManager(initialData) {
     if (checkAuthError(result)) return;
     if (result?.error) {
       setProjects(prev);
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
       return;
     }
     invalidateCache();
     showToast('專案已重新命名', 'success');
-  }, [projects, showToast, invalidateCache]);
+  }, [projects, showToast, invalidateCache, handleForbidden]);
 
   const addProject = useCallback(async (name) => {
     const formData = new FormData();
@@ -457,9 +467,11 @@ export default function useTaskManager(initialData) {
       setProjects(p => [...p, result.project]);
       invalidateCache();
       showToast('專案已建立', 'success');
+    } else if (result?.error) {
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const deleteProjectHandler = useCallback(async (id) => {
     const prevProjSnap = projectsRef.current;
@@ -478,11 +490,11 @@ export default function useTaskManager(initialData) {
         setProjects(p => p.some(proj => proj.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removedProj, ...p.slice(Math.min(idx, p.length))]);
       }
       if (removedT.length) setAllT(p => mergeRestore(p, prevTSnap, removedT));
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       showToast('專案已刪除', 'error');
     }
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Batch Delete ──
   const deleteManyTasks = useCallback(async (ids) => {
@@ -507,12 +519,12 @@ export default function useTaskManager(initialData) {
       if (removedS.length) setAllS(p => mergeRestore(p, prevSSnap, removedS));
       if (removedL.length) setAllL(p => mergeRestore(p, prevLSnap, removedL));
       if (removedF.length) setAllF(p => mergeRestore(p, prevFSnap, removedF));
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       showToast(`已刪除 ${result.deleted} 筆任務`, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Batch Update ──
   const updateManyTasks = useCallback(async (ids, field, value) => {
@@ -524,12 +536,12 @@ export default function useTaskManager(initialData) {
     if (checkAuthError(result)) return;
     if (result?.error) {
       setAllT(p => p.map(t => prevValues.has(t.id) ? { ...t, [field]: prevValues.get(t.id) } : t));
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       showToast(`已更新 ${result.updated} 筆任務`, 'success');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Clean All ──
   const deleteAllTasks = useCallback(async () => {
@@ -542,22 +554,24 @@ export default function useTaskManager(initialData) {
       setAllF([]);
       invalidateCache();
       showToast('所有任務已清除', 'error');
+    } else if (result?.error) {
+      if (!handleForbidden(result)) showToast(result.error, 'error');
     }
     return result;
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Import (upsert) ──
   const importTasks = useCallback(async (csvTasks) => {
     const result = await upsertTasksAction(csvTasks);
     if (checkAuthError(result)) return result;
     if (result?.error) {
-      showToast(result.error, 'error');
+      if (!handleForbidden(result)) showToast(result.error, 'error');
       return result;
     }
     showToast(`匯入完成：${result.updated} 筆更新、${result.inserted} 筆新增`, 'success');
     await loadData(true); // force refetch after import
     return result;
-  }, [showToast, loadData]);
+  }, [showToast, loadData, handleForbidden]);
 
   // ── Reorder subtasks ──
   const reorderSubs = useCallback((taskId, activeId, overId) => {
@@ -596,9 +610,9 @@ export default function useTaskManager(initialData) {
     if (checkAuthError(outcome.result)) return;
     if (outcome.result?.error) {
       setProjects(prevProjects);
-      showToast(outcome.result.error, 'error');
+      if (!handleForbidden(outcome.result)) showToast(outcome.result.error, 'error');
     }
-  }, [projects, showToast, invalidateCache]);
+  }, [projects, showToast, invalidateCache, handleForbidden]);
 
   // ── Computed: tasks with progress ──
   const twp = useMemo(() => {
@@ -623,17 +637,17 @@ export default function useTaskManager(initialData) {
     setConfigOwners(newOwners);
     const result = await saveConfig('owners', newOwners);
     if (checkAuthError(result)) return;
-    if (result?.error) showToast(result.error, 'error');
+    if (result?.error) { if (!handleForbidden(result)) showToast(result.error, 'error'); }
     else invalidateCache();
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   const saveConfigCats = useCallback(async (newCats) => {
     setConfigCats(newCats);
     const result = await saveConfig('categories', newCats);
     if (checkAuthError(result)) return;
-    if (result?.error) showToast(result.error, 'error');
+    if (result?.error) { if (!handleForbidden(result)) showToast(result.error, 'error'); }
     else invalidateCache();
-  }, [showToast, invalidateCache]);
+  }, [showToast, invalidateCache, handleForbidden]);
 
   return {
     projects, setProjects,

@@ -1,21 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { withRouteCap } from '@/lib/withCap';
 import { uploadToR2, deleteFromR2, getDownloadUrl } from '@/lib/r2';
 import { db } from '@/server/db';
 import { projects } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { isValidUUID } from '@/lib/utils';
+import { can } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_BANNER_SIZE = 5 * 1024 * 1024; // 5 MB
 
-export async function POST(request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const POST = withRouteCap('write', async (request, ctx, session) => {
   const formData = await request.formData();
   const file = formData.get('file');
   const projectId = formData.get('projectId');
@@ -49,7 +45,7 @@ export async function POST(request) {
     if (!proj[0]) {
       return NextResponse.json({ error: '專案不存在' }, { status: 404 });
     }
-    if (proj[0].createdBy !== session.userId && session.role !== 'super_admin') {
+    if (proj[0].createdBy !== session.userId && !can(session.role, 'manage')) {
       return NextResponse.json({ error: '無權限修改此專案' }, { status: 403 });
     }
 
@@ -77,4 +73,4 @@ export async function POST(request) {
     console.error('[upload-banner] error:', err);
     return NextResponse.json({ error: 'Banner 上傳失敗' }, { status: 500 });
   }
-}
+});

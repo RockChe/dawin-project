@@ -1,9 +1,14 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useCan } from "@/components/PermissionProvider";
+import useForbiddenHandler from "@/hooks/useForbiddenHandler";
 import { extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 
-export default function FileManagerModal({ project, tasks, allL, allF, addLink, addFile, deleteLink, deleteFile, onClose }) {
+export default function FileManagerModal({ project, tasks, allL, allF, addLink, addFile, deleteLink, deleteFile, onClose, showToast }) {
+  const canWrite = useCan("write");
+  const canExport = useCan("export");
+  const handleForbidden = useForbiddenHandler(showToast || (() => {}));
   const [tab, setTab] = useState("files");
   const [showAdd, setShowAdd] = useState(false);
   const [linkDraft, setLinkDraft] = useState({ url: "", title: "", taskId: "" });
@@ -87,6 +92,7 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
       try {
         const result = JSON.parse(xhr.responseText);
         if (result.success) { addFile(fileDraftTask, result.file); }
+        else if (result.error) { if (!handleForbidden(result) && showToast) showToast(result.error, 'error'); }
       } catch {}
       setUploading(false);
       setFileDraftTask("");
@@ -121,11 +127,11 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
           <button onClick={() => { setTab("files"); setShowAdd(false); }} style={tabStyle(tab === "files")}>📎 Files ({projFiles.length})</button>
           <button onClick={() => { setTab("links"); setShowAdd(false); }} style={tabStyle(tab === "links")}>🔗 Links ({projLinks.length})</button>
           <div style={{ flex: 1 }} />
-          <button onClick={() => setShowAdd(!showAdd)} style={{ background: showAdd ? X.surfaceLight : "transparent", border: `1px solid ${X.border}`, borderRadius: 20, padding: "4px 14px", fontSize: 13, color: X.accent, cursor: "pointer", fontWeight: 600 }}>+ Add</button>
+          {canWrite && <button onClick={() => setShowAdd(!showAdd)} style={{ background: showAdd ? X.surfaceLight : "transparent", border: `1px solid ${X.border}`, borderRadius: 20, padding: "4px 14px", fontSize: 13, color: X.accent, cursor: "pointer", fontWeight: 600 }}>+ Add</button>}
         </div>
 
         {/* Add Form */}
-        {showAdd && (
+        {canWrite && showAdd && (
           <div style={{ padding: "12px 20px", borderBottom: `1px solid ${X.border}`, flexShrink: 0 }}>
             <div style={{ fontSize: 12, color: X.textDim, marginBottom: 6 }}>Task</div>
             {tab === "links" ? (
@@ -177,10 +183,10 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
                   {group.items.map(f => (
                     <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, padding: "6px 10px", borderRadius: 8, background: X.surfaceLight }}>
                       <span style={{ fontSize: 14, flexShrink: 0 }}>{group.emoji}</span>
-                      <span onClick={() => downloadFile(f)} style={{ flex: 1, fontSize: 13, color: X.textSec, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title="Click to download">{f.name}</span>
+                      <span onClick={canExport ? () => downloadFile(f) : undefined} style={{ flex: 1, fontSize: 13, color: X.textSec, cursor: canExport ? "pointer" : "default", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={canExport ? "Click to download" : undefined}>{f.name}</span>
                       <span style={{ fontSize: 11, color: X.textDim, flexShrink: 0, background: `${X.accent}18`, padding: "2px 8px", borderRadius: 10 }}>{taskMap[f.taskId] || f.taskId}</span>
                       <span style={{ fontSize: 12, color: X.textDim, flexShrink: 0 }}>{formatFileSize(f.size)}</span>
-                      <button onClick={() => deleteFile(f.id)} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>
+                      {canWrite && <button onClick={() => deleteFile(f.id)} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>}
                     </div>
                   ))}
                 </div>
@@ -198,7 +204,7 @@ export default function FileManagerModal({ project, tasks, allL, allF, addLink, 
                       <span style={{ fontSize: 14, flexShrink: 0 }}>🔗</span>
                       <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: 13, color: X.accent, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.url}>{l.title || l.url}</a>
                       <span style={{ fontSize: 11, color: X.textDim, flexShrink: 0, background: `${X.accent}18`, padding: "2px 8px", borderRadius: 10 }}>{taskMap[l.taskId] || l.taskId}</span>
-                      <button onClick={() => deleteLink(l.id)} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>
+                      {canWrite && <button onClick={() => deleteLink(l.id)} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>}
                     </div>
                   ))}
                 </div>

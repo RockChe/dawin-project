@@ -16,6 +16,11 @@ import { toBusinessDateString } from '@/lib/utils';
 
 const toggleSubtaskAction = vi.fn(async () => ({ success: true, done: true, doneDate: '2026-08-15' }));
 
+// useTaskManager now runs FORBIDDEN results through useForbiddenHandler,
+// which calls next/navigation's useRouter() — stub it so renderHook doesn't
+// need a mounted Next.js app router.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 vi.mock('@/server/actions/tasks', () => ({
   createTask: vi.fn(async () => ({ success: true })),
   updateTask: vi.fn(async () => ({ success: true })),

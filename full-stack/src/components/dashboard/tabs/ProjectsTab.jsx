@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback, useMemo, useEffect, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
+import { useCan } from "@/components/PermissionProvider";
+import useForbiddenHandler from "@/hooks/useForbiddenHandler";
 import { pD, fD } from "@/lib/utils";
 import { STATUSES } from "@/lib/constants";
 import EditableCell from "../EditableCell";
@@ -134,6 +136,8 @@ function SortableProjectRow({ project, pn, pt, c, ts, avg, stC, icon, dragEnable
 
 function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView }) {
   const { X, SC, inputStyle } = useTheme();
+  const canWrite = useCan("write");
+  const handleForbidden = useForbiddenHandler(showToast);
   const projMeta = useMemo(() => { const m = {}; projects.forEach(p => { m[p.name] = { creatorName: p.creatorName || null, source: p.source || null }; }); return m; }, [projects]);
   const [selProj, setSelProj] = useState(null);
   const [showCreateProj, setShowCreateProj] = useState(false);
@@ -205,7 +209,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
         showToast("圖示已上傳", "success");
       } else if (data.error) {
         setProjBanners(p => { const n = { ...p }; delete n[projName]; return n; });
-        showToast(data.error, "error");
+        if (!handleForbidden(data)) showToast(data.error, "error");
       }
     } catch {
       setProjBanners(p => { const n = { ...p }; delete n[projName]; return n; });
@@ -221,7 +225,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
     const result = await deleteProjectBanner(proj.id);
     if (result?.error) {
       setProjBanners(p => ({ ...p, [projName]: old }));
-      showToast(result.error, "error");
+      if (!handleForbidden(result)) showToast(result.error, "error");
     } else {
       showToast("圖示已刪除", "success");
     }
@@ -286,45 +290,56 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
             </div>
           )}
         </div>
-        {!showCreateProj ? (<button onClick={() => setShowCreateProj(true)} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>
+        {canWrite && (!showCreateProj ? (<button onClick={() => setShowCreateProj(true)} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>
         ) : (<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input value={newProjName} onChange={e => setNewProjName(e.target.value)} placeholder="Project name" onKeyDown={e => { if (e.key === "Enter") createProj(newProjName); if (e.key === "Escape") { setShowCreateProj(false); setNewProjName(""); } }} autoFocus style={{ fontSize: 14, padding: "6px 12px", borderRadius: 20, border: `1px solid ${X.accent}`, outline: "none", background: X.surface, color: X.text, width: 200 }} />
           <button onClick={() => createProj(newProjName)} disabled={!newProjName.trim()} style={{ background: newProjName.trim() ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "6px 16px", fontSize: 14, fontWeight: 700, cursor: newProjName.trim() ? "pointer" : "not-allowed" }}>Confirm</button>
           <button onClick={() => { setShowCreateProj(false); setNewProjName(""); }} style={{ background: X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, cursor: "pointer" }}>Cancel</button>
-        </div>)}
+        </div>))}
       </div>
-      <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
-        <SortableContext items={sortedProjList.map(p => p.id)} strategy={projectsView === "list" ? verticalListSortingStrategy : rectSortingStrategy} disabled={sortMode !== "manual"}>
-          <div className={projectsView === "list" ? undefined : "dash-grid-cards"} style={projectsView === "list" ? { display: "flex", flexDirection: "column", gap: 8 } : undefined}>
-            {sortedProjList.map(proj => {
-              const pn = proj.name;
-              const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
-              const ts = allS.filter(s => pt.some(t => t.id === s.taskId));
-              const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
-              const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
-              const icn = projBanners[pn];
-              const isHidden = hiddenProjects.includes(proj.id);
-              const onToggle = onToggleHidden ? () => onToggleHidden(proj.id) : undefined;
-              return projectsView === "list" ? (
-                <SortableProjectRow key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
-                  dragEnabled={sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} />
-              ) : (
-                <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
-                  dragEnabled={sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
-                  onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} onIconRemove={() => handleIconRemove(pn)} />
-              );
-            })}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {(() => {
+        const cardList = sortedProjList.map(proj => {
+          const pn = proj.name;
+          const pt = twp.filter(d => d.project === pn); const c = pcMap[pn] || X.accent;
+          const ts = allS.filter(s => pt.some(t => t.id === s.taskId));
+          const avg = pt.length > 0 ? Math.round(pt.reduce((s, t) => s + t.progress, 0) / pt.length) : 0;
+          const stC = {}; pt.forEach(t => { stC[t.status] = (stC[t.status] || 0) + 1; });
+          const icn = projBanners[pn];
+          const isHidden = hiddenProjects.includes(proj.id);
+          const onToggle = onToggleHidden ? () => onToggleHidden(proj.id) : undefined;
+          return projectsView === "list" ? (
+            <SortableProjectRow key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
+              dragEnabled={canWrite && sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} />
+          ) : (
+            <SortableProjectCard key={proj.id} project={proj} pn={pn} pt={pt} c={c} ts={ts} avg={avg} stC={stC} icon={icn}
+              dragEnabled={canWrite && sortMode === "manual"} hidden={isHidden} onToggleHidden={onToggle} onSelect={() => setSelProj(pn)} onArchive={() => archiveProj(pn)} onDelete={() => deleteProj(pn)}
+              onIconClick={() => { setUploadTarget(pn); fileRef.current?.click(); }} onIconRemove={() => handleIconRemove(pn)} />
+          );
+        });
+        const listClassName = projectsView === "list" ? undefined : "dash-grid-cards";
+        const listStyle = projectsView === "list" ? { display: "flex", flexDirection: "column", gap: 8 } : undefined;
+        // viewer：不掛 DndContext（唯讀時整個 bypass，而不是只清空 sensors）。
+        // SortableProjectCard/SortableProjectRow 本身已經用 useCan('write') 藏掉
+        // 編輯按鈕與拖拉把手，兩種角色重用同一份渲染邏輯，不重複維護。
+        if (!canWrite) {
+          return <div className={listClassName} style={listStyle}>{cardList}</div>;
+        }
+        return (
+          <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
+            <SortableContext items={sortedProjList.map(p => p.id)} strategy={projectsView === "list" ? verticalListSortingStrategy : rectSortingStrategy} disabled={sortMode !== "manual"}>
+              <div className={listClassName} style={listStyle}>{cardList}</div>
+            </SortableContext>
+          </DndContext>
+        );
+      })()}
       {showArch && archived.size > 0 && (<div style={{ marginTop: 24 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: X.textDim, marginBottom: 12 }}>Archived</div>
         <div className="dash-grid-2col" style={{ gap: 12 }}>
           {[...archived].map(pn => { const pt = twp.filter(d => d.project === pn); if (!pt.length) return null;
             return (<div key={pn} onClick={() => setSelProj(pn)} style={{ background: X.surface, borderRadius: 12, border: `1px solid ${X.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, opacity: 0.5, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity = "0.7"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>
               <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>{pn}</div><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM }}>{pt.length} tasks</div></div>
-              <button onClick={e => { e.stopPropagation(); unarchiveProj(pn); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "4px 12px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Unarchive</button>
-              <button className="dash-tap" onClick={e => { e.stopPropagation(); if (confirm("Permanently delete?")) deleteProj(pn); unarchiveProj(pn); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "4px 12px", fontSize: 14, color: X.red, cursor: "pointer" }}>Delete</button>
+              {canWrite && <button onClick={e => { e.stopPropagation(); unarchiveProj(pn); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "4px 12px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Unarchive</button>}
+              {canWrite && <button className="dash-tap" onClick={e => { e.stopPropagation(); if (confirm("Permanently delete?")) deleteProj(pn); unarchiveProj(pn); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "4px 12px", fontSize: 14, color: X.red, cursor: "pointer" }}>Delete</button>}
             </div>);
           })}
         </div>
@@ -356,23 +371,23 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
       <button onClick={() => { setSelProj(null); }} style={{ background: X.surface, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>← Back</button>
       {/* Detail Icon */}
       <div
-        onClick={e => { e.stopPropagation(); setUploadTarget(selProj); fileRef.current?.click(); }}
+        onClick={canWrite ? e => { e.stopPropagation(); setUploadTarget(selProj); fileRef.current?.click(); } : undefined}
         onMouseEnter={() => setDetailIconHover(true)}
         onMouseLeave={() => setDetailIconHover(false)}
-        title={detailIcon ? "更換圖示" : "上傳圖示"}
-        style={{ position: "relative", width: 80, height: 80, borderRadius: 18, background: detailIcon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 700, color: c, cursor: "pointer", overflow: "hidden", border: detailIcon ? "none" : `1px dashed ${c}50`, flexShrink: 0 }}>
+        title={canWrite ? (detailIcon ? "更換圖示" : "上傳圖示") : undefined}
+        style={{ position: "relative", width: 80, height: 80, borderRadius: 18, background: detailIcon ? "transparent" : `${c}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 700, color: c, cursor: canWrite ? "pointer" : "default", overflow: "hidden", border: detailIcon ? "none" : `1px dashed ${c}50`, flexShrink: 0 }}>
         {detailIcon ? <img src={detailIcon} alt="" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 18 }} /> : selProj[0]}
-        {detailIcon && detailIconHover && (
+        {canWrite && detailIcon && detailIconHover && (
           <button
             onClick={e => { e.stopPropagation(); handleIconRemove(selProj); }}
             style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.5)", color: "#fff", border: "none", fontSize: 14, lineHeight: "22px", textAlign: "center", cursor: "pointer", padding: 0, zIndex: 2 }}
             title="刪除圖示">×</button>
         )}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}><h2 className="dash-name-1line" style={{ fontSize: 24, fontWeight: 700, margin: 0 }}><EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /></h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div>{projMeta[selProj]?.creatorName && <div style={{ fontSize: 12, color: X.textDim, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>{projMeta[selProj].creatorName} · <span style={{ padding: "0 5px", borderRadius: 6, background: projMeta[selProj].source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: projMeta[selProj].source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{projMeta[selProj].source === 'csv_import' ? 'CSV匯入' : '手動'}</span></div>}</div>
+      <div style={{ flex: 1, minWidth: 0 }}><h2 className="dash-name-1line" style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>{canWrite ? <EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /> : selProj}</h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div>{projMeta[selProj]?.creatorName && <div style={{ fontSize: 12, color: X.textDim, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>{projMeta[selProj].creatorName} · <span style={{ padding: "0 5px", borderRadius: 6, background: projMeta[selProj].source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: projMeta[selProj].source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{projMeta[selProj].source === 'csv_import' ? 'CSV匯入' : '手動'}</span></div>}</div>
       <button onClick={() => setShowFileManager(selProj)} style={{ background: "transparent", border: `1px solid ${X.accent}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.accent, cursor: "pointer", fontWeight: 600 }}>📁 檔案管理</button>
-      <button onClick={() => archiveProj(selProj)} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>
-      <button onClick={() => { if (confirm("Delete?")) deleteProj(selProj); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>
+      {canWrite && <button onClick={() => archiveProj(selProj)} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>}
+      {canWrite && <button onClick={() => { if (confirm("Delete?")) deleteProj(selProj); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>}
     </div>
     {pt.some(t => t.start) && (<div style={{ marginBottom: 20 }}>
       <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={setTimeDim} /></div>
@@ -422,7 +437,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
           <span style={{ fontSize: 14, fontWeight: 700 }}>Tasks
             {ptView.length !== pt.length && <span style={{ fontFamily: FM, fontSize: 12, fontWeight: 400, color: X.textDim, marginLeft: 8 }}>{ptView.length} / {pt.length}</span>}
           </span>
-          <button onClick={openNewTaskModal} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>
+          {canWrite && <button onClick={openNewTaskModal} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>}
         </div>
         <div style={{ padding: "8px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: X.surfaceLight }}>
           <select value={projectTaskView.sort.field} onChange={e => patchView({ sort: { ...projectTaskView.sort, field: e.target.value } })}
@@ -467,8 +482,8 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
                 </div>
               </div>
               <div ref={openStatusId === task.id ? statusDropRef : null} style={{ position: "relative" }}>
-                <span onClick={e => { e.stopPropagation(); setOpenStatusId(openStatusId === task.id ? null : task.id); }} style={{ fontSize: 14, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, cursor: "pointer", userSelect: "none" }}>{task.status}</span>
-                {openStatusId === task.id && (
+                <span onClick={canWrite ? e => { e.stopPropagation(); setOpenStatusId(openStatusId === task.id ? null : task.id); } : undefined} style={{ fontSize: 14, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, cursor: canWrite ? "pointer" : "default", userSelect: "none" }}>{task.status}</span>
+                {canWrite && openStatusId === task.id && (
                   <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 50, background: X.surface, border: `1px solid ${X.border}`, borderRadius: 10, boxShadow: `0 4px 16px ${X.shadowHeavy}`, padding: "4px 0", minWidth: 120 }}>
                     {STATUS_OPTIONS.map(st => { const s = SC[st] || {}; return (
                       <div key={st} onClick={e => { e.stopPropagation(); updateTask(task.id, "status", st); setOpenStatusId(null); }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"} style={{ padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
@@ -479,18 +494,26 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
                 )}
               </div>
               <div style={{ width: 90 }}><ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} timeBased={task.timeBased} /></div>
-              <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(task.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "4px 6px" }}>×</button>
+              {canWrite && <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(task.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "4px 6px" }}>×</button>}
             </div>
             {tSubs.length > 0 && (() => { const sortedSubs = [...tSubs].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); return <div style={{ paddingLeft: 32, paddingRight: 20, paddingBottom: sortedSubs.length > 0 ? 4 : 0 }}>
-              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={ev => { if (ev.active && ev.over && ev.active.id !== ev.over.id) reorderSubs(task.id, ev.active.id, ev.over.id); }}>
-                <SortableContext items={sortedSubs.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  {sortedSubs.map(sub => (
-                    <SortableSubItem key={sub.id} sub={sub} toggleSub={toggleSub} updateSub={updateSub} deleteSub={deleteSub} configOwners={configOwners} />
-                  ))}
-                </SortableContext>
-              </DndContext>
+              {canWrite ? (
+                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={ev => { if (ev.active && ev.over && ev.active.id !== ev.over.id) reorderSubs(task.id, ev.active.id, ev.over.id); }}>
+                  <SortableContext items={sortedSubs.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    {sortedSubs.map(sub => (
+                      <SortableSubItem key={sub.id} sub={sub} toggleSub={toggleSub} updateSub={updateSub} deleteSub={deleteSub} configOwners={configOwners} />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                // viewer：不掛 DndContext，SortableSubItem 本身會用 useCan('write') 藏掉
+                // TagInput 與完成勾選（拖拉把手因為沒有 SortableContext 也不會顯示）。
+                sortedSubs.map(sub => (
+                  <SortableSubItem key={sub.id} sub={sub} toggleSub={toggleSub} updateSub={updateSub} deleteSub={deleteSub} configOwners={configOwners} />
+                ))
+              )}
             </div>; })()}
-            <div style={{ paddingLeft: 32, paddingRight: 20, paddingBottom: 8 }}>
+            {canWrite && <div style={{ paddingLeft: 32, paddingRight: 20, paddingBottom: 8 }}>
               {showSubAdd === task.id
                 ? <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", padding: "4px 0" }}>
                   <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(task.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px", minWidth: 120 }} />
@@ -500,9 +523,9 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
                 </div>
                 : <span onClick={e => { e.stopPropagation(); setShowSubAdd(task.id); setSubDraft({ name: "", owner: "" }); }} style={{ fontSize: 13, color: X.accent, fontWeight: 500, cursor: "pointer", opacity: 0.5, padding: "2px 8px" }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>+ Add subtask</span>
               }
-            </div>
+            </div>}
           </div>); })}
-        {!pt.length && <div style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📋</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks yet</div><div style={{ fontSize: 14, marginBottom: 16 }}>Get started by creating a task for this project</div><button onClick={openNewTaskModal} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "8px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button></div>}
+        {!pt.length && <div style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📋</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks yet</div><div style={{ fontSize: 14, marginBottom: 16 }}>Get started by creating a task for this project</div>{canWrite && <button onClick={openNewTaskModal} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "8px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>}</div>}
       </div>
     </div>
   </div>);

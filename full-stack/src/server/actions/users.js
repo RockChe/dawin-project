@@ -2,147 +2,191 @@
 
 import { db } from '@/server/db';
 import { users } from '@/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { safeRequireAdmin } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { withCap } from '@/lib/withCap';
+import { ROLES } from '@/lib/permissions';
 
 export async function getUsers() {
-  const { error } = await safeRequireAdmin();
-  if (error) return { error };
-  const result = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      role: users.role,
-      mustChangePassword: users.mustChangePassword,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .orderBy(users.createdAt);
-  return result;
+  return withCap('manage', async (session) => {
+    const result = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        mustChangePassword: users.mustChangePassword,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(users.createdAt);
+    // currentUserId 讓前端知道「哪一列是自己」，藉此 disable 自己那列的角色下拉
+    return { users: result, currentUserId: session.userId };
+  });
 }
 
 export async function createUser(formData) {
-  const { error } = await safeRequireAdmin();
-  if (error) return { error };
+  return withCap('manage', async () => {
+    const email = formData.get('email')?.toString().trim().toLowerCase();
+    const name = formData.get('name')?.toString().trim();
+    const password = formData.get('password')?.toString();
+    const role = formData.get('role')?.toString();
 
-  const email = formData.get('email')?.toString().trim().toLowerCase();
-  const name = formData.get('name')?.toString().trim();
-  const password = formData.get('password')?.toString();
-  const role = formData.get('role')?.toString() || 'admin';
+    // Validate role enum：漏傳 role 應該是錯誤，不是靜默給出寫入權限
+    if (!role || !ROLES.includes(role)) {
+      return { error: `無效的角色: ${role ?? '(未指定)'}` };
+    }
 
-  // Validate role enum
-  const VALID_ROLES = ['super_admin', 'admin'];
-  if (!VALID_ROLES.includes(role)) {
-    return { error: `無效的角色: ${role}` };
-  }
+    if (!email || !name || !password) {
+      return { error: '請填寫所有欄位' };
+    }
 
-  if (!email || !name || !password) {
-    return { error: '請填寫所有欄位' };
-  }
+    if (password.length < 8) {
+      return { error: '密碼至少需要 8 個字元' };
+    }
 
-  if (password.length < 8) {
-    return { error: '密碼至少需要 8 個字元' };
-  }
+    // Check if email exists
+    const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existing.length > 0) {
+      return { error: '此 Email 已被使用' };
+    }
 
-  // Check if email exists
-  const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (existing.length > 0) {
-    return { error: '此 Email 已被使用' };
-  }
+    const hash = await bcrypt.hash(password, 12);
 
-  const hash = await bcrypt.hash(password, 12);
+    await db.insert(users).values({
+      email,
+      name,
+      passwordHash: hash,
+      role,
+      mustChangePassword: true,
+    });
 
-  await db.insert(users).values({
-    email,
-    name,
-    passwordHash: hash,
-    role,
-    mustChangePassword: true,
+    return { success: true };
   });
-
-  return { success: true };
 }
 
 import { isValidUUID } from '@/lib/utils';
 
 export async function resetUserPassword(userId, newPassword) {
-  const { session, error } = await safeRequireAdmin();
-  if (error) return { error };
+  return withCap('manage', async (session) => {
+    if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
 
-  if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
+    if (!newPassword || newPassword.length < 8) {
+      return { error: '密碼至少需要 8 個字元' };
+    }
 
-  if (!newPassword || newPassword.length < 8) {
-    return { error: '密碼至少需要 8 個字元' };
-  }
+    // Verify user exists before updating
+    const target = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!target[0]) return { error: '使用者不存在' };
 
-  // Verify user exists before updating
-  const target = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
-  if (!target[0]) return { error: '使用者不存在' };
+    const hash = await bcrypt.hash(newPassword, 12);
 
-  const hash = await bcrypt.hash(newPassword, 12);
+    await db
+      .update(users)
+      .set({
+        passwordHash: hash,
+        mustChangePassword: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
 
-  await db
-    .update(users)
-    .set({
-      passwordHash: hash,
-      mustChangePassword: true,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId));
+    await logAudit('PASSWORD_RESET', session.userId, {
+      resourceType: 'user',
+      resourceId: userId,
+    });
 
-  await logAudit('PASSWORD_RESET', session.userId, {
-    resourceType: 'user',
-    resourceId: userId,
+    return { success: true };
   });
-
-  return { success: true };
 }
 
+// 保留最後一個 super_admin 的不變量：neon-http 這條 driver 不支援互動式 transaction
+// （db.transaction() 直接 throw「No transactions support」），所以「先數還剩幾個、
+// 再決定要不要放行」不能拆成兩支查詢——兩個 super_admin 同時互降，兩邊各自查到
+// 「還有 2 個」就都放行，系統會歸零。
+// 這裡改用「WITH ... FOR UPDATE + UPDATE/DELETE ... RETURNING」包成單一 SQL 陳述式：
+// FOR UPDATE 鎖住全部 super_admin 列，逼第二個請求排隊等第一個 commit 後才重新讀到
+// 更新後的計數，藉此在單一 statement 內做到跟 transaction 一樣的原子性。
+// 兩支語句共用同一段守護條件的文字，寫成 raw string 而非 sql fragment ——
+// drizzle 的 sql`` 樣板會把巢狀的 sql fragment 攤平成 query 的一部分，
+// 這裡故意用純字串內插（沒有使用者輸入、無 injection 疑慮）以維持兩支語句的
+// 參數順序單純好懂（UPDATE：[role, userId]；DELETE：[userId]）。
+const SUPER_ADMIN_LOCK_CTE = `WITH sa_lock AS (SELECT id FROM users WHERE role = 'super_admin' FOR UPDATE)`;
+const SUPER_ADMIN_GUARD = `(role <> 'super_admin' OR (SELECT count(*) FROM sa_lock) > 1)`;
+
 export async function updateUser(userId, data) {
-  const { session, error } = await safeRequireAdmin();
-  if (error) return { error };
+  return withCap('manage', async (session) => {
+    if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
 
-  if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
+    const hasName = data?.name !== undefined;
+    const hasRole = data?.role !== undefined;
+    if (!hasName && !hasRole) return { error: '沒有可更新的欄位' };
 
-  const name = data?.name?.trim();
-  if (!name || name.length === 0) return { error: '姓名不可為空' };
-  if (name.length > 255) return { error: '姓名不可超過 255 字元' };
+    let name;
+    if (hasName) {
+      name = data.name?.trim();
+      if (!name || name.length === 0) return { error: '姓名不可為空' };
+      if (name.length > 255) return { error: '姓名不可超過 255 字元' };
+    }
 
-  await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+    if (hasRole) {
+      if (!ROLES.includes(data.role)) return { error: `無效的角色: ${data.role}` };
+      // 不可把自己降級：一旦畫面群組把自己擋在外面，就再也進不來改回去了
+      if (userId === session.userId && data.role !== session.role) {
+        return { error: '不能變更自己的角色' };
+      }
+    }
 
-  await logAudit('USER_UPDATE', session.userId, {
-    resourceType: 'user',
-    resourceId: userId,
-    detail: `name → ${name}`,
+    if (hasName) {
+      await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+    }
+
+    if (hasRole) {
+      const result = await db.execute(sql`
+        ${sql.raw(SUPER_ADMIN_LOCK_CTE)}
+        UPDATE users
+        SET role = ${data.role}, updated_at = now()
+        WHERE id = ${userId} AND ${sql.raw(SUPER_ADMIN_GUARD)}
+        RETURNING id, role
+      `);
+      const rows = result.rows ?? result;
+      if (rows.length === 0) return { error: '系統必須至少保留一個 Super Admin' };
+    }
+
+    await logAudit('USER_UPDATE', session.userId, {
+      resourceType: 'user',
+      resourceId: userId,
+      detail: [hasName && `name → ${name}`, hasRole && `role → ${data.role}`].filter(Boolean).join('; '),
+    });
+
+    return { success: true };
   });
-
-  return { success: true };
 }
 
 export async function deleteUser(userId) {
-  const { session, error } = await safeRequireAdmin();
-  if (error) return { error };
+  return withCap('manage', async (session) => {
+    if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
 
-  if (!isValidUUID(userId)) return { error: 'Invalid user ID' };
+    // Prevent deleting yourself
+    if (userId === session.userId) {
+      return { error: '無法刪除自己的帳號' };
+    }
 
-  // Prevent deleting yourself
-  if (userId === session.userId) {
-    return { error: '無法刪除自己的帳號' };
-  }
+    const result = await db.execute(sql`
+      ${sql.raw(SUPER_ADMIN_LOCK_CTE)}
+      DELETE FROM users
+      WHERE id = ${userId} AND ${sql.raw(SUPER_ADMIN_GUARD)}
+      RETURNING id, email
+    `);
+    const rows = result.rows ?? result;
+    if (rows.length === 0) return { error: '系統必須至少保留一個 Super Admin' };
 
-  // 先取得被刪除使用者的 email 供 audit log 記錄
-  const target = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+    await logAudit('USER_DELETE', session.userId, {
+      resourceType: 'user',
+      resourceId: userId,
+      detail: rows[0]?.email,
+    });
 
-  await db.delete(users).where(eq(users.id, userId));
-
-  await logAudit('USER_DELETE', session.userId, {
-    resourceType: 'user',
-    resourceId: userId,
-    detail: target[0]?.email,
+    return { success: true };
   });
-
-  return { success: true };
 }

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>決策：viewer 與附件下載</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1a1d21; --ink2:#4a5159; --ink3:#767e88;
+  --line:#dfe3e8; --line2:#eef1f4;
+  --accent:#2f6df6; --accentbg:#eaf1ff;
+  --red:#c0392b; --redbg:#fdecea;
+  --green:#1f7a4d; --greenbg:#e7f6ee;
+  --amber:#9a6a00; --amberbg:#fdf3dd;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:25px;margin:0 0 4px;letter-spacing:-.2px}
+.sub{color:var(--ink3);font-size:13px;margin-bottom:26px}
+h2{font-size:17px;margin:36px 0 12px;padding-top:18px;border-top:1px solid var(--line)}
+h2 .n{display:inline-block;width:23px;height:23px;line-height:23px;text-align:center;border-radius:6px;
+  background:var(--accentbg);color:var(--accent);font-size:12px;font-weight:700;margin-right:8px;vertical-align:2px}
+h3{font-size:14.5px;margin:20px 0 8px}
+p{margin:9px 0}
+code{background:var(--line2);padding:1px 5px;border-radius:4px;font-size:12.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 17px;margin:12px 0}
+blockquote{margin:0;padding:13px 16px;background:var(--card);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;color:var(--ink2)}
+blockquote p{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;background:var(--card);
+  border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:top}
+th{background:#f0f2f5;color:var(--ink2);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+.scroll{overflow-x:auto}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.t-red{background:var(--redbg);color:var(--red)}
+.t-green{background:var(--greenbg);color:var(--green)}
+.t-amber{background:var(--amberbg);color:var(--amber)}
+.alert{background:var(--redbg);border:1px solid #f2c6c0;border-left:4px solid var(--red);
+  border-radius:0 8px 8px 0;padding:14px 16px;margin:12px 0}
+.alert h3{margin:0 0 6px;color:var(--red);font-size:14.5px}
+.alert p{margin:5px 0;color:#6d2019;font-size:13.5px}
+.ok{background:var(--greenbg);border:1px solid #b8e0ca;border-left:4px solid var(--green);
+  border-radius:0 8px 8px 0;padding:14px 16px;margin:12px 0}
+.ok h3{margin:0 0 6px;color:var(--green);font-size:14.5px}
+.ok p{margin:5px 0;color:#155c39;font-size:13.5px}
+.rec{border:2px solid var(--accent);background:var(--accentbg)}
+.rec .lbl{display:inline-block;background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+  padding:2px 9px;border-radius:20px;margin-bottom:8px}
+ul{margin:8px 0;padding-left:20px} li{margin:5px 0}
+.small{font-size:12.5px;color:var(--ink3)}
+figcaption{font-size:12px;color:var(--ink3);margin-top:8px;text-align:center}
+svg{max-width:100%;height:auto;display:block;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>viewer 與附件下載</h1>
+<div class="sub">dawin-dash · 2026-09-08 · 重裁一個我描述錯的題目 · 已 confer（gemini + grok → codex）</div>
+
+<h2><span class="n">1</span>你的原話</h2>
+<blockquote>
+<p>「我想加一個 viewer，就是只能看，無法操作任何的編輯功能」</p>
+<p>——以及對我上一題的回答：「擋掉匯出」</p>
+</blockquote>
+
+<h2><span class="n">2</span>我要更正兩件事</h2>
+
+<div class="alert">
+<h3>更正一 · 我把 <code>/api/download</code> 描述錯了</h3>
+<p>我在上一份決策頁裡把它寫成「匯出全量資料」。<strong>它不是。</strong>
+它是<strong>開啟單一任務附件</strong>——你在任務裡點那個 ↓ 按鈕，它回傳一條 R2 的
+presigned 連結讓瀏覽器去抓那一個檔案。</p>
+<p>全 repo 只有兩個地方呼叫它：<code>FileManagerModal.jsx:51</code> 和 <code>TaskModal.jsx:223</code>，
+都是使用者明確點擊的下載動作。</p>
+<p>你是對著我那個錯誤描述回答「擋掉匯出」的。</p>
+</div>
+
+<div class="alert">
+<h3>更正二 · 「擋掉匯出」擋不住你以為它擋得住的東西</h3>
+<p>這是 codex 抓出來的，我查證屬實：<strong>viewer 一登入，全部任務資料就已經在他瀏覽器裡了。</strong></p>
+<p><code>getInitialData()</code> 把所有 tasks / subtasks / links / files 一次送給任何登入者
+（<code>dashboard.js:21-38</code>），存進 React state 的 <code>allT</code>。
+而 DataTab 的 Export CSV 按鈕做的事就是 <code>tasksToCSV(allT)</code>——<strong>純前端，不打任何 API</strong>。</p>
+<p>所以隱藏那兩個按鈕<strong>只是化妝</strong>。viewer 開 DevTools 就能把同一份資料倒出來。
+我不能讓你以為那是一道牆。</p>
+</div>
+
+<h2><span class="n">3</span>資料實際是怎麼流的</h2>
+
+<figure>
+<svg viewBox="0 0 900 340" role="img" aria-label="資料流圖：全量資料已在前端，CSV 匯出不經後端">
+  <defs>
+    <marker id="a1" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#767e88"/>
+    </marker>
+    <marker id="a2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#c0392b"/>
+    </marker>
+  </defs>
+
+  <text x="16" y="24" font-size="13" font-weight="700" fill="#1a1d21">登入的那一刻</text>
+
+  <rect x="16" y="36" width="130" height="48" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="81" y="56" font-size="12" text-anchor="middle" fill="#1a1d21">Postgres</text>
+  <text x="81" y="72" font-size="11" text-anchor="middle" fill="#767e88">全部任務資料</text>
+
+  <line x1="150" y1="60" x2="196" y2="60" stroke="#767e88" stroke-width="1.5" marker-end="url(#a1)"/>
+
+  <rect x="200" y="36" width="160" height="48" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="280" y="56" font-size="12" text-anchor="middle" fill="#1a1d21">getInitialData()</text>
+  <text x="280" y="72" font-size="10.5" text-anchor="middle" fill="#767e88">只擋「有沒有登入」</text>
+
+  <line x1="364" y1="60" x2="410" y2="60" stroke="#767e88" stroke-width="1.5" marker-end="url(#a1)"/>
+
+  <rect x="414" y="30" width="180" height="60" rx="8" fill="#fdf3dd" stroke="#ecd9a4"/>
+  <text x="504" y="52" font-size="12" text-anchor="middle" font-weight="700" fill="#9a6a00">瀏覽器 React state</text>
+  <text x="504" y="69" font-size="11" text-anchor="middle" fill="#7a5400">allT ＝ 全部任務</text>
+  <text x="504" y="83" font-size="10.5" text-anchor="middle" fill="#7a5400">viewer 也拿得到</text>
+
+  <line x1="504" y1="94" x2="504" y2="132" stroke="#c0392b" stroke-width="1.5" marker-end="url(#a2)"/>
+  <rect x="386" y="136" width="236" height="48" rx="8" fill="#fdecea" stroke="#f2c6c0"/>
+  <text x="504" y="156" font-size="12" text-anchor="middle" font-weight="700" fill="#c0392b">tasksToCSV(allT) → 下載</text>
+  <text x="504" y="173" font-size="10.5" text-anchor="middle" fill="#6d2019">純前端，完全不經過後端</text>
+
+  <text x="648" y="163" font-size="11.5" fill="#c0392b">← 藏按鈕只能藏住</text>
+  <text x="648" y="179" font-size="11.5" fill="#c0392b">　 這一步的 UI</text>
+
+  <line x1="16" y1="212" x2="884" y2="212" stroke="#dfe3e8"/>
+
+  <text x="16" y="238" font-size="13" font-weight="700" fill="#1a1d21">附件則是另一條路，每次都要問後端</text>
+
+  <rect x="16" y="252" width="150" height="48" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="91" y="272" font-size="12" text-anchor="middle" fill="#1a1d21">點某個附件的 ↓</text>
+  <text x="91" y="288" font-size="10.5" text-anchor="middle" fill="#767e88">一次一個檔</text>
+
+  <line x1="170" y1="276" x2="216" y2="276" stroke="#767e88" stroke-width="1.5" marker-end="url(#a1)"/>
+
+  <rect x="220" y="252" width="180" height="48" rx="8" fill="#eaf1ff" stroke="#2f6df6"/>
+  <text x="310" y="272" font-size="12" text-anchor="middle" fill="#2f6df6">/api/download</text>
+  <text x="310" y="288" font-size="10.5" text-anchor="middle" fill="#2f6df6">這裡擋得住</text>
+
+  <line x1="404" y1="276" x2="450" y2="276" stroke="#767e88" stroke-width="1.5" marker-end="url(#a1)"/>
+
+  <rect x="454" y="252" width="180" height="48" rx="8" fill="#ffffff" stroke="#dfe3e8"/>
+  <text x="544" y="272" font-size="12" text-anchor="middle" fill="#1a1d21">R2 presigned URL</text>
+  <text x="544" y="288" font-size="10.5" text-anchor="middle" fill="#767e88">15 分鐘有效</text>
+
+  <text x="654" y="280" font-size="11.5" fill="#1f7a4d">← 真正可以下決定的點</text>
+</svg>
+<figcaption>上排：任務資料在登入時就整份到前端了，CSV 匯出不經後端。下排：附件每次都要問後端，這裡才擋得住</figcaption>
+</figure>
+
+<h2><span class="n">4</span>覆蓋表：三種「匯出」現在各是什麼狀況</h2>
+
+<div class="scroll"><table>
+<tr><th style="width:26%">東西</th><th style="width:30%">實際是什麼</th><th>擋得住嗎</th></tr>
+<tr>
+  <td><strong>DataTab 的兩個 Export CSV 按鈕</strong></td>
+  <td>把已在前端的 <code>allT</code> 倒成 CSV，純前端</td>
+  <td><span class="tag t-amber">只能藏 UI</span> viewer 開 DevTools 一樣拿得到。<strong>這是化妝，不是牆</strong></td>
+</tr>
+<tr>
+  <td><code>/api/backup</code> GET</td>
+  <td>整庫傾印，含 users 表與密碼雜湊</td>
+  <td><span class="tag t-green">擋得住</span> 已改回 <code>manage</code>（super_admin only）。<br>
+      <span class="small">順帶修掉我先前把它放寬到 admin 的錯誤</span></td>
+</tr>
+<tr>
+  <td><code>/api/download</code></td>
+  <td>開單一任務附件，回 presigned 連結</td>
+  <td><span class="tag t-green">擋得住</span> ← <strong>這題就是在問這個要不要擋</strong></td>
+</tr>
+</table></div>
+
+<h2><span class="n">5</span>confer 三方意見</h2>
+
+<div class="scroll"><table>
+<tr><th style="width:14%">來源</th><th style="width:12%">立場</th><th>關鍵論點</th></tr>
+<tr>
+  <td>gemini</td><td><strong>read</strong>（放行）</td>
+  <td>把單一物件讀取歸為 <code>export</code> 是被 URL 命名污染。「預覽比下載安全」是假象——
+      沒有浮水印沙盒的話，<code>inline</code> 與 <code>attachment</code> 攻擊面相同。
+      拿 presigned URL 的機制缺陷去剝奪 <code>read</code>，是因噎廢食。</td>
+</tr>
+<tr>
+  <td>grok</td><td><strong>read</strong>（放行）</td>
+  <td>「只能看 ≠ 能下載」只在有線上預覽時才成立；你們沒有預覽路徑，擋下載＝擋閱讀檔案本體，
+      那不是保守，是殘缺。presigned 的外流風險 <strong>admin 也有</strong>，
+      差別在帳號信任度，不是端點性質變成了 export。</td>
+</tr>
+<tr>
+  <td>codex</td><td><span class="tag t-amber">決議需修正</span> 0.97</td>
+  <td><strong>P1：</strong>抓出「藏按鈕只是化妝」——viewer 早已持有全量資料，
+      所以「單件是 read、批次是 export」在授權模型上並不自洽，只在 UI 動作名稱上成立。<br>
+      <strong>P2：</strong>「舊裁定綁在錯誤前提上所以不適用」是對的，
+      但從「不適用」推到「使用者同意放行」是未被支持的反向推論——
+      <strong>必須拿正確事實重新問你</strong>，不能自己當作已授權。</td>
+</tr>
+</table></div>
+
+<p class="small"><strong>分歧點：</strong>雙G 直接給 <code>read</code>；codex 同意分類邏輯，但不同意我逕自套用——
+所以這頁存在。codex 這一點我完全接受：那是你的決定，不是我的。</p>
+
+<h2><span class="n">6</span>順帶查到的三個既有問題（不在本次範圍）</h2>
+
+<div class="alert">
+<h3><code>r2.js:32-34</code> 有一條無時效的公開網址分支</h3>
+<p>如果環境變數 <code>R2_PUBLIC_URL</code> 有設定，<code>getDownloadUrl</code> 會直接回傳
+<code>${R2_PUBLIC_URL}/${key}</code>——<strong>沒有簽章、沒有期限</strong>。
+在那種設定下所有附件是永久公開可取的，presigned 的保護根本不存在。</p>
+<p>這跟 viewer 無關，<strong>現在就成立</strong>。要先確認你的 bucket 是不是刻意設成公開的。</p>
+</div>
+
+<ul>
+<li><strong><code>/api/download</code> 完全沒有 audit log</strong>——誰在什麼時候取用了哪個檔案，事後查不到。
+  codex 認為這比 TTL 長短更值得優先處理，我同意。</li>
+<li>presigned TTL 是 900 秒（15 分鐘）。雙G 建議縮短，但 codex 說沒有足夠依據認定它必須縮，
+  且縮太短會讓大檔或延遲開啟失敗。<strong>依資料敏感度評估即可，不急。</strong></li>
+</ul>
+
+<h2><span class="n">7</span>要你裁的</h2>
+
+<div class="card rec">
+<span class="lbl">我的建議</span>
+<h3><code>/api/download</code>（單一附件）分類為 <code>read</code>，viewer 可以開</h3>
+<p>理由一句：你的原話是「只能看」，附件是任務內容的一部分，擋掉它是在縮減「看」而不是擋「編輯」——
+viewer 看到「請審閱附件」卻點不開，那不是唯讀，是殘缺。</p>
+<p class="small">雙G 立場一致，codex 也同意分類邏輯本身。</p>
+</div>
+
+<div class="card">
+<h3>另一個選擇：分類為 <code>export</code>，viewer 點不開附件</h3>
+<p>如果你的考量是「viewer 會給公司外的人用，不想讓他們能產生可轉發的檔案連結」，
+那這是合理的姿態——presigned URL 確實是一條可以貼給別人的連結。</p>
+<p>代價：viewer 看得到附件清單（檔名、大小）但點不開；前端那個 ↓ 按鈕要一併隱藏。</p>
+</div>
+
+<h2><span class="n">8</span>不做什麼</h2>
+<ul>
+<li><strong>不做「線上預覽 vs 下載」的區分。</strong>那要自建中繼串流 proxy，是新功能；
+  而且在沒有浮水印/DRM 的前提下，實質安全增益為零（雙G 一致）。</li>
+<li><strong>不為了讓「擋掉匯出」變成真的牆而改資料載入方式。</strong>
+  要讓 viewer 真的拿不到全量資料，得改 <code>getInitialData</code> 做伺服器端範圍限縮——
+  那是另一個專案級的工作，遠超出「加一個 viewer」。<strong>要做的話另開一張票。</strong></li>
+<li>不因為前端 ↓ 會變壞按鈕就反過來決定後端分類（那是前端 task 的小成本問題）。</li>
+</ul>
+
+</div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useCan } from "@/components/PermissionProvider";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import EditableCell from "./EditableCell";
@@ -10,9 +11,10 @@ import TagInput from "./TagInput";
 
 export default function SortableSubItem({ sub, toggleSub, updateSub, deleteSub, configOwners }) {
   const { X } = useTheme();
+  const canWrite = useCan("write");
   const [editingOwner, setEditingOwner] = useState(false);
   const ownerRef = useRef(null);
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: sub.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: sub.id, disabled: !canWrite });
   const sStyle = { transform: CSS.Transform.toString(transform), transition };
 
   useEffect(() => {
@@ -29,17 +31,22 @@ export default function SortableSubItem({ sub, toggleSub, updateSub, deleteSub, 
       {/* flexWrap：390px 塞不下五個欄位（把手·勾選·名稱·備註·負責人·刪除），
             不換行就會被祖先的 overflow:hidden 直接切掉——實測負責人切 33px、刪除鍵切 67px。 */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 6, marginBottom: 2, flexWrap: "wrap" }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-        <span className="dash-tap" {...attributes} {...listeners} style={{ cursor: "grab", fontSize: 14, color: X.textDim, flexShrink: 0, userSelect: "none" }}>⠿</span>
-        <span className="dash-tap" onClick={e => { e.stopPropagation(); toggleSub(sub.id); }} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: "pointer" }}>{sub.done ? "✓" : ""}</span>
-        <span style={{ flex: "1 1 120px", minWidth: 100 }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
-        <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
-        <span ref={ownerRef} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
+        {canWrite && <span className="dash-tap" {...attributes} {...listeners} style={{ cursor: "grab", fontSize: 14, color: X.textDim, flexShrink: 0, userSelect: "none" }}>⠿</span>}
+        <span className="dash-tap" onClick={canWrite ? e => { e.stopPropagation(); toggleSub(sub.id); } : undefined} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: canWrite ? "pointer" : "default" }}>{sub.done ? "✓" : ""}</span>
+        {canWrite
+          ? <span style={{ flex: "1 1 120px", minWidth: 100 }}><EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} /></span>
+          : <span style={{ flex: "1 1 120px", minWidth: 100, fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }}>{sub.name || "—"}</span>}
+        {canWrite
+          ? <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
+          : <span style={{ flex: "1 1 80px", fontSize: 12, color: sub.notes ? X.textDim : X.textDim + "60", fontStyle: sub.notes ? "normal" : "italic", overflowWrap: "anywhere", padding: "1px 4px", minWidth: 60 }}>{sub.notes || "—"}</span>}
+        {canWrite && <span ref={ownerRef} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
           {editingOwner
             ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 12, minWidth: 140 }} />
             : <span onClick={() => setEditingOwner(true)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
           }
-        </span>
-        <button className="dash-tap" onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.5 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>×</button>
+        </span>}
+        {!canWrite && <OwnerTags value={sub.owner} configOwners={configOwners} />}
+        {canWrite && <button className="dash-tap" onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.5 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>×</button>}
       </div>
     </div>
   );
