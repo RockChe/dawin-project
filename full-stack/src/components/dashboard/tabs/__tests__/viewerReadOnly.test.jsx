@@ -85,6 +85,16 @@ describe('viewer 唯讀渲染', () => {
     expect(screen.getByText(/Export/i)).toBeTruthy();
   });
 
+  it('DataTab 對 viewer 不顯示 "Double-click" 操作提示（雙擊也編輯不了，提示會誤導）', () => {
+    renderDataTabAs('viewer');
+    expect(screen.queryByText(/Double-click/i)).toBeNull();
+  });
+
+  it('DataTab 對 admin 仍顯示 "Double-click" 操作提示', () => {
+    renderDataTabAs('admin');
+    expect(screen.getByText(/Double-click/i)).toBeTruthy();
+  });
+
   it('SettingsTab 對 viewer 不顯示 category 新增按鈕', () => {
     renderSettingsTabAs('viewer');
     expect(screen.queryByPlaceholderText('New category')).toBeNull();

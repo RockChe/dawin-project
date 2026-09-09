@@ -170,7 +170,7 @@ function DataTab({
     <>
       <div style={{ background: X.surface, borderRadius: 12, border: `1px solid ${X.border}`, overflow: "hidden" }}>
         <div style={{ padding: isMobile ? "10px 12px" : "10px 16px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          {!isMobile && <span style={{ fontSize: 14, color: X.textDim }}>Click to select · Double-click or F2 to edit · Arrow keys to navigate</span>}
+          {!isMobile && <span style={{ fontSize: 14, color: X.textDim }}>{canWrite ? "Click to select · Double-click or F2 to edit · Arrow keys to navigate" : "Click to select · Arrow keys to navigate"}</span>}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", ...(isMobile ? { width: "100%", justifyContent: "space-between" } : {}) }}>
             {isMobile ? (
               <>
