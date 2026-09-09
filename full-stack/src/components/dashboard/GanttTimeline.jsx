@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
-import { pD, fD, computeAllProgress } from "@/lib/utils";
+import { pD, fD, computeAllProgress, toBusinessDateString } from "@/lib/utils";
 import MobileGanttList from "./MobileGanttList";
 
 // 左右已合併成同一列，高度由內容決定；長條用 top:50% + translateY(-50%) 垂直置中。
@@ -43,6 +43,21 @@ export function computeProjectProgress(projectTasks) {
  * @param {Array} projectTasks — each item may have .start / .end (date strings)
  * @returns {{start: string, end: string}|null}
  */
+/**
+ * Percent-of-timeline position of "today", quantized to the Asia/Taipei
+ * calendar day. TODAY is a day marker, not a this-instant marker: calling
+ * `new Date()` directly makes server render and client hydration compute
+ * different millisecond values → hydration mismatch. Vercel's server also
+ * runs in UTC, so an un-quantized "today" disagrees with the user's Taipei
+ * "today" before 08:00 local time.
+ * @param {Date} mn — timeline start date
+ * @param {number} td — timeline span in days
+ * @returns {number}
+ */
+export function computeTodayPct(mn, td) {
+  return ((pD(toBusinessDateString()) - mn) / 864e5) / td * 100;
+}
+
 export function projectSpan(projectTasks) {
   if (!projectTasks || projectTasks.length === 0) return null;
   let minD = null, maxD = null, minStr = null, maxStr = null;
@@ -334,7 +349,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMob
         });
       }
     });
-    const todayPct = ((new Date() - mn) / 864e5) / td * 100;
+    const todayPct = computeTodayPct(mn, td);
     return { months, ganttMinW, pcMap, rows, todayPct };
   }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsedState, isControlled]);
 
