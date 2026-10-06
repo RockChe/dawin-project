@@ -164,7 +164,7 @@ function TaskOwnerChips({ task, subs, configOwners }) {
     : <OwnerTags key={n} value={n} configOwners={configOwners} />)}</span>);
 }
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange, onHome }) {
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, archiveProject, unarchiveProject, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange, onHome }) {
   const { X, SC, inputStyle } = useTheme();
   const canWrite = useCan("write");
   const handleForbidden = useForbiddenHandler(showToast);
@@ -173,7 +173,6 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
   const [showCreateProj, setShowCreateProj] = useState(false);
   const [newProjName, setNewProjName] = useState("");
   const [showArch, setShowArch] = useState(false);
-  const [archived, setArchived] = useState(new Set());
   const [uploadTarget, setUploadTarget] = useState(null);
   const [showSubAdd, setShowSubAdd] = useState(null);
   const [subDraft, setSubDraft] = useState({ name: "", owner: "" });
@@ -195,7 +194,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const sortedProjList = useMemo(() => {
-    const valid = projects.filter(p => !archived.has(p.name));
+    const valid = projects.filter(p => !p.archivedAt);
     switch (sortMode) {
       case "name": return [...valid].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
       case "created": return [...valid].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -208,7 +207,9 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
       });
       default: return [...valid].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     }
-  }, [projects, archived, sortMode, twp]);
+  }, [projects, sortMode, twp]);
+  // 封存是專案層級、存在 DB（projects.archived_at），全團隊共享；這裡只從 props 推導，不持有 state。
+  const archivedProjects = useMemo(() => projects.filter(p => p.archivedAt), [projects]);
 
   const handleProjectDragEnd = useCallback((ev) => {
     const { active, over } = ev;
@@ -260,8 +261,20 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
     }
   };
 
-  const archiveProj = useCallback(p => { setArchived(prev => { const n = new Set(prev); n.add(p); return n; }); setSelProj(null); showToast("Project archived", "warn"); }, [showToast]);
-  const unarchiveProj = useCallback(p => { setArchived(prev => { const n = new Set(prev); n.delete(p); return n; }); showToast("Project unarchived", "success"); }, [showToast]);
+  // 樂觀更新與失敗回復 + 錯誤 toast 都在 hook 裡；這裡只在成功時顯示既有的成功 toast。
+  const archiveProj = useCallback(async (name) => {
+    const proj = projects.find(pr => pr.name === name);
+    if (!proj) return;
+    setSelProj(null);
+    const result = await archiveProject(proj.id);
+    if (result?.success) showToast("Project archived", "warn");
+  }, [projects, archiveProject, showToast]);
+  const unarchiveProj = useCallback(async (name) => {
+    const proj = projects.find(pr => pr.name === name);
+    if (!proj) return;
+    const result = await unarchiveProject(proj.id);
+    if (result?.success) showToast("Project unarchived", "success");
+  }, [projects, unarchiveProject, showToast]);
 
   const deleteProj = useCallback(async (p) => {
     const proj = projects.find(pr => pr.name === p);
@@ -282,7 +295,6 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
     if (!proj) return;
     renameProject(proj.id, newName);
     setProjBanners(p => { const n = { ...p }; if (n[oldName]) { n[newName] = n[oldName]; delete n[oldName]; } return n; });
-    setArchived(p => { const n = new Set(p); if (n.has(oldName)) { n.delete(oldName); n.add(newName); } return n; });
     onProjectRenamed(oldName, newName);
     setSelProj(newName);
   }, [projects, renameProject, setProjBanners, onProjectRenamed]);
@@ -302,7 +314,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
             會把整個 main 撐寬到出現橫向捲軸，畫面就被推出左緣。 */}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <button onClick={() => setShowArch(!showArch)} style={{ background: showArch ? X.surfaceLight : X.surface, color: X.textSec, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, cursor: "pointer" }}>
-            Archived ({archived.size})
+            Archived ({archivedProjects.length})
           </button>
           <select value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ background: X.surface, color: X.text, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 12px", fontSize: 14, cursor: "pointer", outline: "none" }}>
             <option value="manual">手動排序</option>
@@ -362,14 +374,14 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
           </DndContext>
         );
       })()}
-      {showArch && archived.size > 0 && (<div style={{ marginTop: 24 }}>
+      {showArch && archivedProjects.length > 0 && (<div style={{ marginTop: 24 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: X.textDim, marginBottom: 12 }}>Archived</div>
         <div className="dash-grid-2col" style={{ gap: 12 }}>
-          {[...archived].map(pn => { const pt = twp.filter(d => d.project === pn); if (!pt.length) return null;
-            return (<div key={pn} onClick={() => setSelProj(pn)} style={{ background: X.surface, borderRadius: 12, border: `1px solid ${X.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, opacity: 0.5, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity = "0.7"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>
+          {archivedProjects.map(({ id, name: pn }) => { const pt = twp.filter(d => d.project === pn);
+            return (<div key={id} onClick={() => setSelProj(pn)} style={{ background: X.surface, borderRadius: 12, border: `1px solid ${X.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, opacity: 0.5, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity = "0.7"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>
               <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>{pn}</div><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM }}>{pt.length} tasks</div></div>
               {canWrite && <button onClick={e => { e.stopPropagation(); unarchiveProj(pn); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "4px 12px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Unarchive</button>}
-              {canWrite && <button className="dash-tap" onClick={e => { e.stopPropagation(); if (confirm("Permanently delete?")) deleteProj(pn); unarchiveProj(pn); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "4px 12px", fontSize: 14, color: X.red, cursor: "pointer" }}>Delete</button>}
+              {canWrite && <button className="dash-tap" onClick={e => { e.stopPropagation(); if (confirm("Permanently delete?")) deleteProj(pn); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "4px 12px", fontSize: 14, color: X.red, cursor: "pointer" }}>Delete</button>}
             </div>);
           })}
         </div>
@@ -427,7 +439,9 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
       </div>
       <div style={{ flex: 1, minWidth: 0 }}><h2 className="dash-name-1line" style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>{canWrite ? <EditableCell value={selProj} onSave={v => handleRename(selProj, v)} style={{ fontSize: 24, fontWeight: 700 }} /> : selProj}</h2><div style={{ fontSize: 14, color: X.textDim, fontFamily: FM, marginTop: 2 }}>{pt.length} tasks · {ts.length} subtasks · {ds} done</div>{projMeta[selProj]?.creatorName && <div style={{ fontSize: 12, color: X.textDim, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>{projMeta[selProj].creatorName} · <span style={{ padding: "0 5px", borderRadius: 6, background: projMeta[selProj].source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: projMeta[selProj].source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{projMeta[selProj].source === 'csv_import' ? 'CSV匯入' : '手動'}</span></div>}</div>
       <button onClick={() => setShowFileManager(selProj)} style={{ background: "transparent", border: `1px solid ${X.accent}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.accent, cursor: "pointer", fontWeight: 600 }}>📁 檔案管理</button>
-      {canWrite && <button onClick={() => archiveProj(selProj)} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>}
+      {canWrite && (projects.find(pr => pr.name === selProj)?.archivedAt
+        ? <button onClick={() => unarchiveProj(selProj)} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Unarchive</button>
+        : <button onClick={() => archiveProj(selProj)} style={{ background: "transparent", border: `1px solid ${X.amber}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.amber, cursor: "pointer", fontWeight: 600 }}>Archive</button>)}
       {canWrite && <button onClick={() => { if (confirm("Delete?")) deleteProj(selProj); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>}
     </div>
     {pt.some(t => t.start) && (<div style={{ marginBottom: 20 }}>
