@@ -25,6 +25,8 @@ import {
   updateProject as updateProjectAction,
   deleteProject as deleteProjectAction,
   reorderProjects as reorderProjectsAction,
+  archiveProject as archiveProjectAction,
+  unarchiveProject as unarchiveProjectAction,
 } from '@/server/actions/projects';
 import { saveConfig } from '@/server/actions/config';
 import { runReorder, moveWithinOrder } from './reorderProjects';
@@ -497,6 +499,24 @@ export default function useTaskManager(initialData) {
     showToast('專案已重新命名', 'success');
   }, [projects, showToast, invalidateCache, handleForbidden]);
 
+  // 封存（projects.archived_at，全團隊共享）：樂觀更新，失敗只回復該專案的 archivedAt（不蓋掉同時發生的其他變更）。
+  // 成功 toast 由呼叫端（ProjectsTab）負責；這裡只在失敗時 toast。
+  const setArchived = useCallback(async (id, archivedAt, action) => {
+    const prevArchivedAt = projectsRef.current.find(proj => proj.id === id)?.archivedAt ?? null;
+    setProjects(p => p.map(proj => proj.id === id ? { ...proj, archivedAt } : proj));
+    const result = await action(id);
+    if (checkAuthError(result)) return result;
+    if (result?.error) {
+      setProjects(p => p.map(proj => proj.id === id ? { ...proj, archivedAt: prevArchivedAt } : proj));
+      if (!handleForbidden(result)) showToast(result.error, 'error');
+      return result;
+    }
+    invalidateCache();
+    return result;
+  }, [showToast, invalidateCache, handleForbidden]);
+  const archiveProject = useCallback((id) => setArchived(id, new Date().toISOString(), archiveProjectAction), [setArchived]);
+  const unarchiveProject = useCallback((id) => setArchived(id, null, unarchiveProjectAction), [setArchived]);
+
   const addProject = useCallback(async (name) => {
     const formData = new FormData();
     formData.set('name', name);
@@ -738,7 +758,7 @@ export default function useTaskManager(initialData) {
     addTask, deleteTask, addSub, deleteSub,
     addLink, deleteLink,
     addFile, deleteFile: deleteFileHandler,
-    renameProject, addProject, deleteProject: deleteProjectHandler,
+    renameProject, addProject, deleteProject: deleteProjectHandler, archiveProject, unarchiveProject,
     reorderSubs, reorderProjects, reorderTasks, importTasks,
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
