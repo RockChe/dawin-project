@@ -147,7 +147,11 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           clipped at both ends. The overlay itself is already viewport-sized. */}
       <div onClick={e => e.stopPropagation()} style={{ background: X.surface, borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "100%", overflowY: "auto", boxShadow: X.modalShadow, border: `1px solid ${X.border}` }}>
         <div style={{ padding: "16px 20px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 16, fontWeight: 700 }}>{isNew ? "建立任務" : "編輯任務"}</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{isNew ? "建立任務" : "編輯任務"}</div>
+            {/* 副標：純文字（不是連結）——modal 是 overlay，點了也沒地方去 */}
+            {projectName && <div style={{ fontSize: 12, color: X.textSec, marginTop: 2, maxWidth: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{`${projectName} › ${isNew ? "新任務" : (task.task || "未命名任務")}`}</div>}
+          </div>
           <button onClick={onClose} aria-label="關閉" style={{ background: "transparent", border: "none", fontSize: 20, color: X.textDim, cursor: "pointer", padding: "2px 6px", lineHeight: 1 }}>×</button>
         </div>
         <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>

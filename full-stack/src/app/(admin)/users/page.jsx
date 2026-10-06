@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { getUsers, createUser, resetUserPassword, deleteUser, updateUser } from '@/server/actions/users';
 import { useTheme } from '@/components/ThemeProvider';
 import { F } from '@/lib/theme';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 const ROLE_OPTIONS = [
   { value: 'super_admin', label: 'Super Admin' },
@@ -125,6 +126,7 @@ export default function UsersPage() {
 
   return (
     <div style={{ padding: '32px 40px', maxWidth: 800, margin: '0 auto', fontFamily: F, color: X.text }}>
+      <Breadcrumbs items={[{ label: '首頁', href: '/dashboard' }, { label: '帳號管理' }]} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700 }}>帳號管理</h1>
         <button

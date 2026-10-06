@@ -17,6 +17,8 @@ import OverviewTab from "./tabs/OverviewTab";
 import MyTasksTab from "./tabs/MyTasksTab";
 import ProjectsTab, { toggleHidden, PROJECT_TASK_VIEW_DEFAULT } from "./tabs/ProjectsTab";
 import DataTab from "./tabs/DataTab";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { tabCrumbs } from "@/lib/breadcrumbs";
 
 export default function Dashboard({ initialData }) {
   const { themeKey, cycleTheme, X, SC, PC, PJC } = useTheme();
@@ -60,6 +62,7 @@ export default function Dashboard({ initialData }) {
   // 個人設定：目前分頁／時間尺度／欄寬／Timeline 高度／Upcoming 都存 user_settings（per-account，跨裝置）
   const tab = resolveTab(userSettings.activeTab);
   const changeTab = useCallback(v => updateSetting('activeTab', v), [updateSetting]);
+  const goHome = useCallback(() => changeTab('overview'), [changeTab]);
   const timeDimOverview = resolveTimeDim(userSettings.timeDimOverview);
   const timeDimTimeline = resolveTimeDim(userSettings.timeDimTimeline);
   const timeDimProject = resolveTimeDim(userSettings.timeDimProject);
@@ -248,6 +251,9 @@ export default function Dashboard({ initialData }) {
             <button key={t.k} onClick={() => changeTab(t.k)} style={{ padding: "12px 20px", border: "none", background: "transparent", color: tab === t.k ? X.accent : X.textSec, fontSize: 14, fontWeight: tab === t.k ? 700 : 400, cursor: "pointer", borderBottom: tab === t.k ? `2px solid ${X.accent}` : "2px solid transparent", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0, transition: "color 0.2s, border-color 0.2s" }}>{t.l}</button>))}
         </div>
 
+        {/* 麵包屑：Projects 由 ProjectsTab 自己畫（選了專案會多一層），這裡跳過，確保全頁只有一列 */}
+        {tab !== "projects" && <Breadcrumbs items={tabCrumbs(tab, { onHome: goHome })} />}
+
         {/* OVERVIEW */}
         {tab === "overview" && <OverviewTab projects={projects} timeDim={timeDimOverview} onTimeDimChange={setTimeDimOverview} filtered={filtered} twp={twp} allS={allS} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
 
@@ -255,7 +261,7 @@ export default function Dashboard({ initialData }) {
         {tab === "mytasks" && <MyTasksTab twp={twp} userName={initialData?.session?.name} pcMap={pcMap} setModalTask={handleSetModalTask} />}
 
         {/* PROJECTS */}
-        {tab === "projects" && <ProjectsTab timeDim={timeDimProject} onTimeDimChange={setTimeDimProject} twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} reorderTasks={reorderTasks} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
+        {tab === "projects" && <ProjectsTab onHome={goHome} timeDim={timeDimProject} onTimeDimChange={setTimeDimProject} twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} reorderTasks={reorderTasks} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
 
         {/* TIMELINE */}
         {tab === "timeline" && <TimelineTab timeDim={timeDimTimeline} onTimeDimChange={setTimeDimTimeline} timelineSort={timelineSort} onTimelineSortChange={setTimelineSort} twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} timelineDefaultCollapsed={timelineDefaultCollapsed} setTimelineDefaultCollapsed={setTimelineDefaultCollapsed} />}

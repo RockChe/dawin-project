@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { downloadCSV } from '@/lib/utils';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   getBackupSettings,
   saveBackupSettings,
@@ -289,6 +290,7 @@ export default function BackupPage() {
 
   return (
     <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
+      <Breadcrumbs items={[{ label: '首頁', href: '/dashboard' }, { label: '備份' }]} />
       <h1 style={{ fontSize: 22, fontWeight: 700, color: '#37352F', marginBottom: 16 }}>系統管理</h1>
 
       {/* ── Tabs ── */}

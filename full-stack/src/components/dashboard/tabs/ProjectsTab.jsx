@@ -20,6 +20,8 @@ import { CSS } from "@dnd-kit/utilities";
 import SortableProjectCard, { EyeToggle } from "../SortableProjectCard";
 import SortableTask, { lockHorizontal } from "../SortableTask";
 import { deleteProjectBanner } from "@/server/actions/projects";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { tabCrumbs, detailCrumbs } from "@/lib/breadcrumbs";
 
 const STATUS_OPTIONS = ["已完成", "進行中", "待辦", "提案中", "待確認"];
 
@@ -162,7 +164,7 @@ function TaskOwnerChips({ task, subs, configOwners }) {
     : <OwnerTags key={n} value={n} configOwners={configOwners} />)}</span>);
 }
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange }) {
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange, onHome }) {
   const { X, SC, inputStyle } = useTheme();
   const canWrite = useCan("write");
   const handleForbidden = useForbiddenHandler(showToast);
@@ -293,6 +295,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
   // Project list view
   if (!selProj) return (
     <div>
+      <Breadcrumbs items={tabCrumbs("projects", { onHome })} />
       <input type="file" accept="image/*" ref={fileRef} style={{ display: "none" }} onChange={e => { if (uploadTarget) handleIconUpload(e, uploadTarget); setUploadTarget(null); }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         {/* 內層也要 wrap：不換行時這一組（Archived + 排序 + 卡片/明細）寬 399px，
@@ -403,6 +406,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, s
     color: on ? X.accent : X.textSec, fontWeight: on ? 700 : 400 });
 
   return (<div>
+    <Breadcrumbs items={detailCrumbs("projects", selProj, { onHome, onTab: () => setSelProj(null) })} />
     <input type="file" accept="image/*" ref={fileRef} style={{ display: "none" }} onChange={e => { if (uploadTarget) handleIconUpload(e, uploadTarget); setUploadTarget(null); }} />
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
       <button onClick={() => { setSelProj(null); }} style={{ background: X.surface, border: `1px solid ${X.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>← Back</button>

@@ -5,6 +5,8 @@ import { FM } from '@/lib/theme';
 import { useTheme } from '@/components/ThemeProvider';
 import { pD, fD, computeProgress } from '@/lib/utils';
 import ProgressBar from './ProgressBar';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import { detailCrumbs } from '@/lib/breadcrumbs';
 
 export default function ProjectDetail({ initialData }) {
   const { X, SC, PC, PJC } = useTheme();
@@ -32,6 +34,7 @@ export default function ProjectDetail({ initialData }) {
     <div style={{ padding: '32px 40px', maxWidth: 1000, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
+        <Breadcrumbs items={detailCrumbs('projects', project.name, { homeHref: '/dashboard', tabHref: '/dashboard' })} />
         <a href="/dashboard" style={{ fontSize: 13, color: X.textDim, textDecoration: 'none' }}>← 返回儀表板</a>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: X.text, marginTop: 8 }}>{project.name}</h1>
       </div>
