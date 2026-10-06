@@ -99,6 +99,13 @@ describe('MyTasksTab', () => {
       expect(screen.getAllByText('已逾期')[0].previousSibling.textContent).toBe('1');
     });
 
+    it('篩出空結果 → 提示「沒有符合篩選的任務」（無 🎉），不再說沒有指派', () => {
+      renderTab({ twp });
+      fireEvent.click(chip('暫緩'));
+      expect(screen.getByText('沒有符合篩選的任務')).toBeTruthy();
+      expect(screen.queryByText(/沒有指派給你的任務/)).toBeNull();
+    });
+
     it('篩出空結果仍顯示篩選列', () => {
       renderTab({ twp: [task('1', 'Amy', '2026-10-01', '進行中')] });
       fireEvent.click(chip('暫緩'));

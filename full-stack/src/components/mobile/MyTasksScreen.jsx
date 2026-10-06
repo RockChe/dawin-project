@@ -50,7 +50,7 @@ export default function MyTasksScreen({ twp, userName, today, pcMap = {}, openTa
 
       {total === 0 && (
         <div style={{ background: X.surface, borderRadius: 12, padding: 32, border: `1px solid ${X.border}`, textAlign: "center", color: X.textDim, fontSize: 14 }}>
-          沒有指派給你的任務 🎉
+          {sel.length ? "沒有符合篩選的任務" : "沒有指派給你的任務 🎉"}
         </div>
       )}
 

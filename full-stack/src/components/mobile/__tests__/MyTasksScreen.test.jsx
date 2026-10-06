@@ -98,6 +98,13 @@ describe('MyTasksScreen', () => {
       expect(screen.getByText('逾期任務')).toBeTruthy();
     });
 
+    it('篩出空結果 → 提示「沒有符合篩選的任務」（無 🎉），不再說沒有指派', () => {
+      setup();
+      fireEvent.click(chip('暫緩'));
+      expect(screen.getByText('沒有符合篩選的任務')).toBeTruthy();
+      expect(screen.queryByText(/沒有指派給你的任務/)).toBeNull();
+    });
+
     it('KPI 不受篩選影響', () => {
       setup();
       const before = kpiText();
