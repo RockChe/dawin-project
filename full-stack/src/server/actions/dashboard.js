@@ -41,7 +41,7 @@ export async function getInitialData() {
       }).from(files).orderBy(desc(files.createdAt)),
       db.select({
         id: projects.id, name: projects.name, bannerR2Key: projects.bannerR2Key,
-        sortOrder: projects.sortOrder, source: projects.source,
+        sortOrder: projects.sortOrder, source: projects.source, archivedAt: projects.archivedAt,
         createdBy: projects.createdBy, createdAt: projects.createdAt,
         updatedAt: projects.updatedAt, creatorName: projCreator.name,
       }).from(projects).leftJoin(projCreator, eq(projects.createdBy, projCreator.id))

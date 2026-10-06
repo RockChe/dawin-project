@@ -13,7 +13,7 @@ export async function getProjects() {
   return withCap('read', async () => {
     return db.select({
       id: projects.id, name: projects.name, bannerR2Key: projects.bannerR2Key,
-      sortOrder: projects.sortOrder, source: projects.source,
+      sortOrder: projects.sortOrder, source: projects.source, archivedAt: projects.archivedAt,
       createdBy: projects.createdBy, createdAt: projects.createdAt,
       updatedAt: projects.updatedAt, creatorName: users.name,
     }).from(projects).leftJoin(users, eq(projects.createdBy, users.id))
@@ -166,6 +166,30 @@ export async function reorderProjects(orderedIds) {
       return { error: err.message || "重新排序失敗" };
     }
   });
+}
+
+// 封存是「專案層級、全團隊共享」的狀態（projects.archived_at），是刪除專案的安全替代：可還原、不動任務資料。
+// 不做 createdBy 擁有者檢查：任何有 write 的人都能封存／還原（沿用先前 UI 本地封存的行為，且完全可逆）。
+async function applyArchive(session, id, archivedAt, auditAction) {
+  if (!isValidUUID(id)) return { error: 'Invalid project ID' };
+  try {
+    const rows = await db.update(projects).set({ archivedAt, updatedAt: new Date() })
+      .where(eq(projects.id, id)).returning({ id: projects.id });
+    if (!rows[0]) return { error: '專案不存在' };
+    await logAudit(auditAction, session.userId, { resourceType: 'project', resourceId: id });
+    return { success: true };
+  } catch (err) {
+    console.error(`[${auditAction}] error:`, err);
+    return { error: err.message || '封存操作失敗' };
+  }
+}
+
+export async function archiveProject(id) {
+  return withCap('write', (session) => applyArchive(session, id, new Date(), 'PROJECT_ARCHIVE'));
+}
+
+export async function unarchiveProject(id) {
+  return withCap('write', (session) => applyArchive(session, id, null, 'PROJECT_UNARCHIVE'));
 }
 
 export async function getProjectWithTasks(projectId) {

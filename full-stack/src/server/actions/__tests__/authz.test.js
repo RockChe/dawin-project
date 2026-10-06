@@ -63,6 +63,8 @@ const PROJECT_WRITE_ACTIONS = [
   ['deleteProject',       () => projects.deleteProject('11111111-1111-1111-1111-111111111111')],
   ['deleteProjectBanner', () => projects.deleteProjectBanner('11111111-1111-1111-1111-111111111111')],
   ['reorderProjects',     () => projects.reorderProjects(['11111111-1111-1111-1111-111111111111'])],
+  ['archiveProject',      () => projects.archiveProject('11111111-1111-1111-1111-111111111111')],
+  ['unarchiveProject',    () => projects.unarchiveProject('11111111-1111-1111-1111-111111111111')],
 ];
 
 describe('projects.js：viewer 不能執行任何寫入', () => {

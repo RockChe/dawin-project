@@ -87,4 +87,10 @@ describe('getInitialData settings', () => {
     const idx = calls.findIndex(t => getTableName(t) === 'tasks');
     expect(Object.keys(selectFields[idx])).toContain('watchers');
   });
+
+  it('projects 的 select 欄位包含 archivedAt（專案封存）', async () => {
+    await getInitialData();
+    const idx = calls.findIndex(t => getTableName(t) === 'projects');
+    expect(Object.keys(selectFields[idx])).toContain('archivedAt');
+  });
 });

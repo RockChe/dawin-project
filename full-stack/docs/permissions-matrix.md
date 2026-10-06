@@ -50,6 +50,8 @@
 | `projects.js` | deleteProject | write | 刪除專案 |
 | `projects.js` | deleteProjectBanner | write | 刪除專案 banner |
 | `projects.js` | reorderProjects | write | 調整專案排序 |
+| `projects.js` | archiveProject | write | 封存專案（寫 archived_at，全團隊共享） |
+| `projects.js` | unarchiveProject | write | 還原封存的專案 |
 | `config.js` | getConfig | read | 讀取單一設定值 |
 | `config.js` | getConfigs | read | 讀取多個設定值 |
 | `config.js` | saveConfig | write | 寫入設定值 |

@@ -15,6 +15,7 @@ export const MATRIX = {
     getProjects: 'read', getProjectWithTasks: 'read',
     createProject: 'write', updateProject: 'write', deleteProject: 'write',
     deleteProjectBanner: 'write', reorderProjects: 'write',
+    archiveProject: 'write', unarchiveProject: 'write',
   },
   'src/server/actions/config.js': {
     getConfig: 'read', getConfigs: 'read', saveConfig: 'write',
