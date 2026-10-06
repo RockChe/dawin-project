@@ -18,7 +18,6 @@ function TimelineTab({
   fpSet,
   fs,
   fpr,
-  isMobile,
   ganttWidths,
   timelineHeight,
   configOwners = [],
@@ -138,7 +137,6 @@ function TimelineTab({
         fp={fpSet}
         fs={fs}
         fpr={fpr}
-        isMobile={isMobile}
         timeDim={timeDim}
         ganttWidths={ganttWidths}
         timelineHeight={timelineHeight}

@@ -176,6 +176,7 @@ export async function actionName(params) {
 - 字體：`'Noto Sans TC'` (內文)、`'JetBrains Mono'` (等寬)
 - Toast 通知透過 `useTaskManager` 的 `showToast(msg, type)` 顯示
 - 拖曳排序使用 `@dnd-kit`，需設定 sensors 和 sortable context
+- **桌機固定版（2026-10-06）**：已移除 RWD（無 `isMobile`、`globals.css` 無 `@media`）；`(dashboard)`／`(admin)` layout 固定 `viewport` 寬 1280 + `min-width: 1280`，登入頁維持 device-width。平板版／手機版另行設計，不在本版
 
 ### 檔案上傳流程
 1. 前端 → `POST /api/upload`（FormData，含 taskId）
@@ -207,7 +208,7 @@ export async function actionName(params) {
 - **前端隱藏編輯按鈕只是 UI policy，不是安全邊界**：`getInitialData()` 會把全量任務資料送進任何登入者的瀏覽器（`useTaskManager` 的 `allT` state），DataTab 的 Export CSV 是純前端從 `allT` 產生——藏按鈕擋不住 DevTools。真正的牆是後端的 `withCap` / `withRouteCap`；前端隱藏只是避免使用者對著點不動的按鈕困惑
 - **Migration baseline（技術債，已解決）**：曾用一支臨時 idempotent 腳本把 0000–0004 標記為「已套用」到 `__drizzle_migrations`（讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入，已存在則跳過），已對 prod 執行並驗證、**腳本已刪除，不在 repo 中**；之後 `db:migrate` 只會套 0005+
 - **Wave 2 個人化（工單 0531）**：Projects 卡片/明細（精簡列表）切換（`projectsView`，user_settings）、Timeline 隱藏專案眼睛 toggle（`hiddenProjects`=project.id 陣列，user_settings；**Dashboard 掛 `useUserSettings` 為單一真相**，以 props 同時傳 ProjectsTab 顯示眼睛狀態 + TimelineTab 過濾，W2-2 不自呼叫 hook）、Timeline 排序（`timelineSort`，user_settings）。ephemeral UI state 走 localStorage：Timeline 逐專案收折（`dash-timelineCollapsed`）。（2026-10-06 起 active tab 與欄寬／高度／Upcoming／時間尺度都改存 user_settings，見「個人設定 key」）
-- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），2026-10-06 批次落地後共 **656 個測試 / 63 個檔**全綠
+- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），2026-10-06 批次落地後共 **659 個測試 / 63 個檔**全綠
 
 ## 關鍵參考檔案
 

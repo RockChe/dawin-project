@@ -3,7 +3,7 @@ import { useState, memo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useCan } from "@/components/PermissionProvider";
 
-function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, isMobile, showToast, zoom, onZoomChange }) {
+function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, setGanttDraft, saveGanttWidths, timelineHeight, saveTimelineHeight, upcomingDays, upcomingLimit, saveUpcomingSettings, showToast, zoom, onZoomChange }) {
   const { X, CC, PJC, inputStyle } = useTheme();
   const canWrite = useCan("write");
   const [newCat, setNewCat] = useState("");
@@ -13,7 +13,7 @@ function SettingsTab({ configCats, saveConfigCats, configOwners, ganttDraft, set
   const iS2 = inputStyle;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
       <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.accent, borderRadius: 2 }} />Categories</h3>
         {configCats.map((cat, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>

@@ -24,7 +24,7 @@ function renderDataTabAs(role) {
     updateTask: () => {}, deleteTask: () => {}, addTask: () => {},
     toggleSub: () => {}, updateSub: () => {}, addSub: () => {}, deleteSub: () => {},
     configCats: [], configOwners: [],
-    isMobile: false, userRole: role, pcMap: {},
+    userRole: role, pcMap: {},
     importTasks: () => {}, deleteManyTasks: () => {}, updateManyTasks: () => {}, deleteAllTasks: () => {},
     showToast: () => {}, setModalTask: () => {},
   };
@@ -43,7 +43,7 @@ function renderSettingsTabAs(role) {
     ganttDraft: { overview: {}, project: {}, timeline: {} }, setGanttDraft: () => {},
     saveGanttWidths: () => {}, timelineHeight: 100, saveTimelineHeight: () => {},
     upcomingDays: 30, upcomingLimit: 5, saveUpcomingSettings: () => {},
-    isMobile: false, showToast: () => {}, zoom: 150, onZoomChange: () => {},
+    showToast: () => {}, zoom: 150, onZoomChange: () => {},
   };
   return render(
     <ThemeProvider>
@@ -58,7 +58,7 @@ function renderProjectsTabAs(role) {
   const projects = [{ id: 'p1', name: 'Project A', sortOrder: 1 }];
   const props = {
     twp: [], allS: [], projects, configOwners: [], pcMap: { 'Project A': '#123456' },
-    allProjNames: ['Project A'], isMobile: false, setModalTask: () => {}, setShowFileManager: () => {},
+    allProjNames: ['Project A'], setModalTask: () => {}, setShowFileManager: () => {},
     ganttWidths: {}, timelineHeight: 100, showToast: () => {},
     renameProject: () => {}, addProject: () => {}, deleteProject: () => {},
     updateTask: () => {}, deleteTask: () => {}, toggleSub: () => {}, updateSub: () => {},

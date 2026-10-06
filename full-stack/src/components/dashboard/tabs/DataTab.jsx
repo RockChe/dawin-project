@@ -6,7 +6,6 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useCan } from "@/components/PermissionProvider";
 import { pD, fD, toISO, tasksToCSV, parseCSV, downloadCSV } from "@/lib/utils";
 import EditableCell from "../EditableCell";
-import InlineNote from "../InlineNote";
 import CalendarPicker from "../CalendarPicker";
 import TagInput from "../TagInput";
 import ProgressBar from "../ProgressBar";
@@ -29,7 +28,7 @@ function DataTab({
   filtered, allS, allT, twp, projects,
   updateTask, deleteTask, addTask, toggleSub, updateSub, addSub, deleteSub,
   configCats, configOwners,
-  isMobile, pcMap,
+  pcMap,
   importTasks, deleteManyTasks, updateManyTasks, deleteAllTasks,
   showToast, setModalTask,
 }) {
@@ -173,32 +172,16 @@ function DataTab({
   return (
     <>
       <div style={{ background: X.surface, borderRadius: 12, border: `1px solid ${X.border}`, overflow: "hidden" }}>
-        <div style={{ padding: isMobile ? "10px 12px" : "10px 16px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          {!isMobile && <span style={{ fontSize: 14, color: X.textDim }}>{canWrite ? "Click to select · Double-click or F2 to edit · Arrow keys to navigate" : "Click to select · Arrow keys to navigate"}</span>}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", ...(isMobile ? { width: "100%", justifyContent: "space-between" } : {}) }}>
-            {isMobile ? (
-              <>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {canExport && <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>Export</button>}
-                  {canWrite && <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>}
-                  {canWrite && <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.textSec, cursor: "pointer" }}>URL</button>}
-                  {canWrite && selectedRows.size > 0 && <select onChange={async e => { const v = e.target.value; if (!v) return; await updateManyTasks([...selectedRows], "owner", v); e.target.value = ""; }} style={{ borderRadius: 20, padding: "4px 8px", fontSize: 12, border: `1px solid ${X.accent}`, background: X.surface, color: X.accent, cursor: "pointer", fontWeight: 600 }}><option value="">指派 Owner ({selectedRows.size})</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>}
-                  {canWrite && selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>刪除 ({selectedRows.size})</button>}
-                  {canManage && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 10px", fontSize: 12, color: X.red, cursor: "pointer" }}>Clean All</button>}
-                </div>
-                {canWrite && <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>}
-              </>
-            ) : (
-              <>
-                {canExport && <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Export CSV</button>}
-                {canWrite && <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import CSV<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>}
-                {canWrite && <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Import URL</button>}
-                {canWrite && selectedRows.size > 0 && <select onChange={async e => { const v = e.target.value; if (!v) return; await updateManyTasks([...selectedRows], "owner", v); e.target.value = ""; }} style={{ borderRadius: 20, padding: "5px 12px", fontSize: 14, border: `1px solid ${X.accent}`, background: X.surface, color: X.accent, cursor: "pointer", fontWeight: 600 }}><option value="">指派 Owner ({selectedRows.size})</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>}
-                {canWrite && selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>刪除已選 ({selectedRows.size})</button>}
-                {canManage && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.red, cursor: "pointer" }}>Clean All</button>}
-                {canWrite && <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>}
-              </>
-            )}
+        <div style={{ padding: "10px 16px", borderBottom: `1px solid ${X.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <span style={{ fontSize: 14, color: X.textDim }}>{canWrite ? "Click to select · Double-click or F2 to edit · Arrow keys to navigate" : "Click to select · Arrow keys to navigate"}</span>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {canExport && <button onClick={() => downloadCSV(tasksToCSV(allT), "tasks_export.csv")} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Export CSV</button>}
+            {canWrite && <label style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>Import CSV<input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} /></label>}
+            {canWrite && <button onClick={() => { setShowUrlInput(!showUrlInput); setUrlValue(""); }} style={{ background: X.surfaceLight, border: `1px solid ${X.border}`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.textSec, cursor: "pointer" }}>Import URL</button>}
+            {canWrite && selectedRows.size > 0 && <select onChange={async e => { const v = e.target.value; if (!v) return; await updateManyTasks([...selectedRows], "owner", v); e.target.value = ""; }} style={{ borderRadius: 20, padding: "5px 12px", fontSize: 14, border: `1px solid ${X.accent}`, background: X.surface, color: X.accent, cursor: "pointer", fontWeight: 600 }}><option value="">指派 Owner ({selectedRows.size})</option>{configOwners.map(o => <option key={o} value={o}>{o}</option>)}</select>}
+            {canWrite && selectedRows.size > 0 && <button onClick={async () => { if (confirm(`確定要刪除 ${selectedRows.size} 筆任務？`)) { await deleteManyTasks([...selectedRows]); setSelectedRows(new Set()); } }} style={{ background: X.red, color: "#fff", border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>刪除已選 ({selectedRows.size})</button>}
+            {canManage && <button onClick={() => { setShowCleanAllModal(true); setCleanAllInput(""); }} style={{ background: "transparent", border: `1px solid ${X.red}60`, borderRadius: 20, padding: "5px 14px", fontSize: 14, color: X.red, cursor: "pointer" }}>Clean All</button>}
+            {canWrite && <button onClick={() => setShowTblAdd(!showTblAdd)} style={{ background: showTblAdd ? X.surfaceLight : X.accent, color: showTblAdd ? X.textSec : "#fff", border: showTblAdd ? `1px solid ${X.border}` : "none", borderRadius: 20, padding: "5px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{showTblAdd ? "Cancel" : "+ Create"}</button>}
           </div>
         </div>
         {showUrlInput && (
@@ -211,163 +194,95 @@ function DataTab({
         {showTblAdd && (() => {
           const doAdd = async () => { if (tblAddLoading || !draft.task.trim() || !draft.project.trim()) return; const proj = projects.find(p => p.name === draft.project); if (!proj) { showToast('找不到專案，請從列表中選擇', 'error'); return; } const dur = (draft.start && draft.end) ? Math.max(1, Math.ceil((pD(draft.end) - pD(draft.start)) / 864e5)) : null; setTblAddLoading(true); try { const result = await addTask(proj.id, { task: draft.task, startDate: draft.start ? toISO(draft.start) : null, endDate: draft.end ? toISO(draft.end) : null, duration: dur, owner: draft.owner, category: draft.category, priority: draft.priority, notes: draft.notes }); if (result?.success) { setDraft({ task: "", project: "", start: "", end: "", owner: "—", category: "活動", priority: "中", notes: "" }); setShowTblAdd(false); } } catch (err) { console.error("doAdd failed:", err); showToast('新增失敗，請稍後再試', 'error'); } finally { setTblAddLoading(false); } };
           return (<div style={{ padding: "12px 16px", background: X.surfaceLight, borderBottom: `1px solid ${X.accent}30` }}>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.5fr 2fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 2fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
               <div><div style={{ fontSize: 12, color: X.textDim, marginBottom: 3 }}>Project *</div><input value={draft.project} onChange={e => setDraft(p => ({ ...p, project: e.target.value }))} list="pl" style={iS2} /><datalist id="pl">{projects.map(p => <option key={p.id} value={p.name} />)}</datalist></div>
               <div><div style={{ fontSize: 12, color: X.textDim, marginBottom: 3 }}>Task *</div><input value={draft.task} onChange={e => setDraft(p => ({ ...p, task: e.target.value }))} onKeyDown={e => { if (e.key === "Enter") doAdd(); }} style={iS2} /></div>
               <div><div style={{ fontSize: 12, color: X.textDim, marginBottom: 3 }}>Start</div><CalendarPicker value={draft.start} onChange={v => setDraft(p => ({ ...p, start: v }))} showTime /></div>
               <div><div style={{ fontSize: 12, color: X.textDim, marginBottom: 3 }}>End</div><CalendarPicker value={draft.end} onChange={v => setDraft(p => ({ ...p, end: v }))} showTime /></div>
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
-              <div style={{ flex: 1, minWidth: isMobile ? 120 : undefined }}><TagInput value={draft.owner} onChange={v => setDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} placeholder="Add owner..." /></div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "nowrap" }}>
+              <div style={{ flex: 1 }}><TagInput value={draft.owner} onChange={v => setDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} placeholder="Add owner..." /></div>
               <select value={draft.category} onChange={e => setDraft(p => ({ ...p, category: e.target.value }))} style={{ ...iS2, flex: 1, cursor: "pointer" }}>{configCats.map(o => <option key={o}>{o}</option>)}</select>
-              <select value={draft.priority} onChange={e => setDraft(p => ({ ...p, priority: e.target.value }))} style={{ ...iS2, flex: isMobile ? 1 : 0.6, cursor: "pointer" }}><option>高</option><option>中</option><option>低</option></select>
-              <button onClick={doAdd} disabled={tblAddLoading || !draft.task.trim() || !draft.project.trim()} style={{ background: (!tblAddLoading && draft.task.trim() && draft.project.trim()) ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "6px 20px", fontSize: 14, fontWeight: 700, cursor: (!tblAddLoading && draft.task.trim() && draft.project.trim()) ? "pointer" : "not-allowed", whiteSpace: "nowrap", opacity: tblAddLoading ? 0.6 : 1, ...(isMobile ? { width: "100%" } : {}) }}>{tblAddLoading ? "新增中..." : "Confirm"}</button>
+              <select value={draft.priority} onChange={e => setDraft(p => ({ ...p, priority: e.target.value }))} style={{ ...iS2, flex: 0.6, cursor: "pointer" }}><option>高</option><option>中</option><option>低</option></select>
+              <button onClick={doAdd} disabled={tblAddLoading || !draft.task.trim() || !draft.project.trim()} style={{ background: (!tblAddLoading && draft.task.trim() && draft.project.trim()) ? X.accent : X.border, color: "#fff", border: "none", borderRadius: 20, padding: "6px 20px", fontSize: 14, fontWeight: 700, cursor: (!tblAddLoading && draft.task.trim() && draft.project.trim()) ? "pointer" : "not-allowed", whiteSpace: "nowrap", opacity: tblAddLoading ? 0.6 : 1 }}>{tblAddLoading ? "新增中..." : "Confirm"}</button>
             </div>
           </div>);
         })()}
-        {isMobile ? (
-          <div style={{ padding: 12 }}>
-            {paged.length === 0 && <div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></div>}
-            {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = subsByTaskId[d.id] || [];
-              return (
-                <div key={d.id} style={{ background: selectedRows.has(d.id) ? `${X.accent}10` : X.surface, borderRadius: 12, border: `1px solid ${selectedRows.has(d.id) ? X.accent + "40" : X.border}`, overflow: "hidden", marginBottom: 8 }}>
-                  <div onClick={() => toggle(d.id)} style={{ padding: "12px 14px", cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      {canWrite && <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { e.stopPropagation(); setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} onClick={e => e.stopPropagation()} style={{ cursor: "pointer", accentColor: X.accent, flexShrink: 0 }} />}
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.task}</span>
-                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{d.status}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 14, marginBottom: 6 }}>
-                      <OwnerTags value={d.owner} configOwners={configOwners} />
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: pc.color }} />
-                      <span style={{ fontSize: 13, color: pc.color, fontWeight: 500 }}>{d.priority}</span>
-                      <div style={{ flex: 1, marginLeft: 4 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></div>
-                    </div>
-                    <div style={{ fontSize: 12, fontFamily: FM, color: X.textDim, paddingLeft: 14, display: "flex", alignItems: "center", gap: 6 }}>
-                      {fD(d.start)} → {fD(d.end)}
-                      <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 6, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontWeight: 500 }}>{d.category}</span>
-                      <span style={{ marginLeft: "auto", fontSize: 12, color: X.textDim }}>{d.project}</span>
-                    </div>
-                  </div>
-                  {isE && (
-                    <div style={{ borderTop: `1px solid ${X.border}` }}>
-                      {d.notes && <div style={{ padding: "8px 14px", fontSize: 13, color: X.textSec, background: X.surfaceLight }}>{d.notes}</div>}
-                      {tSubs.map(sub => (
-                        <div key={sub.id} style={{ padding: "8px 14px", background: X.surfaceLight, borderTop: `1px solid ${X.border}22`, display: "flex", alignItems: "center", gap: 8 }}>
-                          <span onClick={canWrite ? e => { e.stopPropagation(); toggleSub(sub.id); } : undefined} style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff", cursor: canWrite ? "pointer" : "default" }}>{sub.done ? "✓" : ""}</span>
-                          <span style={{ flexShrink: 0 }}>{canWrite
-                            ? <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1 }} />
-                            : <ReadOnlyCell value={sub.name} style={{ fontSize: 13, color: X.textSec, textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, display: "inline" }} />}</span>
+        <div ref={tableRef} tabIndex={-1} onKeyDown={handleTableKeyDown} style={{ overflowX: "auto", outline: "none" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead><tr style={{ background: X.surfaceLight }}>
+              <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}`, textAlign: "center" }}>
+                {canWrite && <input type="checkbox" checked={paged.length > 0 && paged.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(paged.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />}
+              </th>
+              {[{ k: "project", l: "Project" }, { k: "task", l: "Task" }, { k: "owner", l: "Owner" }, { k: "status", l: "Status" }, { k: "priority", l: "Pri" }, { k: "progress", l: "Progress" }, { k: "category", l: "Category" }, { k: "start", l: "Start" }, { k: "end", l: "End" }, { k: "notes", l: "Notes" }, { k: "creatorName", l: "Creator" }].map(col => (
+                <th key={col.k} onClick={() => handleSort(col.k)} style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: X.textDim, fontSize: 13, borderBottom: `1px solid ${X.border}`, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>{col.l}<SI col={col.k} /></th>
+              ))}
+              <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}` }} />
+            </tr></thead>
+            <tbody>
+              {paged.length === 0 && <tr><td colSpan={12} style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></td></tr>}
+              {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = subsByTaskId[d.id] || [];
+                return [
+                  <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}`, background: selectedRows.has(d.id) ? `${X.accent}10` : "transparent" }} onMouseEnter={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = X.surfaceHover; }} onMouseLeave={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = "transparent"; }}>
+                    <td style={{ padding: "9px 6px", textAlign: "center" }}>{canWrite && <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} />}</td>
+                    <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.project}>{d.project || "—"}</div></div></td>
+                    <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}>{canWrite ? <EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /> : <ReadOnlyCell value={d.task} />}</div></div></td>
+                    <td style={{ padding: "9px 8px", fontSize: 14 }}>{canWrite && !lockedOwnerIds.has(d.id) ? <EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /> : <span title={lockedOwnerIds.has(d.id) ? "由子任務自動帶出" : undefined} onClick={canWrite ? cellP(d.id, "owner").onSelect : undefined}><ReadOnlyCell value={d.owner} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /></span>}</td>
+                    <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={STATUSES} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /> : <ReadOnlyCell value={d.status} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} />}</td>
+                    <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /> : <ReadOnlyCell value={d.priority} style={{ display: "inline-block", color: pc.color, fontSize: 14, fontWeight: 600 }} />}</td>
+                    <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></td>
+                    <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.category} onSave={v => updateTask(d.id, "category", v)} {...cellP(d.id, "category")} options={configCats} style={{ padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} /> : <ReadOnlyCell value={d.category} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} />}</td>
+                    <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.start} onSave={v => updateTask(d.id, "start", v)} {...cellP(d.id, "start")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /> : <ReadOnlyCell value={fD(d.start)} style={{ fontFamily: FM, fontSize: 14, color: X.text }} />}</td>
+                    <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.end} onSave={v => updateTask(d.id, "end", v)} {...cellP(d.id, "end")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /> : <ReadOnlyCell value={fD(d.end)} style={{ fontFamily: FM, fontSize: 14, color: X.text }} />}</td>
+                    <td style={{ padding: "9px 8px", maxWidth: 180 }}>{canWrite ? <EditableCell value={d.notes} onSave={v => updateTask(d.id, "notes", v)} {...cellP(d.id, "notes")} style={{ fontSize: 14, color: X.textSec }} /> : <ReadOnlyCell value={d.notes} style={{ fontSize: 14, color: X.textSec }} />}</td>
+                    <td style={{ padding: "9px 8px", fontSize: 12, color: X.textDim, whiteSpace: "nowrap" }}>{d.creatorName || "—"}{d.source && <span style={{ marginLeft: 4, padding: "0 4px", borderRadius: 4, background: d.source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: d.source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{d.source === 'csv_import' ? 'CSV' : '手動'}</span>}</td>
+                    <td style={{ padding: "6px", textAlign: "center" }}>{canWrite && <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(d.id); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: X.red, fontSize: 14, padding: "2px 6px" }}>×</button>}</td>
+                  </tr>,
+                  ...(isE ? [...tSubs.map(sub => (
+                    <tr key={sub.id} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
+                      <td />
+                      <td />
+                      <td style={{ padding: "7px 8px 7px 30px", fontSize: 14 }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: canWrite ? "pointer" : "default" }} onClick={canWrite ? e => { e.stopPropagation(); toggleSub(sub.id); } : undefined}>
+                          <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff" }}>{sub.done ? "✓" : ""}</span>
                           {canWrite
-                            ? <InlineNote value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} />
-                            : <ReadOnlyCell value={sub.notes} style={{ flex: "1 1 80px", fontSize: 12, minWidth: 60, display: "inline" }} />}
-                          {canWrite && <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
-                            {editingSubOwner === sub.id
-                              ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 12, minWidth: 140 }} />
-                              : <span onClick={() => setEditingSubOwner(sub.id)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
-                            }
-                          </span>}
-                          {!canWrite && <OwnerTags value={sub.owner} configOwners={configOwners} />}
-                          {canWrite && <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 12, cursor: "pointer", padding: "2px 4px", opacity: 0.6 }}>×</button>}
-                        </div>
-                      ))}
-                      {canWrite && (showSubAdd === d.id
-                        ? <div onClick={e => e.stopPropagation()} style={{ padding: "8px 14px", background: X.surfaceLight, borderTop: `1px solid ${X.border}22`, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                          <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "5px 10px", minWidth: 120 }} />
-                          <div style={{ flex: "0 0 140px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
-                          <button onClick={() => { if (subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "4px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Add</button>
-                          <button onClick={() => setShowSubAdd(null)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "4px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>Cancel</button>
-                        </div>
-                        : <div onClick={e => { e.stopPropagation(); setShowSubAdd(d.id); setSubDraft({ name: "", owner: "" }); }} style={{ padding: "8px 14px", background: X.surfaceLight, borderTop: `1px solid ${X.border}22`, cursor: "pointer", opacity: 0.7 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}>
-                          <span style={{ fontSize: 13, color: X.accent, fontWeight: 500 }}>+ Add subtask</span>
-                        </div>
-                      )}
-                      {canWrite && <div style={{ padding: "8px 14px", borderTop: `1px solid ${X.border}`, display: "flex", justifyContent: "flex-end" }}>
-                        <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(d.id); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 16, padding: "3px 12px", fontSize: 12, color: X.red, cursor: "pointer" }}>Delete</button>
-                      </div>}
-                    </div>
-                  )}
-                </div>
-              ); })}
-          </div>
-        ) : (
-          <div ref={tableRef} tabIndex={-1} onKeyDown={handleTableKeyDown} style={{ overflowX: "auto", outline: "none" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-              <thead><tr style={{ background: X.surfaceLight }}>
-                <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}`, textAlign: "center" }}>
-                  {canWrite && <input type="checkbox" checked={paged.length > 0 && paged.every(d => selectedRows.has(d.id))} onChange={e => { if (e.target.checked) { setSelectedRows(new Set(paged.map(d => d.id))); } else { setSelectedRows(new Set()); } }} style={{ cursor: "pointer", accentColor: X.accent }} />}
-                </th>
-                {[{ k: "project", l: "Project" }, { k: "task", l: "Task" }, { k: "owner", l: "Owner" }, { k: "status", l: "Status" }, { k: "priority", l: "Pri" }, { k: "progress", l: "Progress" }, { k: "category", l: "Category" }, { k: "start", l: "Start" }, { k: "end", l: "End" }, { k: "notes", l: "Notes" }, { k: "creatorName", l: "Creator" }].map(col => (
-                  <th key={col.k} onClick={() => handleSort(col.k)} style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: X.textDim, fontSize: 13, borderBottom: `1px solid ${X.border}`, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>{col.l}<SI col={col.k} /></th>
-                ))}
-                <th style={{ padding: "10px 6px", width: 36, borderBottom: `1px solid ${X.border}` }} />
-              </tr></thead>
-              <tbody>
-                {paged.length === 0 && <tr><td colSpan={12} style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📊</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks found</div><div style={{ fontSize: 14 }}>Try adjusting your filters or create a new task</div></td></tr>}
-                {paged.map(d => { const sc = SC[d.status] || {}, pc = PC[d.priority] || {}; const isE = expanded.has(d.id); const tSubs = subsByTaskId[d.id] || [];
-                  return [
-                    <tr key={d.id} style={{ borderBottom: `1px solid ${isE ? X.border : X.border + "40"}`, background: selectedRows.has(d.id) ? `${X.accent}10` : "transparent" }} onMouseEnter={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = X.surfaceHover; }} onMouseLeave={e => { if (!selectedRows.has(d.id)) e.currentTarget.style.background = "transparent"; }}>
-                      <td style={{ padding: "9px 6px", textAlign: "center" }}>{canWrite && <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} />}</td>
-                      <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.project}>{d.project || "—"}</div></div></td>
-                      <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}>{canWrite ? <EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /> : <ReadOnlyCell value={d.task} />}</div></div></td>
-                      <td style={{ padding: "9px 8px", fontSize: 14 }}>{canWrite && !lockedOwnerIds.has(d.id) ? <EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /> : <span title={lockedOwnerIds.has(d.id) ? "由子任務自動帶出" : undefined} onClick={canWrite ? cellP(d.id, "owner").onSelect : undefined}><ReadOnlyCell value={d.owner} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /></span>}</td>
-                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={STATUSES} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /> : <ReadOnlyCell value={d.status} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} />}</td>
-                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /> : <ReadOnlyCell value={d.priority} style={{ display: "inline-block", color: pc.color, fontSize: 14, fontWeight: 600 }} />}</td>
-                      <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></td>
-                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.category} onSave={v => updateTask(d.id, "category", v)} {...cellP(d.id, "category")} options={configCats} style={{ padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} /> : <ReadOnlyCell value={d.category} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 8, background: X.surfaceLight, color: CC[d.category] || X.textSec, fontSize: 14, fontWeight: 500 }} />}</td>
-                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.start} onSave={v => updateTask(d.id, "start", v)} {...cellP(d.id, "start")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /> : <ReadOnlyCell value={fD(d.start)} style={{ fontFamily: FM, fontSize: 14, color: X.text }} />}</td>
-                      <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.end} onSave={v => updateTask(d.id, "end", v)} {...cellP(d.id, "end")} isDate style={{ fontFamily: FM, fontSize: 14, color: X.text }} /> : <ReadOnlyCell value={fD(d.end)} style={{ fontFamily: FM, fontSize: 14, color: X.text }} />}</td>
-                      <td style={{ padding: "9px 8px", maxWidth: 180 }}>{canWrite ? <EditableCell value={d.notes} onSave={v => updateTask(d.id, "notes", v)} {...cellP(d.id, "notes")} style={{ fontSize: 14, color: X.textSec }} /> : <ReadOnlyCell value={d.notes} style={{ fontSize: 14, color: X.textSec }} />}</td>
-                      <td style={{ padding: "9px 8px", fontSize: 12, color: X.textDim, whiteSpace: "nowrap" }}>{d.creatorName || "—"}{d.source && <span style={{ marginLeft: 4, padding: "0 4px", borderRadius: 4, background: d.source === 'csv_import' ? `${X.purple}15` : `${X.accent}15`, color: d.source === 'csv_import' ? X.purple : X.accent, fontSize: 10, fontWeight: 600 }}>{d.source === 'csv_import' ? 'CSV' : '手動'}</span>}</td>
-                      <td style={{ padding: "6px", textAlign: "center" }}>{canWrite && <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(d.id); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: X.red, fontSize: 14, padding: "2px 6px" }}>×</button>}</td>
-                    </tr>,
-                    ...(isE ? [...tSubs.map(sub => (
-                      <tr key={sub.id} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
-                        <td />
-                        <td />
-                        <td style={{ padding: "7px 8px 7px 30px", fontSize: 14 }}>
-                          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: canWrite ? "pointer" : "default" }} onClick={canWrite ? e => { e.stopPropagation(); toggleSub(sub.id); } : undefined}>
-                            <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: sub.done ? X.green : "transparent", border: sub.done ? "none" : `1.5px solid ${X.border}`, color: "#fff" }}>{sub.done ? "✓" : ""}</span>
-                            {canWrite
-                              ? <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} {...cellP(sub.id, "name")} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />
-                              : <ReadOnlyCell value={sub.name} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />}
-                          </label>
-                        </td>
-                        <td style={{ padding: "7px 8px", fontSize: 14 }}>
-                          {canWrite ? <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative", display: "inline-block" }}>
-                            {editingSubOwner === sub.id
-                              ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13, minWidth: 140 }} />
-                              : <span onClick={() => setEditingSubOwner(sub.id)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
-                            }
-                          </span> : <OwnerTags value={sub.owner} configOwners={configOwners} />}
-                        </td>
-                        <td colSpan={2} style={{ padding: "7px 8px" }}>{sub.done ? <span style={{ fontSize: 14, color: X.green, fontWeight: 600 }}>Done</span> : <span style={{ fontSize: 14, color: X.textDim }}>Pending</span>}</td>
-                        <td style={{ padding: "7px 8px", fontFamily: FM, fontSize: 14, color: sub.done ? X.green : X.textDim }}>{sub.done_date ? fD(sub.done_date) : "—"}</td>
-                        <td colSpan={5} style={{ padding: "7px 8px", fontSize: 14 }}>{canWrite ? <EditableCell value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} {...cellP(sub.id, "notes")} style={{ color: X.textDim }} /> : <ReadOnlyCell value={sub.notes} style={{ color: X.textDim }} />}</td>
-                        <td style={{ padding: "4px", textAlign: "center" }}>{canWrite && <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>}</td>
-                      </tr>)),
-                      ...(canWrite ? [<tr key={d.id + "_addsub"} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
-                        <td />
-                        <td />
-                        <td colSpan={11} style={{ padding: "6px 8px 6px 30px" }}>
-                          {showSubAdd === d.id
-                            ? <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "4px 10px" }} />
-                              <div style={{ flex: "0 0 160px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
-                              <button onClick={() => { if (subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "3px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Add</button>
-                              <button onClick={() => setShowSubAdd(null)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "3px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>Cancel</button>
-                            </div>
-                            : <span onClick={e => { e.stopPropagation(); setShowSubAdd(d.id); setSubDraft({ name: "", owner: "" }); }} style={{ fontSize: 13, color: X.accent, fontWeight: 500, cursor: "pointer", opacity: 0.7 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}>+ Add subtask</span>
+                            ? <EditableCell value={sub.name} onSave={v => updateSub(sub.id, "name", v)} {...cellP(sub.id, "name")} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />
+                            : <ReadOnlyCell value={sub.name} style={{ textDecoration: sub.done ? "line-through" : "none", opacity: sub.done ? 0.5 : 1, color: X.textSec }} />}
+                        </label>
+                      </td>
+                      <td style={{ padding: "7px 8px", fontSize: 14 }}>
+                        {canWrite ? <span ref={editingSubOwner === sub.id ? subOwnerRef : null} onClick={e => e.stopPropagation()} style={{ position: "relative", display: "inline-block" }}>
+                          {editingSubOwner === sub.id
+                            ? <TagInput value={sub.owner} onChange={v => updateSub(sub.id, "owner", v)} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13, minWidth: 140 }} />
+                            : <span onClick={() => setEditingSubOwner(sub.id)} style={{ cursor: "pointer" }}><OwnerTags value={sub.owner} configOwners={configOwners} /></span>
                           }
-                        </td>
-                      </tr>] : [])
-                    ] : [])
-                  ]; })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </span> : <OwnerTags value={sub.owner} configOwners={configOwners} />}
+                      </td>
+                      <td colSpan={2} style={{ padding: "7px 8px" }}>{sub.done ? <span style={{ fontSize: 14, color: X.green, fontWeight: 600 }}>Done</span> : <span style={{ fontSize: 14, color: X.textDim }}>Pending</span>}</td>
+                      <td style={{ padding: "7px 8px", fontFamily: FM, fontSize: 14, color: sub.done ? X.green : X.textDim }}>{sub.done_date ? fD(sub.done_date) : "—"}</td>
+                      <td colSpan={5} style={{ padding: "7px 8px", fontSize: 14 }}>{canWrite ? <EditableCell value={sub.notes} onSave={v => updateSub(sub.id, "notes", v)} {...cellP(sub.id, "notes")} style={{ color: X.textDim }} /> : <ReadOnlyCell value={sub.notes} style={{ color: X.textDim }} />}</td>
+                      <td style={{ padding: "4px", textAlign: "center" }}>{canWrite && <button onClick={e => { e.stopPropagation(); deleteSub(sub.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "2px 6px", opacity: 0.6 }}>×</button>}</td>
+                    </tr>)),
+                    ...(canWrite ? [<tr key={d.id + "_addsub"} style={{ background: X.surfaceLight, borderBottom: `1px solid ${X.border}22` }}>
+                      <td />
+                      <td />
+                      <td colSpan={11} style={{ padding: "6px 8px 6px 30px" }}>
+                        {showSubAdd === d.id
+                          ? <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <input value={subDraft.name} onChange={e => setSubDraft(p => ({ ...p, name: e.target.value }))} placeholder="Subtask name" autoFocus onKeyDown={e => { if (e.key === "Enter" && subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } if (e.key === "Escape") setShowSubAdd(null); }} style={{ ...iS2, flex: 1, fontSize: 13, padding: "4px 10px" }} />
+                            <div style={{ flex: "0 0 160px" }}><TagInput value={subDraft.owner} onChange={v => setSubDraft(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="負責人..." style={{ fontSize: 13 }} /></div>
+                            <button onClick={() => { if (subDraft.name.trim()) { addSub(d.id, { name: subDraft.name, owner: subDraft.owner }); setSubDraft({ name: "", owner: "" }); setShowSubAdd(null); } }} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 16, padding: "3px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Add</button>
+                            <button onClick={() => setShowSubAdd(null)} style={{ background: "transparent", border: `1px solid ${X.border}`, borderRadius: 16, padding: "3px 10px", fontSize: 13, color: X.textSec, cursor: "pointer" }}>Cancel</button>
+                          </div>
+                          : <span onClick={e => { e.stopPropagation(); setShowSubAdd(d.id); setSubDraft({ name: "", owner: "" }); }} style={{ fontSize: 13, color: X.accent, fontWeight: 500, cursor: "pointer", opacity: 0.7 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}>+ Add subtask</span>
+                        }
+                      </td>
+                    </tr>] : [])
+                  ] : [])
+                ]; })}
+            </tbody>
+          </table>
+        </div>
       </div>
       {sorted.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: `1px solid ${X.border}`, fontSize: 13, color: X.textSec, flexWrap: "wrap", gap: 8 }}>

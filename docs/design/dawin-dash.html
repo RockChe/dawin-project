@@ -97,6 +97,7 @@
   <a href="#db">9 資料庫串接圖</a>
   <a href="#docs">10 相關文件</a>
   <a href="#batch-20261006">11 2026-10-06 優化批次</a>
+  <a href="#rwd-removed">12 移除 RWD</a>
   <span class="sep">|</span>
   <a class="ext" href="./dawin-dash-task-sortfilter-q-scope.html">記憶範圍</a>
   <a class="ext" href="./dawin-dash-task-sortfilter-q-ui.html">UI 版型</a>
@@ -1132,6 +1133,12 @@
   <tr><td><a href="./decision-personal-settings.html"><code>decision-personal-settings.html</code></a></td><td>決策頁：個人化設定範圍</td></tr>
   <tr><td><a href="./owner-backfill-table.html"><code>owner-backfill-table.html</code></a></td><td>負責人整理對照表。<b>已被「關注人」設計取代</b>（被擠掉的人改轉成關注人，不再直接丟棄），僅供歷史對照</td></tr>
 </table>
+
+<h2 id="rwd-removed">12 2026-10-06 補記：移除 RWD，固定桌機版</h2>
+<p class="hint">user 原話：「RWD 效果不好，我想拿掉，固定桌機板，另外出一個 平板版 跟 手機版的，請先固定桌機板」。
+  已移除全部 <code>isMobile</code> 分支與 <code>globals.css</code> 的 <code>@media</code>，刪除 <code>MobileGanttList</code>／<code>MobileProjectTimeline</code>；
+  dashboard／admin layout 匯出 <code>viewport = { width: 1280 }</code> 並設 <code>min-width: 1280px</code>（登入頁不動）。平板版／手機版另行設計，不在本次範圍。
+  先前的手機稽核（<a href="./dawin-dash-mobile-q-audit.html">dawin-dash-mobile-q-audit.html</a>）僅供之後做手機版時參考。</p>
 
 </main>
 

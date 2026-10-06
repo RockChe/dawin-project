@@ -5,6 +5,9 @@ import Sidebar from '@/components/dashboard/Sidebar';
 
 export const dynamic = 'force-dynamic';
 
+// 固定桌機版：手機／平板以 1280 寬渲染後縮放（可雙指放大）；平板／手機版另行設計。
+export const viewport = { width: 1280 };
+
 export default async function AdminLayout({ children }) {
   let session;
   try {
@@ -23,7 +26,7 @@ export default async function AdminLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen" style={{ minWidth: 1280 }}>
       <Sidebar user={session} />
       <main className="flex-1 overflow-auto">
         {children}

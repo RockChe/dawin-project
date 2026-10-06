@@ -12,7 +12,7 @@ function renderTab(props) {
   return render(
     <ThemeProvider>
       <PermissionProvider role="viewer">
-        <MyTasksTab twp={[]} userName="Amy" isMobile={false} pcMap={{ 'Proj A': '#123456' }}
+        <MyTasksTab twp={[]} userName="Amy" pcMap={{ 'Proj A': '#123456' }}
           setModalTask={() => {}} today={TODAY} {...props} />
       </PermissionProvider>
     </ThemeProvider>

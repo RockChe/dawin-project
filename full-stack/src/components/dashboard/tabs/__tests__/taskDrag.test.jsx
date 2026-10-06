@@ -48,7 +48,7 @@ function renderDetailAs(role) {
   const mk = (id, sortOrder) => ({ id, projectId: 'p1', project: 'Project A', task: `task-${id}`, status: '進行中', priority: '中', owner: '', start: '2026-06-01', end: '2026-06-30', duration: 29, progress: 0, sDone: 0, sTotal: 0, sortOrder });
   const props = {
     twp: [mk('t1', 1), mk('t2', 2)], allS: [], projects, configOwners: [], pcMap: { 'Project A': '#123456' },
-    allProjNames: ['Project A'], isMobile: false, setModalTask: () => {}, setShowFileManager: () => {},
+    allProjNames: ['Project A'], setModalTask: () => {}, setShowFileManager: () => {},
     ganttWidths: {}, timelineHeight: 100, showToast: () => {},
     renameProject: () => {}, addProject: () => {}, deleteProject: () => {},
     updateTask: () => {}, deleteTask: () => {}, toggleSub: () => {}, updateSub: () => {},

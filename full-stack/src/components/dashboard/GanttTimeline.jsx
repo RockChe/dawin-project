@@ -3,7 +3,6 @@ import { useState, useMemo, useEffect } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeAllProgress, toBusinessDateString } from "@/lib/utils";
-import MobileGanttList from "./MobileGanttList";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import SortableTask, { lockHorizontal } from "./SortableTask";
@@ -293,7 +292,7 @@ function TaskRowsDnd({ enabled, sensors, ids, onMove, children }) {
 // GanttTimeline is a controlled/uncontrolled hybrid for collapse state.
 // - Uncontrolled (Overview/Projects): owns internal state + persists to localStorage.
 // - Controlled (TimelineTab): collapsed + onToggleCollapse props are supplied.
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed, onToggleCollapse, taskOrder, onReorderTasks }) {
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed, onToggleCollapse, taskOrder, onReorderTasks }) {
   const { X, SC, PC, PJC } = useTheme();
   // taskOrder（task id 陣列）= 專案詳情頁的「有效順序」，覆蓋各專案內 task 列的順序；onReorderTasks 有給才啟用左欄拖移。
   // 用字串當依賴：呼叫端每次 render 都會產生新陣列，直接依賴它會讓整張甘特每次都重算。
@@ -377,7 +376,6 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMob
   }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsedState, isControlled, taskOrderKey]);
 
   // ── Early returns AFTER all hooks ─────────────────────────────────────────
-  if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} />;
   if (!ganttData) return (<div style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📅</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No timeline data</div><div style={{ fontSize: 14 }}>Try adjusting filters or adding tasks with dates</div></div>);
 
   const { months, ganttMinW, pcMap, rows, todayPct } = ganttData;

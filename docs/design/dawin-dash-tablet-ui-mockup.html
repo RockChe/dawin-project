@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>平板版 UI 草圖</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:#e9ecf0;color:#1d2330;font:13px/1.5 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.w{max-width:1400px;margin:0 auto}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 6px}.n{color:#5b6676;font-size:13px;margin:0 0 14px}
+.row{display:flex;gap:24px;overflow-x:auto;padding:6px 4px 18px;align-items:flex-start}
+.cap{font-size:13px;font-weight:700;margin:0 0 6px}.cap small{display:block;font-weight:400;color:#5b6676;font-size:12px}
+.tab{border:9px solid #1d2330;border-radius:22px;background:#f7f6f3;display:flex;overflow:hidden;flex:none}
+.tab.p{width:430px;height:580px}.tab.l{width:640px;height:420px}
+.rail{width:54px;background:#fff;border-right:1px solid #d7dce2;display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:12px;font-size:9px;color:#8a94a3;flex:none}
+.rail div{text-align:center}.rail i{display:block;font-style:normal;font-size:16px}.rail .on{color:#2f8fd1;font-weight:700}
+.main{flex:1;min-width:0;padding:10px 12px;overflow:hidden}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.top b{font-size:15px}
+.seg{display:flex;border:1px solid #d7dce2;border-radius:6px;overflow:hidden;font-size:10px}.seg span{padding:1px 8px;color:#8a94a3;background:#fff}.seg .on{background:#2f8fd1;color:#fff}
+.card{background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:9px 11px;margin-bottom:8px}.card h4{margin:0 0 6px;font-size:12px;border-left:3px solid #2f8fd1;padding-left:6px}
+.up{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #eef0f3;font-size:12px}.up:last-child{border:0}.up small{color:#5b6676;display:block;font-size:10px}.up .d{margin-left:auto;font:700 12px ui-monospace,monospace}
+.red{color:#d9483b}.amb{color:#d99a1e}.dim{color:#8a94a3}
+.g2{display:grid;grid-template-columns:3fr 2fr;gap:8px}
+.donut{width:78px;height:78px;border-radius:50%;background:conic-gradient(#2e9d6a 0 29%,#d99a1e 29% 91%,#3b8fd0 91% 100%);position:relative;flex:none}.donut::after{content:"93";position:absolute;inset:18px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 14px ui-monospace,monospace}
+.ml{display:flex;align-items:center;gap:6px;font-size:10px;margin:4px 0}.ml .n2{width:92px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#5b6676}.ml .tr{flex:1;height:9px;background:#f0f1f4;border-radius:4px;position:relative}.ml .tr i{position:absolute;top:0;bottom:0;border-radius:4px}
+.pane{display:flex;gap:8px;height:100%}.lst{width:200px;flex:none;overflow:hidden}.det{flex:1;background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:10px 12px;overflow:hidden}
+.li{background:#fff;border:1px solid #d7dce2;border-radius:10px;padding:6px 9px;margin-bottom:5px;font-size:11px}.li.on{border:2px solid #2f8fd1;background:#eaf4fc}.li b{display:block;font-size:12px}
+.bar{height:5px;background:#e3e6ea;border-radius:3px;overflow:hidden;margin-top:4px}.bar span{display:block;height:100%}
+.p2{display:inline-block;border-radius:99px;padding:0 7px;font-size:10px;margin-right:3px;background:#e8ecf1}.pu{background:#f0e9fb;color:#6b43b3}.rd{background:#fdeeec;color:#b23a2e}.bl{background:#e6f0fa;color:#2a6aa8}
+.tag{font-size:9px;border-radius:5px;padding:0 5px;background:#2f8fd1;color:#fff;margin-left:3px}
+.tk{border:1px solid #e3e6ea;border-radius:9px;padding:6px 8px;margin-bottom:5px;font-size:11px}.tk .h{display:flex;align-items:center;gap:6px;font-weight:600}.hd{color:#8a94a3;cursor:grab}
+.sub{font-size:10px;color:#5b6676;padding:2px 0 2px 24px;display:flex;gap:6px;align-items:center}.cb{width:11px;height:11px;border:1.5px solid #8a94a3;border-radius:3px;flex:none}.cb.ok{background:#2e9d6a;border-color:#2e9d6a}
+.st2{font-size:10px;padding:0 6px;border-radius:6px;background:#fff3dd;color:#a06a00;margin-left:auto}
+.gt{display:flex;height:100%;flex-direction:column}.gr{display:flex;font-size:9px;color:#8a94a3;border-bottom:1px solid #d7dce2;padding-bottom:3px;margin-left:120px}.gr span{flex:1}
+.grow{display:flex;align-items:center;height:22px;font-size:10px;border-bottom:1px solid #eef0f3}.grow .nm{width:120px;flex:none;display:flex;gap:4px;align-items:center;white-space:nowrap;overflow:hidden}.grow .tr{flex:1;height:10px;position:relative;background:linear-gradient(90deg,#eef0f3 1px,transparent 1px) 0 0/16.66% 100%}.grow .tr i{position:absolute;top:0;bottom:0;border-radius:4px}
+.td{position:absolute;top:0;bottom:0;border-left:2px dashed #2f8fd1;opacity:.6}
+table{border-collapse:collapse;background:#fff;font-size:12px}th,td{border:1px solid #d7dce2;padding:5px 9px;text-align:left;vertical-align:top}th{background:#eceff3}
+.rule{background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:12px 16px;margin-bottom:14px}.rule li{margin:2px 0}
+</style></head><body><div class="w">
+<h1>平板版 UI 草圖（直向 820、橫向 1180 基準）</h1>
+<p class="n">平板是「功能接近桌機、操作改成觸控」：完整保留甘特與拖移，版面改成左側窄導覽＋主從雙欄。</p>
+
+<div class="rule"><b>設計原則</b><ul style="margin:6px 0 0 18px;padding:0">
+<li><b>左側窄導覽列</b>（圖示＋文字）取代桌機的上方分頁，騰出垂直空間。</li>
+<li><b>橫向＝主從雙欄</b>：左邊專案清單、右邊任務詳情；直向＝單欄，點進去看詳情。</li>
+<li><b>保留甘特圖與拖移排序</b>：甘特左欄固定、右邊橫向捲動；拖移把手加大（觸控友善，最小 44px 點擊區）。</li>
+<li><b>Data 資料表保留</b>（精簡欄位、可橫向捲動）；Settings、帳號管理保留在導覽最下方。</li>
+<li>滑過（hover）的提示全部改成點擊或長按。</li></ul></div>
+
+<div class="row">
+ <div><div class="cap">① 總覽（直向）<small>Timeline 滿版；Upcoming 與 Status 上下排</small></div>
+  <div class="tab p"><div class="rail"><div class="on"><i>◔</i>總覽</div><div><i>☑</i>我的</div><div><i>▤</i>專案</div><div><i>≡</i>時程</div><div><i>▦</i>資料</div><div style="margin-top:auto;padding-bottom:10px"><i>⚙</i>設定</div></div>
+   <div class="main"><div class="top"><b>總覽</b><div class="seg"><span>日</span><span>週</span><span class="on">月</span><span>季</span></div></div>
+    <div class="card"><h4>Project Timeline</h4>
+     <div class="ml"><span class="n2">科教館公益展廳</span><div class="tr"><i style="left:14%;width:72%;background:#d9c9f0"></i><i style="left:14%;width:30%;background:#8a63c9"></i></div></div>
+     <div class="ml"><span class="n2">非非和他的小本子</span><div class="tr"><i style="left:5%;width:70%;background:#bcdcec"></i><i style="left:5%;width:40%;background:#3b8fd0"></i></div></div>
+     <div class="ml"><span class="n2">虎姑婆和他的朋友</span><div class="tr"><i style="left:0;width:48%;background:#f3dfae"></i><i style="left:0;width:36%;background:#d99a1e"></i></div></div>
+     <div class="ml"><span class="n2">發行事務</span><div class="tr"><i style="left:22%;width:35%;background:#f3c4c0"></i><i style="left:22%;width:14%;background:#d9483b"></i></div></div></div>
+    <div class="card"><h4 style="border-color:#d9483b">Upcoming Deadlines</h4>
+     <div class="up"><div>連連玩境影視展<small>發行事務 · Felien 車</small></div><span class="d red">9d</span></div>
+     <div class="up"><div>10/25 義美活動<small>TTXC 虎姑婆 駁二 · Karen</small></div><span class="d amb">19d</span></div></div>
+    <div class="card" style="display:flex;gap:12px;align-items:center"><div class="donut"></div><div style="font-size:11px">已完成 27 (29%)<br>進行中 58 (62%)<br>待辦 8 (9%)</div></div></div></div></div>
+
+ <div><div class="cap">② 專案（橫向，主從雙欄）<small>左：專案清單；右：任務與子任務，可拖移</small></div>
+  <div class="tab l"><div class="rail"><div><i>◔</i>總覽</div><div><i>☑</i>我的</div><div class="on"><i>▤</i>專案</div><div><i>≡</i>時程</div><div><i>▦</i>資料</div><div style="margin-top:auto;padding-bottom:10px"><i>⚙</i>設定</div></div>
+   <div class="main"><div class="pane"><div class="lst"><div class="top"><b>專案</b></div>
+     <div class="li on"><b>TTXC 虎姑婆 駁二</b>24 任務<div class="bar"><span style="width:75%;background:#3b8fd0"></span></div></div>
+     <div class="li"><b>科教館公益展廳</b>18 任務<div class="bar"><span style="width:22%;background:#8a63c9"></span></div></div>
+     <div class="li"><b>虎姑婆和他的朋友</b>11 任務<div class="bar"><span style="width:74%;background:#d99a1e"></span></div></div>
+     <div class="li"><b>發行事務</b>9 任務<div class="bar"><span style="width:39%;background:#d9483b"></span></div></div></div>
+     <div class="det"><div class="top"><b>TTXC 虎姑婆 駁二</b><div class="seg"><span class="on">進行中</span><span>待辦</span><span>隱藏已完成</span></div></div>
+      <div class="tk"><div class="h"><span class="hd">⋮⋮</span>商品合作<span class="st2">進行中</span></div><div style="margin:3px 0 0 20px"><span class="p2 pu">Karen</span><span class="p2 rd">Felien</span><span class="p2 bl">Rae</span> 7/8</div>
+       <div class="sub"><span class="cb"></span>虎姑婆娃娃</div><div class="sub"><span class="cb ok"></span><s>蜜友冰棒</s></div></div>
+      <div class="tk"><div class="h"><span class="hd">⋮⋮</span>Yaya's Band 芽芽樂團<span class="st2">進行中</span></div><div style="margin:3px 0 0 20px"><span class="p2 bl">幸真</span><span class="tag" style="margin:0 6px 0 0">關注</span><span class="p2 rd">Felien 車</span></div></div>
+      <div class="tk"><div class="h"><span class="hd">⋮⋮</span>相關檔案連結<span class="st2" style="background:#e6f0fa;color:#2a6aa8">待辦</span></div></div></div></div></div></div></div>
+
+ <div><div class="cap">③ 時程（橫向，完整甘特）<small>左欄固定、右邊橫向捲動；拖左欄把手排序</small></div>
+  <div class="tab l"><div class="rail"><div><i>◔</i>總覽</div><div><i>☑</i>我的</div><div><i>▤</i>專案</div><div class="on"><i>≡</i>時程</div><div><i>▦</i>資料</div><div style="margin-top:auto;padding-bottom:10px"><i>⚙</i>設定</div></div>
+   <div class="main"><div class="top"><b>時程</b><div class="seg"><span>日</span><span>週</span><span class="on">月</span><span>季</span></div></div>
+    <div class="gt"><div class="gr"><span>6月</span><span>7月</span><span>8月</span><span>9月</span><span>10月</span><span>11月</span></div>
+     <div style="position:relative"><div class="td" style="left:calc(120px + (100% - 120px)*.69)"></div>
+      <div class="grow"><div class="nm"><span class="dim">⋮⋮</span>▾ <b style="color:#3b8fd0">TTXC 虎姑婆 駁二</b></div><div class="tr"></div></div>
+      <div class="grow"><div class="nm"><span class="dim">⋮⋮</span>MOMO上架</div><div class="tr"><i style="left:55%;width:30%;background:#d9c9f0"></i><i style="left:55%;width:15%;background:#8a63c9"></i></div></div>
+      <div class="grow"><div class="nm"><span class="dim">⋮⋮</span>行銷合作30</div><div class="tr"><i style="left:38%;width:50%;background:#d9c9f0"></i><i style="left:38%;width:25%;background:#8a63c9"></i></div></div>
+      <div class="grow"><div class="nm"><span class="dim">⋮⋮</span>印刷品</div><div class="tr"><i style="left:42%;width:14%;background:#8a63c9"></i></div></div>
+      <div class="grow"><div class="nm"><span class="dim">⋮⋮</span>富邦集團_內部資源</div><div class="tr"><i style="left:52%;width:46%;background:#8a63c9"></i></div></div>
+      <div class="grow"><div class="nm"><span class="dim">⋮⋮</span>商品合作</div><div class="tr"><i style="left:0;width:60%;background:#d9c9f0"></i><i style="left:0;width:52%;background:#8a63c9"></i></div></div></div></div></div></div></div>
+</div>
+
+<h2>三種裝置怎麼分工</h2>
+<table><tr><th>功能</th><th>桌機（1280 固定）</th><th>平板</th><th>手機</th></tr>
+<tr><td>導覽</td><td>上方分頁</td><td>左側窄導覽列</td><td>底部分頁列</td></tr>
+<tr><td>總覽</td><td>三塊</td><td>三塊，直向上下排</td><td>Upcoming／Status；Timeline 另頁簡化</td></tr>
+<tr><td>我的任務</td><td>有（第二個分頁）</td><td>有（導覽第二項）</td><td><b>首頁</b></td></tr>
+<tr><td>專案任務清單</td><td>單欄卡片</td><td><b>主從雙欄</b></td><td>清單→詳情，抽屜編輯</td></tr>
+<tr><td>甘特與拖移</td><td>完整</td><td><b>完整（觸控把手）</b></td><td>簡化橫條，不拖移</td></tr>
+<tr><td>Data 資料表</td><td>完整</td><td>精簡欄位</td><td>不做</td></tr>
+<tr><td>設定／帳號／備份</td><td>完整</td><td>保留</td><td>不做</td></tr></table>
+</div></body></html>

@@ -24,7 +24,6 @@ function makeProps(overrides = {}) {
     upcomingDays: 30,
     upcomingLimit: 5,
     saveUpcomingSettings: () => {},
-    isMobile: false,
     showToast: () => {},
     zoom: 150,
     onZoomChange: vi.fn(),

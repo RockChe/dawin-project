@@ -16,7 +16,7 @@ function renderDetail(taskOver, subs) {
   const props = {
     twp: [task], allS: subs.map((s, i) => ({ id: `s${i}`, taskId: 't1', name: `sub-${i}`, done: false, sortOrder: i + 1, ...s })),
     projects, configOwners: [], pcMap: { 'Project A': '#123456' },
-    allProjNames: ['Project A'], isMobile: false, setModalTask: () => {}, setShowFileManager: () => {},
+    allProjNames: ['Project A'], setModalTask: () => {}, setShowFileManager: () => {},
     ganttWidths: {}, timelineHeight: 100, showToast: () => {},
     renameProject: () => {}, addProject: () => {}, deleteProject: () => {},
     updateTask: () => {}, deleteTask: () => {}, toggleSub: () => {}, updateSub: () => {},

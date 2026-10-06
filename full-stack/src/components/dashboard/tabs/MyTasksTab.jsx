@@ -9,7 +9,7 @@ const ROLE_BADGE = { watcher: "我關注", executor: "我執行" };
 
 // 唯讀清單：登入者（userName）名下、尚未完成的任務，依到期日分三組。
 // 「今天」一律取 Asia/Taipei 日界（toBusinessDateString），不直接 new Date()——理由見 OverviewTab 的 computeTodayPct。
-function MyTasksTab({ twp, userName, isMobile, pcMap, setModalTask, today: todayProp }) {
+function MyTasksTab({ twp, userName, pcMap, setModalTask, today: todayProp }) {
   const { X, SC } = useTheme();
   const today = todayProp || toBusinessDateString();
   const groups = useMemo(() => groupMyTasks(twp, userName, today), [twp, userName, today]);
@@ -29,9 +29,9 @@ function MyTasksTab({ twp, userName, isMobile, pcMap, setModalTask, today: today
   ];
 
   return (<>
-    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 8 : 12, marginBottom: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
       {cards.map(c => (
-        <div key={c.l} style={{ background: X.surface, borderRadius: 12, padding: isMobile ? "12px 14px" : "16px 18px", border: `1px solid ${X.border}`, boxShadow: X.surfaceShadow }}>
+        <div key={c.l} style={{ background: X.surface, borderRadius: 12, padding: "16px 18px", border: `1px solid ${X.border}`, boxShadow: X.surfaceShadow }}>
           <div style={{ fontFamily: FM, fontSize: 24, fontWeight: 700, lineHeight: 1, color: c.c }}>{c.n}</div>
           <div style={{ fontSize: 13, color: X.textSec, marginTop: 6 }}>{c.l}</div>
         </div>
@@ -62,11 +62,9 @@ function MyTasksTab({ twp, userName, isMobile, pcMap, setModalTask, today: today
                 <div style={{ fontSize: 12, color: X.textSec }}>{t.project}</div>
               </div>
               <span style={{ fontSize: 12, padding: "1px 8px", borderRadius: 6, background: `${sc}22`, color: sc, flexShrink: 0 }}>{t.status}</span>
-              {!isMobile && (
-                <div title={`${t.progress}%`} style={{ width: 70, height: 5, background: X.border, borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
-                  <div style={{ width: `${t.progress}%`, height: "100%", background: X.accent }} />
-                </div>
-              )}
+              <div title={`${t.progress}%`} style={{ width: 70, height: 5, background: X.border, borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
+                <div style={{ width: `${t.progress}%`, height: "100%", background: X.accent }} />
+              </div>
               <div style={{ textAlign: "right", flexShrink: 0, minWidth: 52 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FM, color: s.c }}>{d === null ? "—" : `${d}d`}</div>
                 <div style={{ fontSize: 11, color: X.textSec, fontFamily: FM }}>{fD(t.end)}</div>

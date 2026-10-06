@@ -5,7 +5,7 @@ import OverviewTab from '@/components/dashboard/tabs/OverviewTab';
 
 function renderOverview() {
   const props = {
-    filtered: [], twp: [], allS: [], isMobile: false, pcMap: {},
+    filtered: [], twp: [], allS: [], pcMap: {},
     ganttWidths: null, projBanners: {}, stats: {}, configOwners: [],
   };
   return render(
@@ -37,7 +37,7 @@ describe('OverviewTab 專案列順序 = Projects 分頁順序', () => {
     [...container.querySelectorAll('.dash-tl-label')].map(e => e.textContent).filter(Boolean);
   const mount = (projects) => render(
     <ThemeProvider>
-      <OverviewTab filtered={[]} twp={['C', 'Z', 'A', 'B'].map(mk)} allS={[]} isMobile={false} pcMap={{}}
+      <OverviewTab filtered={[]} twp={['C', 'Z', 'A', 'B'].map(mk)} allS={[]} pcMap={{}}
         ganttWidths={null} projBanners={{}} stats={{}} configOwners={[]} projects={projects} />
     </ThemeProvider>);
 
@@ -53,7 +53,7 @@ describe('OverviewTab 專案列順序 = Projects 分頁順序', () => {
 
   it('時間尺度由 props 控制，切換呼叫 onTimeDimChange', () => {
     const onChange = vi.fn();
-    render(<ThemeProvider><OverviewTab filtered={[]} twp={[]} allS={[]} isMobile={false} pcMap={{}}
+    render(<ThemeProvider><OverviewTab filtered={[]} twp={[]} allS={[]} pcMap={{}}
       ganttWidths={null} projBanners={{}} stats={{}} timeDim="季" onTimeDimChange={onChange} /></ThemeProvider>);
     fireEvent.click(screen.getByText('週'));
     expect(onChange).toHaveBeenCalledWith('週');

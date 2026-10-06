@@ -162,7 +162,7 @@ function TaskOwnerChips({ task, subs, configOwners }) {
     : <OwnerTags key={n} value={n} configOwners={configOwners} />)}</span>);
 }
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange }) {
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange }) {
   const { X, SC, inputStyle } = useTheme();
   const canWrite = useCan("write");
   const handleForbidden = useForbiddenHandler(showToast);
@@ -398,7 +398,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
   const ownerOptions = [...new Set(pt.flatMap(t => String(t.owner || "").split(",").map(s => s.trim()).filter(Boolean)))];
   const viewIsDefault = !projectTaskView.status.length && !projectTaskView.owner.length && !projectTaskView.priority.length && !projectTaskView.hideDoneSubs
     && projectTaskView.sort.field === PROJECT_TASK_VIEW_DEFAULT.sort.field && projectTaskView.sort.dir === PROJECT_TASK_VIEW_DEFAULT.sort.dir;
-  const pillStyle = on => ({ fontSize: 12, padding: isMobile ? "8px 12px" : "3px 10px", borderRadius: 20, cursor: "pointer",
+  const pillStyle = on => ({ fontSize: 12, padding: "3px 10px", borderRadius: 20, cursor: "pointer",
     border: `1px solid ${on ? X.accent : X.border}`, background: on ? `${X.accent}15` : X.surface,
     color: on ? X.accent : X.textSec, fontWeight: on ? 700 : 400 });
 
@@ -430,7 +430,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
       <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={onTimeDimChange} /></div>
       {/* 決策 B：詳情頁甘特跟著「下方那組」專案內篩選走，不吃上方跨專案的全域篩選。
           原本三個都寫死「全部」，所以它從來不被任何篩選影響。 */}
-      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={projectTaskView.status} fpr={projectTaskView.priority} fow={projectTaskView.owner} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} configOwners={configOwners} taskOrder={ptAll.map(t => t.id)} onReorderTasks={canWrite && reorderTasks ? onTaskMove : undefined} />
+      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={projectTaskView.status} fpr={projectTaskView.priority} fow={projectTaskView.owner} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} configOwners={configOwners} taskOrder={ptAll.map(t => t.id)} onReorderTasks={canWrite && reorderTasks ? onTaskMove : undefined} />
     </div>)}
     <div className="dash-detail-grid" style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

@@ -4,7 +4,6 @@ import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toBusinessDateString } from "@/lib/utils";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
-import MobileProjectTimeline from "../MobileProjectTimeline";
 import OwnerTags from "../OwnerTags";
 import { orderProjBars } from "@/lib/personalSettings";
 
@@ -23,7 +22,7 @@ export function computeTodayPct(mn, td) {
   return ((pD(toBusinessDateString()) - mn) / 864e5) / td * 100;
 }
 
-function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5, configOwners = [], projects, timeDim = "月", onTimeDimChange }) {
+function OverviewTab({ filtered, twp, allS, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5, configOwners = [], projects, timeDim = "月", onTimeDimChange }) {
   const { X, SC } = useTheme();
   const [ovHover, setOvHover] = useState(null);
 
@@ -61,14 +60,13 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
 
   return (<>
     {/* Project Timeline */}
-    <div style={{ background: X.surface, borderRadius: 12, padding: isMobile ? 14 : 20, border: `1px solid ${X.border}`, marginBottom: 16 }}>
+    <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}`, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 16px", flexWrap: "wrap", gap: 8 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.accent, borderRadius: 2 }} />Project Timeline</h3>
         <TimeScaleToggle value={timeDim} onChange={onTimeDimChange} />
       </div>
       {(() => {
         const projBars = projBarsData.map(p => ({ ...p, color: pcMap[p.name] || X.accent }));
-        if (isMobile) return <MobileProjectTimeline projBars={projBars} />;
         if (!projBars.length) return (<div style={{ padding: 40, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 32, marginBottom: 8, opacity: 0.3 }}>📅</div><div style={{ fontSize: 14 }}>No timeline data available</div></div>);
         const allDates = projBars.flatMap(p => [p.start, p.end]);
         const mn = new Date(Math.min(...allDates)), mx = new Date(Math.max(...allDates));

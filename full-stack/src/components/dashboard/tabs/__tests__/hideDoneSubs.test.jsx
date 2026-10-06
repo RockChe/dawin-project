@@ -38,7 +38,7 @@ function renderDetail(view, setView = () => {}) {
   const sub = (id, done) => ({ id, taskId: 't1', name: `sub-${id}`, owner: '', done, sortOrder: id === 's1' ? 1 : 2 });
   const props = {
     twp: [task], allS: [sub('s1', true), sub('s2', false)], projects, configOwners: [], pcMap: { 'Project A': '#123456' },
-    allProjNames: ['Project A'], isMobile: false, setModalTask: () => {}, setShowFileManager: () => {},
+    allProjNames: ['Project A'], setModalTask: () => {}, setShowFileManager: () => {},
     ganttWidths: {}, timelineHeight: 100, showToast: () => {},
     renameProject: () => {}, addProject: () => {}, deleteProject: () => {},
     updateTask: () => {}, deleteTask: () => {}, toggleSub: () => {}, updateSub: () => {},

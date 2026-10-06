@@ -70,7 +70,7 @@ describe('DataTab 負責人格（桌面表格）', () => {
       updateTask, deleteTask: () => {}, addTask: async () => ({ success: true }),
       toggleSub: () => {}, updateSub: () => {}, addSub: async () => {}, deleteSub: () => {},
       configCats: ['活動'], configOwners: ['Amy', 'Bob'],
-      isMobile: false, pcMap: { P1: '#123456' },
+      pcMap: { P1: '#123456' },
       importTasks: () => {}, deleteManyTasks: () => {}, updateManyTasks: () => {}, deleteAllTasks: () => {},
       showToast: () => {}, setModalTask: () => {},
     };

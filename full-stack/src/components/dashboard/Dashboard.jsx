@@ -111,8 +111,6 @@ export default function Dashboard({ initialData }) {
     for (const [k, v] of Object.entries(collectLegacySettings(userSettings, storage))) updateSetting(k, v);
   }, [settingsReady]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const h = () => setScrolled(window.scrollY > 10); window.addEventListener("scroll", h, { passive: true }); return () => window.removeEventListener("scroll", h); }, []);
-  const [isMobile, setIsMobile] = useState(() => { try { return window.innerWidth <= 768; } catch { return false; } });
-  useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
 
   // Memoize ganttWidths per-view to avoid cross-tab re-renders
   const ganttWidthsOverview = useMemo(() => ganttWidths.overview, [ganttWidths.overview]);
@@ -190,20 +188,20 @@ export default function Dashboard({ initialData }) {
     <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s", zoom: zoom / 100 }}>
       <style>{`::selection{background:${X.selectionBg}} *{box-sizing:border-box} ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:${X.scrollThumb};border-radius:5px} ::-webkit-scrollbar-track{background:transparent} input,select,button{font-family:'Noto Sans TC',-apple-system,sans-serif}`}</style>
       <ReadOnlyBadge X={X} />
-      <DashboardHeader themeKey={themeKey} cycleTheme={cycleTheme} isMobile={isMobile} scrolled={scrolled} searchInput={searchInput} handleSearch={handleSearch} searchQ={searchQ} clearSearch={clearSearch} avgProg={avgProg} filtered={filtered} />
+      <DashboardHeader themeKey={themeKey} cycleTheme={cycleTheme} scrolled={scrolled} searchInput={searchInput} handleSearch={handleSearch} searchQ={searchQ} clearSearch={clearSearch} avgProg={avgProg} filtered={filtered} />
 
       <div className="dash-content" style={{ maxWidth: 1400, margin: "0 auto" }}>
         {/* Filters — 決策 B（docs/design/dawin-dash-task-sortfilter-q-statesync.html）：
             這組是「跨專案」篩選，只管 Overview 與 Timeline。Projects 分頁有自己的專案內
             篩選，所以在那裡把這組灰掉並明講，避免兩組同時看起來都在生效。 */}
         <div aria-disabled={tab === "projects"} title={tab === "projects" ? "Projects 分頁使用專案內的篩選" : undefined}
-          style={{ display: "flex", gap: isMobile ? 6 : 8, marginBottom: isMobile ? 12 : 20, flexWrap: "wrap", alignItems: "center",
+          style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", alignItems: "center",
             opacity: tab === "projects" ? 0.4 : 1, pointerEvents: tab === "projects" ? "none" : "auto" }}>
           {STATUS_FILTERS.map(s => { const a = s === "全部" ? fs.length === 0 : fs.includes(s), c = SC[s]; return (
-            <button key={s} onClick={() => toggleFS(s)} style={{ padding: isMobile ? "4px 10px" : "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
+            <button key={s} onClick={() => toggleFS(s)} style={{ padding: "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
           <div style={{ width: 1, height: 20, background: X.border }} />
           {["全部", "高", "中", "低"].map(p => { const a = fpr === p, c = PC[p]; return (
-            <button key={p} onClick={() => setFPR(p)} style={{ padding: isMobile ? "4px 10px" : "6px 14px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{p === "全部" ? "Priority" : p}</button>); })}
+            <button key={p} onClick={() => setFPR(p)} style={{ padding: "6px 14px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{p === "全部" ? "Priority" : p}</button>); })}
         </div>
 
         {/* Status cards */}
@@ -212,9 +210,9 @@ export default function Dashboard({ initialData }) {
           {tab === "projects" && <span style={{ fontSize: 11, color: X.amber }}>· Projects 分頁使用下方「本專案」的篩選</span>}
         </div>
         <div aria-disabled={tab === "projects"}
-          style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(160px, 1fr))", gap: isMobile ? 8 : 12, marginBottom: isMobile ? 12 : 20,
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20,
             opacity: tab === "projects" ? 0.4 : 1, pointerEvents: tab === "projects" ? "none" : "auto" }}>
-          {Object.entries(SC).map(([k, c]) => (<div key={k} onClick={() => toggleFS(k)} style={{ background: X.surface, borderRadius: 12, padding: isMobile ? "12px 14px" : "16px 18px", border: fs.includes(k) ? `1px solid ${c.color}` : `1px solid ${X.border}`, boxShadow: X.surfaceShadow, cursor: "pointer" }}>
+          {Object.entries(SC).map(([k, c]) => (<div key={k} onClick={() => toggleFS(k)} style={{ background: X.surface, borderRadius: 12, padding: "16px 18px", border: fs.includes(k) ? `1px solid ${c.color}` : `1px solid ${X.border}`, boxShadow: X.surfaceShadow, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 16, fontWeight: 600, color: X.textSec }}>{k}</span><span style={{ color: c.color, fontSize: 18 }}>{c.icon}</span>
             </div>
@@ -231,9 +229,9 @@ export default function Dashboard({ initialData }) {
         </div>
 
         {/* Project filter tags */}
-        <div style={{ display: "flex", gap: 6, marginBottom: isMobile ? 12 : 20, alignItems: "center", ...(isMobile ? { overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 4 } : { flexWrap: "wrap" }) }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
           {allProjNames.map(p => { const a = fpSet.has(p); const cl = pcMap[p] || X.accent; return (
-            <button key={p} onClick={() => toggleFP(p)} style={{ padding: "5px 12px", borderRadius: 20, border: a ? `2px solid ${cl}` : `1px solid ${X.border}`, background: a ? `${cl}18` : X.surface, color: a ? cl : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 600 : 400, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, flexShrink: 0, whiteSpace: "nowrap" }}>
+            <button key={p} onClick={() => toggleFP(p)} style={{ padding: "5px 12px", borderRadius: 20, border: a ? `2px solid ${cl}` : `1px solid ${X.border}`, background: a ? `${cl}18` : X.surface, color: a ? cl : X.textSec, fontSize: 14, fontWeight: a ? 600 : 400, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, flexShrink: 0, whiteSpace: "nowrap" }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl, opacity: a ? 1 : 0.4 }} />
               {p}
             </button>); })}
@@ -241,27 +239,27 @@ export default function Dashboard({ initialData }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: `1px solid ${X.border}`, marginBottom: isMobile ? 12 : 20, ...(isMobile ? { overflowX: "auto" } : {}) }}>
+        <div style={{ display: "flex", borderBottom: `1px solid ${X.border}`, marginBottom: 20 }}>
           {[{ k: "overview", l: "Overview" }, { k: "mytasks", l: "My Tasks" }, { k: "projects", l: "Projects" }, { k: "timeline", l: "Timeline" }, { k: "table", l: "Data" }, { k: "settings", l: "Settings" }].map(t => (
-            <button key={t.k} onClick={() => changeTab(t.k)} style={{ padding: isMobile ? "10px 14px" : "12px 20px", border: "none", background: "transparent", color: tab === t.k ? X.accent : X.textSec, fontSize: 14, fontWeight: tab === t.k ? 700 : 400, cursor: "pointer", borderBottom: tab === t.k ? `2px solid ${X.accent}` : "2px solid transparent", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0, transition: "color 0.2s, border-color 0.2s" }}>{t.l}</button>))}
+            <button key={t.k} onClick={() => changeTab(t.k)} style={{ padding: "12px 20px", border: "none", background: "transparent", color: tab === t.k ? X.accent : X.textSec, fontSize: 14, fontWeight: tab === t.k ? 700 : 400, cursor: "pointer", borderBottom: tab === t.k ? `2px solid ${X.accent}` : "2px solid transparent", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0, transition: "color 0.2s, border-color 0.2s" }}>{t.l}</button>))}
         </div>
 
         {/* OVERVIEW */}
-        {tab === "overview" && <OverviewTab projects={projects} timeDim={timeDimOverview} onTimeDimChange={setTimeDimOverview} filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
+        {tab === "overview" && <OverviewTab projects={projects} timeDim={timeDimOverview} onTimeDimChange={setTimeDimOverview} filtered={filtered} twp={twp} allS={allS} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
 
         {/* MY TASKS */}
-        {tab === "mytasks" && <MyTasksTab twp={twp} userName={initialData?.session?.name} isMobile={isMobile} pcMap={pcMap} setModalTask={handleSetModalTask} />}
+        {tab === "mytasks" && <MyTasksTab twp={twp} userName={initialData?.session?.name} pcMap={pcMap} setModalTask={handleSetModalTask} />}
 
         {/* PROJECTS */}
-        {tab === "projects" && <ProjectsTab timeDim={timeDimProject} onTimeDimChange={setTimeDimProject} twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} reorderTasks={reorderTasks} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
+        {tab === "projects" && <ProjectsTab timeDim={timeDimProject} onTimeDimChange={setTimeDimProject} twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} reorderTasks={reorderTasks} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
 
         {/* TIMELINE */}
-        {tab === "timeline" && <TimelineTab timeDim={timeDimTimeline} onTimeDimChange={setTimeDimTimeline} timelineSort={timelineSort} onTimelineSortChange={setTimelineSort} twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} timelineDefaultCollapsed={timelineDefaultCollapsed} setTimelineDefaultCollapsed={setTimelineDefaultCollapsed} />}
+        {tab === "timeline" && <TimelineTab timeDim={timeDimTimeline} onTimeDimChange={setTimeDimTimeline} timelineSort={timelineSort} onTimelineSortChange={setTimelineSort} twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} timelineDefaultCollapsed={timelineDefaultCollapsed} setTimelineDefaultCollapsed={setTimelineDefaultCollapsed} />}
 
         {/* DATA TABLE */}
-        {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={handleSetModalTask} />}
+        {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={handleSetModalTask} />}
         {/* SETTINGS */}
-        {tab === "settings" && <SettingsTab configCats={configCats} saveConfigCats={saveConfigCats} configOwners={configOwners} ganttDraft={ganttDraft} setGanttDraft={setGanttDraft} saveGanttWidths={saveGanttWidths} timelineHeight={timelineHeight} saveTimelineHeight={saveTimelineHeight} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} saveUpcomingSettings={saveUpcomingSettings} isMobile={isMobile} showToast={showToast} zoom={zoom} onZoomChange={onZoomChange} />}
+        {tab === "settings" && <SettingsTab configCats={configCats} saveConfigCats={saveConfigCats} configOwners={configOwners} ganttDraft={ganttDraft} setGanttDraft={setGanttDraft} saveGanttWidths={saveGanttWidths} timelineHeight={timelineHeight} saveTimelineHeight={saveTimelineHeight} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} saveUpcomingSettings={saveUpcomingSettings} showToast={showToast} zoom={zoom} onZoomChange={onZoomChange} />}
       </div>
       {modalTask && <TaskModal task={modalTask._isNew ? "new" : modalTask} projectId={modalTask._isNew ? modalTask.projectId : modalTask.projectId} projectName={modalTask._isNew ? modalTask.projectName : (modalTask.project || "")} onClose={handleCloseModal} addTask={addTask} updateTask={updateTask} allS={allS} addSub={addSub} deleteSub={deleteSub} toggleSub={toggleSub} updateSub={updateSub} configCats={configCats} configOwners={configOwners} reorderSubs={reorderSubs} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} showToast={showToast} />}
       {showFileManager && <FileManagerModal project={showFileManager} tasks={twp} allL={allL} allF={allF} addLink={addLink} addFile={addFile} deleteLink={deleteLink} deleteFile={deleteFile} onClose={handleCloseFileManager} showToast={showToast} />}
