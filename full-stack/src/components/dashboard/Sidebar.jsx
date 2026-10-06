@@ -9,6 +9,7 @@ export default function Sidebar({ user }) {
   const [collapsed, setCollapsed] = useState(true);
   const [hoverToggle, setHoverToggle] = useState(false);
   const [hoverLogout, setHoverLogout] = useState(false);
+  const [hoverMobile, setHoverMobile] = useState(false);
   const [hoverNav, setHoverNav] = useState(null);
 
   return (
@@ -57,6 +58,16 @@ export default function Sidebar({ user }) {
             {collapsed ? '⏻' : '登出'}
           </button>
         </form>
+        <a
+          href="/api/device?to=mobile"
+          aria-label="手機版"
+          className="block w-full text-xs py-1.5 px-2 rounded text-left dash-tap"
+          style={{ color: X.textSec, background: hoverMobile ? X.surfaceHover : 'transparent' }}
+          onMouseEnter={() => setHoverMobile(true)}
+          onMouseLeave={() => setHoverMobile(false)}
+        >
+          {collapsed ? '▯' : '手機版'}
+        </a>
       </div>
 
       {/* Navigation */}
