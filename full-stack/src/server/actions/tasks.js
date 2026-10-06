@@ -8,6 +8,28 @@ import { isValidUUID, toBusinessDateString } from '@/lib/utils';
 import { withCap } from '@/lib/withCap';
 import { logAudit } from '@/lib/audit';
 
+// ── tasks.owner 由子任務 owner 自動帶出 ──
+// 規則與 lib/taskOwner.js 的 deriveTaskOwner 相同：依 sort_order → created_at 取子任務 owner 的 token，
+// 去空白、丟掉 ''/'—'、同名只留第一次、以 ',' 串接。沒有任何子任務 owner → NULL（呼叫端用 COALESCE 保留原值）。
+// 相關子查詢綁在外層的 tasks.id，所以只能放在 UPDATE tasks ... 裡用。
+// 全部在 SQL 內算完（不先讀回 JS 再寫），子任務寫入與父任務重算才能塞進同一個 db.batch 原子執行。
+const DERIVED_OWNER_SQL = `(SELECT string_agg(d.tok, ',' ORDER BY d.pos) FROM (
+  SELECT x.tok, MIN(x.pos) AS pos FROM (
+    SELECT btrim(u.piece) AS tok,
+           row_number() OVER (ORDER BY s.sort_order, s.created_at, s.id, u.ord) AS pos
+    FROM subtasks s
+    CROSS JOIN LATERAL unnest(string_to_array(s.owner, ',')) WITH ORDINALITY AS u(piece, ord)
+    WHERE s.task_id = tasks.id
+  ) x WHERE x.tok <> '' AND x.tok <> '—' GROUP BY x.tok
+) d)`.replace(/\s+/g, ' ');
+
+// 手動輸入的 owner 只在「沒有任何子任務 owner」時才生效；有的話以推得值為準（不報錯、直接忽略）。
+const ownerUnlessDerived = (manual) => sql`COALESCE(${sql.raw(DERIVED_OWNER_SQL)}, ${manual})`;
+
+// 重算單一任務的 owner；taskIdSql 是 SQL 片段（參數或子查詢）。回傳 db.batch 可收的 statement。
+const syncTaskOwner = (taskIdSql) =>
+  db.execute(sql`UPDATE tasks SET owner = COALESCE(${sql.raw(DERIVED_OWNER_SQL)}, tasks.owner) WHERE tasks.id = ${taskIdSql}`);
+
 // ── Tasks ──
 
 export async function getAllTasks() {
@@ -86,6 +108,9 @@ export async function updateTask(id, data) {
         if (missing.length > 0) return { error: `Owner "${missing.join(', ')}" 不存在` };
       }
     }
+
+    // 有子任務 owner 的任務以推得值為準：傳進來的 owner 交給 SQL 忽略（不報錯）
+    if ('owner' in updateData) updateData.owner = ownerUnlessDerived(updateData.owner ?? null);
 
     try {
       await db.update(tasks).set(updateData).where(eq(tasks.id, id));
@@ -171,15 +196,19 @@ export async function createSubtask(data) {
     }
 
     try {
-      const result = await db.insert(subtasks).values({
-        taskId: data.taskId,
-        name: data.name.trim(),
-        owner: data.owner || null,
-        done: data.done || false,
-        doneDate: data.doneDate || null,
-        notes: data.notes || null,
-        sortOrder: data.sortOrder || 0,
-      }).returning();
+      // 子任務 INSERT + 父任務 owner 重算：neon-http 無互動式 transaction → 同一個 db.batch 原子執行
+      const [result] = await db.batch([
+        db.insert(subtasks).values({
+          taskId: data.taskId,
+          name: data.name.trim(),
+          owner: data.owner || null,
+          done: data.done || false,
+          doneDate: data.doneDate || null,
+          notes: data.notes || null,
+          sortOrder: data.sortOrder || 0,
+        }).returning(),
+        syncTaskOwner(sql`${data.taskId}`),
+      ]);
 
       return { success: true, subtask: result[0] };
     } catch (err) {
@@ -201,7 +230,13 @@ export async function updateSubtask(id, data) {
     }
 
     try {
-      await db.update(subtasks).set(updateData).where(eq(subtasks.id, id));
+      const write = db.update(subtasks).set(updateData).where(eq(subtasks.id, id));
+      // owner / sortOrder 會改變父任務推得的 owner → 同一個 db.batch 內重算；其他欄位維持單一 UPDATE
+      if ('owner' in updateData || 'sortOrder' in updateData) {
+        await db.batch([write, syncTaskOwner(sql`(SELECT task_id FROM subtasks WHERE id = ${id})`)]);
+      } else {
+        await write;
+      }
       return { success: true };
     } catch (err) {
       console.error("updateSubtask error:", err);
@@ -215,7 +250,13 @@ export async function deleteSubtask(id) {
     if (!isValidUUID(id)) return { error: 'Invalid subtask ID' };
 
     try {
-      await db.delete(subtasks).where(eq(subtasks.id, id));
+      // 刪掉之後就查不到父任務了 → 先讀出 task_id，再把 DELETE 與重算放進同一個 db.batch
+      const [row] = await db.select({ taskId: subtasks.taskId }).from(subtasks).where(eq(subtasks.id, id)).limit(1);
+      if (row) {
+        await db.batch([db.delete(subtasks).where(eq(subtasks.id, id)), syncTaskOwner(sql`${row.taskId}`)]);
+      } else {
+        await db.delete(subtasks).where(eq(subtasks.id, id));
+      }
       return { success: true };
     } catch (err) {
       console.error("deleteSubtask error:", err);
@@ -419,7 +460,8 @@ export async function upsertTasks(importedTasks) {
         };
 
         if (existing.length > 0) {
-          await db.update(tasks).set({ ...data, updatedAt: new Date() }).where(eq(tasks.id, existing[0].id));
+          // 既有任務若有子任務 owner，CSV 的 owner 不覆寫推得值
+          await db.update(tasks).set({ ...data, owner: ownerUnlessDerived(data.owner), updatedAt: new Date() }).where(eq(tasks.id, existing[0].id));
           updated++;
         } else {
           await db.insert(tasks).values({
@@ -466,6 +508,9 @@ export async function updateManyTasks(ids, data) {
         if (missing.length > 0) return { error: `Owner "${missing.join(', ')}" 不存在` };
       }
     }
+
+    // 有子任務 owner 的任務在 SQL 層略過 owner（推得值為準）；其他欄位照寫
+    if ('owner' in updateData) updateData.owner = ownerUnlessDerived(updateData.owner ?? null);
 
     try {
       await db.update(tasks).set(updateData).where(inArray(tasks.id, ids));

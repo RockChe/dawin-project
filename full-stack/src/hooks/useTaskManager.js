@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { computeAllProgress, toISO, toBusinessDateString } from '@/lib/utils';
+import { deriveTaskOwner, hasSubOwners } from '@/lib/taskOwner';
 import { getInitialData } from '@/server/actions/dashboard';
 import {
   createTask as createTaskAction,
@@ -65,6 +66,12 @@ export function mergeRestore(current, originalSnapshot, removedItems) {
   const extra = current.filter(c => !originalSnapshot.some(o => o.id === c.id));
   return [...restored, ...extra];
 }
+
+// tasks.owner 由子任務 owner 自動帶出：子任務一變，就用「變動後的子任務清單」重算本地父任務的 owner，
+// 跟伺服端 db.batch 內的重算結果一致（規則見 lib/taskOwner.js）。
+const withDerivedOwner = (tasks, subs, taskId) => tasks.map(t => (t.id === taskId
+  ? { ...t, owner: deriveTaskOwner(subs.filter(s => s.taskId === taskId), t.owner) }
+  : t));
 
 export default function useTaskManager(initialData) {
   const [projects, setProjects] = useState(initialData?.projects || []);
@@ -232,6 +239,9 @@ export default function useTaskManager(initialData) {
     // row always hold the same string. toISO is idempotent on ISO input.
     const value = DATE_COLUMNS.has(dbField) ? (toISO(rawValue ?? '') || null) : rawValue;
 
+    // 有子任務 owner 的任務，owner 由子任務自動帶出，不接受直接編輯（伺服端也會忽略）。
+    if (dbField === 'owner' && hasSubOwners(allSRef.current.filter(s => s.taskId === id))) return;
+
     const key = `${id}:${dbField}`;
     // Skip if same field on same task is already being updated (prevent race condition)
     if (pendingUpdates.current.has(key)) return;
@@ -348,10 +358,18 @@ export default function useTaskManager(initialData) {
     const prevRow = allSRef.current.find(s => s.id === id);
     const prevValue = prevRow ? prevRow[field] : undefined;
     setAllS(p => p.map(s => s.id === id ? { ...s, [field]: value } : s));
+    // 改 owner 會連動父任務的 owner：樂觀更新，失敗時跟子任務一起還原
+    const syncParent = field === 'owner' && !!prevRow;
+    const prevTaskOwner = syncParent ? allTRef.current.find(t => t.id === prevRow.taskId)?.owner : undefined;
+    if (syncParent) {
+      const nextSubs = allSRef.current.map(s => s.id === id ? { ...s, owner: value } : s);
+      setAllT(p => withDerivedOwner(p, nextSubs, prevRow.taskId));
+    }
     const result = await updateSubtaskAction(id, { [field]: value });
     if (checkAuthError(result)) return;
     if (result?.error) {
       if (prevRow) setAllS(p => p.map(s => s.id === id ? { ...s, [field]: prevValue } : s));
+      if (syncParent) setAllT(p => p.map(t => t.id === prevRow.taskId ? { ...t, owner: prevTaskOwner } : t));
       if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
       invalidateCache();
@@ -363,6 +381,8 @@ export default function useTaskManager(initialData) {
     if (checkAuthError(result)) return;
     if (result?.success) {
       setAllS(p => [...p, result.subtask]);
+      const nextSubs = [...allSRef.current, result.subtask];
+      setAllT(p => withDerivedOwner(p, nextSubs, taskId));
       invalidateCache();
       showToast('子任務已新增', 'success');
     } else if (result?.error) {
@@ -375,11 +395,17 @@ export default function useTaskManager(initialData) {
     const idx = allSRef.current.findIndex(s => s.id === id);
     const removed = idx === -1 ? null : allSRef.current[idx];
     setAllS(p => p.filter(s => s.id !== id));
+    const prevTaskOwner = removed ? allTRef.current.find(t => t.id === removed.taskId)?.owner : undefined;
+    if (removed) {
+      const nextSubs = allSRef.current.filter(s => s.id !== id);
+      setAllT(p => withDerivedOwner(p, nextSubs, removed.taskId));
+    }
     const result = await deleteSubtaskAction(id);
     if (checkAuthError(result)) return;
     if (result?.error) {
       if (removed) {
         setAllS(p => p.some(s => s.id === id) ? p : [...p.slice(0, Math.min(idx, p.length)), removed, ...p.slice(Math.min(idx, p.length))]);
+        setAllT(p => p.map(t => t.id === removed.taskId ? { ...t, owner: prevTaskOwner } : t));
       }
       if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
@@ -528,7 +554,18 @@ export default function useTaskManager(initialData) {
   }, [showToast, invalidateCache, handleForbidden]);
 
   // ── Batch Update ──
-  const updateManyTasks = useCallback(async (ids, field, value) => {
+  const updateManyTasks = useCallback(async (allIds, field, value) => {
+    // 有子任務 owner 的任務，owner 由子任務自動帶出 → 批次指派 owner 時略過（伺服端 SQL 也會略過）
+    let ids = allIds;
+    if (field === 'owner') {
+      const locked = new Set(allSRef.current.filter(s => hasSubOwners([s])).map(s => s.taskId));
+      ids = allIds.filter(id => !locked.has(id));
+      if (ids.length === 0) {
+        showToast('所選任務的負責人由子任務自動帶出，無法直接指派', 'error');
+        return { success: true, updated: 0 };
+      }
+    }
+    const skipped = allIds.length - ids.length;
     const prevValues = new Map(allTRef.current.filter(t => ids.includes(t.id)).map(t => [t.id, t[field]]));
     setAllT(p => p.map(t => ids.includes(t.id) ? { ...t, [field]: value } : t));
     invalidateCache();
@@ -539,7 +576,7 @@ export default function useTaskManager(initialData) {
       setAllT(p => p.map(t => prevValues.has(t.id) ? { ...t, [field]: prevValues.get(t.id) } : t));
       if (!handleForbidden(result)) showToast(result.error, 'error');
     } else {
-      showToast(`已更新 ${result.updated} 筆任務`, 'success');
+      showToast(`已更新 ${result.updated} 筆任務${skipped ? `（${skipped} 筆負責人由子任務自動帶出，已略過）` : ''}`, 'success');
     }
     return result;
   }, [showToast, invalidateCache, handleForbidden]);

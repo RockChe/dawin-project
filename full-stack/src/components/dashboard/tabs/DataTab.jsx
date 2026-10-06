@@ -12,6 +12,7 @@ import TagInput from "../TagInput";
 import ProgressBar from "../ProgressBar";
 import OwnerTags from "../OwnerTags";
 import { getEditableCols } from "@/lib/tableColumns";
+import { hasSubOwners } from "@/lib/taskOwner";
 
 const COL_POS = { project: 0, task: 1, name: 1, owner: 2, status: 3, priority: 4, category: 6, start: 7, end: 8, notes: 9 };
 
@@ -79,6 +80,8 @@ function DataTab({
   const paged = useMemo(() => sorted.slice((safePage - 1) * effectivePageSize, safePage * effectivePageSize), [sorted, safePage, effectivePageSize]);
   useEffect(() => { setCurrentPage(1); }, [filtered, sortCol, sortDir, pageSize]);
   const subsByTaskId = useMemo(() => { const map = {}; allS.forEach(s => { if (!map[s.taskId]) map[s.taskId] = []; map[s.taskId].push(s); }); return map; }, [allS]);
+  // 任務負責人由子任務自動帶出：有子任務 owner 的任務，owner 格唯讀（鍵盤編輯也擋）
+  const lockedOwnerIds = useMemo(() => new Set(Object.keys(subsByTaskId).filter(id => hasSubOwners(subsByTaskId[id]))), [subsByTaskId]);
   const flatRows = useMemo(() => { const rows = []; paged.forEach(d => { rows.push({ type: "task", id: d.id, data: d }); if (expanded.has(d.id)) { (subsByTaskId[d.id] || []).forEach(sub => { rows.push({ type: "sub", id: sub.id, data: sub }); }); } }); return rows; }, [paged, expanded, subsByTaskId]);
 
   const handleSort = col => { if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc"); else { setSortCol(col); setSortDir("asc"); } };
@@ -128,20 +131,21 @@ function DataTab({
   const handleTableKeyDown = useCallback((e) => {
     if (!activeCell || editingCell) return;
     const { rowId, colKey } = activeCell;
+    const ownerLocked = colKey === "owner" && lockedOwnerIds.has(rowId);
     switch (e.key) {
       case "ArrowUp": e.preventDefault(); navigate("up"); break;
       case "ArrowDown": e.preventDefault(); navigate("down"); break;
       case "ArrowLeft": e.preventDefault(); navigate("left"); break;
       case "ArrowRight": e.preventDefault(); navigate("right"); break;
       case "Tab": e.preventDefault(); navigate(e.shiftKey ? "left" : "right"); break;
-      case "Enter": case "F2": e.preventDefault(); setEditingCell(true); setInitialTypedChar(null); break;
+      case "Enter": case "F2": e.preventDefault(); if (!ownerLocked) { setEditingCell(true); setInitialTypedChar(null); } break;
       case "Delete": case "Backspace": e.preventDefault();
-        { const row = flatRows.find(r => r.id === rowId); if (row) { if (row.type === "task") updateTask(rowId, colKey, ""); else updateSub(rowId, colKey, ""); } } break;
+        { const row = flatRows.find(r => r.id === rowId); if (row && !ownerLocked) { if (row.type === "task") updateTask(rowId, colKey, ""); else updateSub(rowId, colKey, ""); } } break;
       case "Escape": e.preventDefault(); setActiveCell(null); break;
       default:
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setInitialTypedChar(e.key); setEditingCell(true); }
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); if (!ownerLocked) { setInitialTypedChar(e.key); setEditingCell(true); } }
     }
-  }, [activeCell, editingCell, navigate, flatRows, updateTask, updateSub]);
+  }, [activeCell, editingCell, navigate, flatRows, updateTask, updateSub, lockedOwnerIds]);
 
   const cellP = useCallback((rowId, colKey) => ({
     isSelected: activeCell?.rowId === rowId && activeCell?.colKey === colKey,
@@ -307,7 +311,7 @@ function DataTab({
                       <td style={{ padding: "9px 6px", textAlign: "center" }}>{canWrite && <input type="checkbox" checked={selectedRows.has(d.id)} onChange={e => { setSelectedRows(prev => { const n = new Set(prev); if (e.target.checked) n.add(d.id); else n.delete(d.id); return n; }); }} style={{ cursor: "pointer", accentColor: X.accent }} />}</td>
                       <td style={{ padding: "9px 8px", fontWeight: 500, maxWidth: 140 }}><div style={{ display: "flex", alignItems: "center" }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: pcMap[d.project], marginRight: 6, flexShrink: 0 }} /><div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.project}>{d.project || "—"}</div></div></td>
                       <td style={{ padding: "9px 8px", maxWidth: 200 }}><div style={{ display: "flex", alignItems: "center" }}><span onClick={e => { e.stopPropagation(); toggle(d.id); }} style={{ color: X.textDim, marginRight: 6, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>{isE ? "▾" : "▸"}</span><div style={{ flex: 1, minWidth: 0 }}>{canWrite ? <EditableCell value={d.task} onSave={v => updateTask(d.id, "task", v)} {...cellP(d.id, "task")} /> : <ReadOnlyCell value={d.task} />}</div></div></td>
-                      <td style={{ padding: "9px 8px", fontSize: 14 }}>{canWrite ? <EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /> : <ReadOnlyCell value={d.owner} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} />}</td>
+                      <td style={{ padding: "9px 8px", fontSize: 14 }}>{canWrite && !lockedOwnerIds.has(d.id) ? <EditableCell value={d.owner} onSave={v => updateTask(d.id, "owner", v)} {...cellP(d.id, "owner")} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /> : <span title={lockedOwnerIds.has(d.id) ? "由子任務自動帶出" : undefined} onClick={canWrite ? cellP(d.id, "owner").onSelect : undefined}><ReadOnlyCell value={d.owner} renderValue={v => <OwnerTags value={v} configOwners={configOwners} />} /></span>}</td>
                       <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.status} onSave={v => updateTask(d.id, "status", v)} {...cellP(d.id, "status")} options={STATUSES} style={{ padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} /> : <ReadOnlyCell value={d.status} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, background: sc.bg, color: sc.color, fontSize: 12, fontWeight: 600 }} />}</td>
                       <td style={{ padding: "9px 8px" }}>{canWrite ? <EditableCell value={d.priority} onSave={v => updateTask(d.id, "priority", v)} {...cellP(d.id, "priority")} options={["高", "中", "低"]} style={{ color: pc.color, fontSize: 14, fontWeight: 600 }} /> : <ReadOnlyCell value={d.priority} style={{ display: "inline-block", color: pc.color, fontSize: 14, fontWeight: 600 }} />}</td>
                       <td style={{ padding: "9px 8px", minWidth: 110 }}><ProgressBar pct={d.progress} done={d.sDone} total={d.sTotal} timeBased={d.timeBased} /></td>

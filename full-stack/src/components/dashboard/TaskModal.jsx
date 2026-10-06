@@ -4,6 +4,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useCan } from "@/components/PermissionProvider";
 import { pD, fD, toISO, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 import { planTaskUpdates } from "@/lib/taskUpdates";
+import { deriveTaskOwner, hasSubOwners } from "@/lib/taskOwner";
 import { STATUSES } from "@/lib/constants";
 import useForbiddenHandler from "@/hooks/useForbiddenHandler";
 import CalendarPicker from "./CalendarPicker";
@@ -32,6 +33,8 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
   const xhrRef = useRef(null);
   const mountedRef = useRef(true);
   const tSubs = isNew ? [] : allS.filter(s => s.taskId === task.id).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  // 任務負責人由子任務自動帶出：任一子任務有 owner 時，這格唯讀並顯示推得值（隨子任務即時變動）
+  const ownerLocked = hasSubOwners(tSubs);
   const tLinks = isNew ? [] : (allL || []).filter(l => l.taskId === task.id);
   const tFiles = isNew ? [] : (allF || []).filter(f => f.taskId === task.id);
   const { X, inputStyle: iS2 } = useTheme();
@@ -157,7 +160,8 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           </div>
           <div>
             <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>負責人</div>
-            {canWrite ? <TagInput value={form.owner} onChange={v => setForm(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="新增負責人..." /> : <OwnerTags value={form.owner} configOwners={configOwners} />}
+            {canWrite && !ownerLocked ? <TagInput value={form.owner} onChange={v => setForm(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="新增負責人..." /> : <OwnerTags value={ownerLocked ? deriveTaskOwner(tSubs, form.owner) : form.owner} configOwners={configOwners} />}
+            {ownerLocked && <div style={{ fontSize: 11, color: X.textDim, marginTop: 4 }}>由子任務自動帶出</div>}
           </div>
           {!isNew && <div>
             <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>狀態</div>
