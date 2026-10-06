@@ -94,6 +94,7 @@
 | 檔案 | Method | 為什麼豁免 |
 |---|---|---|
 | `api/health/route.js` | GET | 公開健康檢查，只回傳 status/timestamp/db/cronSecret 布林，無敏感資料 |
+| `api/device/route.js` | GET | 手動切換裝置版本，只寫 `device_pref` 偏好 cookie（值限固定白名單、導向固定路徑），不讀寫任何資料；middleware 已要求有 session cookie |
 | `api/backup/route.js` | POST | Vercel Cron 觸發，走 `CRON_SECRET` 而非 session 授權（見 Task 6） |
 
 ## `/api/debug` 的委派形狀

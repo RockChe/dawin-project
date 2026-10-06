@@ -59,5 +59,6 @@ export const EXEMPT = [
   'src/server/actions/auth.js#logout',         // 登出不需要能力
   'src/server/actions/auth.js#getSessionInfo', // 只回自己的 session
   'src/app/api/health/route.js#GET',           // 公開健康檢查，只回 status/timestamp/db/cronSecret 布林
+  'src/app/api/device/route.js#GET',           // 只寫 device_pref 偏好 cookie（值限白名單），無資料存取；middleware 要求有 session cookie
   'src/app/api/backup/route.js#POST',          // Vercel Cron，走 CRON_SECRET 而非 session（見 Task 6）
 ];
