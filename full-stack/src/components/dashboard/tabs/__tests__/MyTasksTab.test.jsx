@@ -44,7 +44,69 @@ describe('MyTasksTab', () => {
     expect(setModalTask).toHaveBeenCalledWith(mine);
   });
 
-  it('role badges: 我關注 for watcher-only, 我執行 for sub executor, none for plain owner', () => {
+  describe('狀態篩選', () => {
+    const twp = [
+      task('1', 'Amy', '2026-10-01', '進行中'),
+      task('2', 'Amy', '2026-10-08', '待辦'),
+      task('3', 'Amy', '2026-10-02', '已完成'),
+    ];
+    const chip = n => screen.getByRole('button', { name: n });
+    const kpiText = () => screen.getAllByText('本月已完成')[0].parentElement.textContent;
+
+    it('沒選：全部 chip 亮、無「已完成」群組、已完成任務不顯示', () => {
+      renderTab({ twp });
+      expect(chip('全部').getAttribute('aria-pressed')).toBe('true');
+      expect(screen.queryByRole('heading', { name: /^已完成/ })).toBeNull();
+      expect(screen.queryByText('task-3')).toBeNull();
+    });
+
+    it('選進行中 → 其他狀態隱藏', () => {
+      renderTab({ twp });
+      fireEvent.click(chip('進行中'));
+      expect(chip('進行中').getAttribute('aria-pressed')).toBe('true');
+      expect(chip('全部').getAttribute('aria-pressed')).toBe('false');
+      expect(screen.getByText('task-1')).toBeTruthy();
+      expect(screen.queryByText('task-2')).toBeNull();
+      expect(screen.queryByText('task-3')).toBeNull();
+    });
+
+    it('選已完成 → 出現「已完成」群組並列出已完成任務', () => {
+      renderTab({ twp });
+      fireEvent.click(chip('已完成'));
+      expect(screen.getByRole('heading', { name: /^已完成/ })).toBeTruthy();
+      expect(screen.getByText('task-3')).toBeTruthy();
+      expect(screen.queryByText('task-1')).toBeNull();
+    });
+
+    it('「全部」清空選取；再點已選 chip 取消', () => {
+      renderTab({ twp });
+      fireEvent.click(chip('進行中'));
+      fireEvent.click(chip('待辦'));
+      expect(screen.queryByText('task-3')).toBeNull();
+      fireEvent.click(chip('全部'));
+      expect(screen.getByText('task-2')).toBeTruthy();
+      expect(chip('待辦').getAttribute('aria-pressed')).toBe('false');
+      fireEvent.click(chip('待辦'));
+      fireEvent.click(chip('待辦'));
+      expect(chip('全部').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('KPI 不受篩選影響', () => {
+      renderTab({ twp });
+      const before = kpiText();
+      fireEvent.click(chip('已完成'));
+      expect(kpiText()).toBe(before);
+      expect(screen.getAllByText('已逾期')[0].previousSibling.textContent).toBe('1');
+    });
+
+    it('篩出空結果仍顯示篩選列', () => {
+      renderTab({ twp: [task('1', 'Amy', '2026-10-01', '進行中')] });
+      fireEvent.click(chip('暫緩'));
+      expect(chip('全部')).toBeTruthy();
+    });
+  });
+
+  it('role badges:我關注 for watcher-only, 我執行 for sub executor, none for plain owner', () => {
     renderTab({
       twp: [
         task('w', 'Felien,Amy', '2026-10-08', '進行中', { watchers: 'Amy', subOwner: 'Felien' }),

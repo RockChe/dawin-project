@@ -48,6 +48,44 @@ describe('groupMyTasks', () => {
   });
 });
 
+describe('groupMyTasks 狀態篩選', () => {
+  const tasks = [
+    mk('a', 'Amy', '2026-10-05', '進行中'),
+    mk('b', 'Amy', '2026-10-08', '待辦'),
+    mk('c', 'Amy', '2026-10-30', '暫緩'),
+    mk('d', 'Amy', '2026-09-01', '已完成'),
+    mk('e', 'Amy', '2026-10-01', '已完成'),
+    mk('f', 'Bob', '2026-10-01', '已完成'),
+  ];
+  it('沒選 = 原行為：無 done 欄位、不含已完成', () => {
+    const g = groupMyTasks(tasks, 'Amy', T, []);
+    expect(g).not.toHaveProperty('done');
+    expect([...g.overdue, ...g.soon, ...g.later].map(t => t.id)).toEqual(['a', 'b', 'c']);
+  });
+  it('選進行中 → 三組只剩進行中，無 done', () => {
+    const g = groupMyTasks(tasks, 'Amy', T, ['進行中']);
+    expect(g.overdue.map(t => t.id)).toEqual(['a']);
+    expect(g.soon).toEqual([]);
+    expect(g.later).toEqual([]);
+    expect(g).not.toHaveProperty('done');
+  });
+  it('選已完成 → done 依 end 由新到舊，且不進三組、不含別人的', () => {
+    const g = groupMyTasks(tasks, 'Amy', T, ['已完成']);
+    expect(g.done.map(t => t.id)).toEqual(['e', 'd']);
+    expect([...g.overdue, ...g.soon, ...g.later]).toEqual([]);
+  });
+  it('已完成 + 待辦 → done 與待辦並存', () => {
+    const g = groupMyTasks(tasks, 'Amy', T, ['已完成', '待辦']);
+    expect(g.done.map(t => t.id)).toEqual(['e', 'd']);
+    expect(g.soon.map(t => t.id)).toEqual(['b']);
+    expect(g.overdue).toEqual([]);
+  });
+  it('done 內無 end 的排最後', () => {
+    const g = groupMyTasks([mk('x', 'Amy', null, '已完成'), mk('y', 'Amy', '2026-01-01', '已完成')], 'Amy', T, ['已完成']);
+    expect(g.done.map(t => t.id)).toEqual(['y', 'x']);
+  });
+});
+
 describe('myTaskKpis', () => {
   it('counts overdue / soon / in-progress / completed this month', () => {
     const tasks = [

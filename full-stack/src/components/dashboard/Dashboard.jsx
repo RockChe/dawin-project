@@ -183,6 +183,9 @@ export default function Dashboard({ initialData }) {
     );
   }
 
+  // 這兩個分頁各自有頁內篩選，頂部跨專案篩選灰掉並說明
+  const ownFilterNote = tab === "projects" ? "Projects 分頁使用專案內的篩選" : tab === "mytasks" ? "My Tasks 分頁使用頁內的篩選" : null;
+
   return (
     <PermissionProvider role={userRole}>
     <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, transition: "background-color 0.3s,color 0.3s", zoom: zoom / 100 }}>
@@ -194,9 +197,9 @@ export default function Dashboard({ initialData }) {
         {/* Filters — 決策 B（docs/design/dawin-dash-task-sortfilter-q-statesync.html）：
             這組是「跨專案」篩選，只管 Overview 與 Timeline。Projects 分頁有自己的專案內
             篩選，所以在那裡把這組灰掉並明講，避免兩組同時看起來都在生效。 */}
-        <div aria-disabled={tab === "projects"} title={tab === "projects" ? "Projects 分頁使用專案內的篩選" : undefined}
+        <div aria-disabled={!!ownFilterNote} title={ownFilterNote || undefined}
           style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", alignItems: "center",
-            opacity: tab === "projects" ? 0.4 : 1, pointerEvents: tab === "projects" ? "none" : "auto" }}>
+            opacity: ownFilterNote ? 0.4 : 1, pointerEvents: ownFilterNote ? "none" : "auto" }}>
           {STATUS_FILTERS.map(s => { const a = s === "全部" ? fs.length === 0 : fs.includes(s), c = SC[s]; return (
             <button key={s} onClick={() => toggleFS(s)} style={{ padding: "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
           <div style={{ width: 1, height: 20, background: X.border }} />
@@ -208,10 +211,11 @@ export default function Dashboard({ initialData }) {
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 12, color: X.textDim }}>全部專案</span>
           {tab === "projects" && <span style={{ fontSize: 11, color: X.amber }}>· Projects 分頁使用下方「本專案」的篩選</span>}
+          {tab === "mytasks" && <span style={{ fontSize: 11, color: X.amber }}>· My Tasks 分頁使用頁內的篩選</span>}
         </div>
-        <div aria-disabled={tab === "projects"}
+        <div aria-disabled={!!ownFilterNote}
           style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20,
-            opacity: tab === "projects" ? 0.4 : 1, pointerEvents: tab === "projects" ? "none" : "auto" }}>
+            opacity: ownFilterNote ? 0.4 : 1, pointerEvents: ownFilterNote ? "none" : "auto" }}>
           {Object.entries(SC).map(([k, c]) => (<div key={k} onClick={() => toggleFS(k)} style={{ background: X.surface, borderRadius: 12, padding: "16px 18px", border: fs.includes(k) ? `1px solid ${c.color}` : `1px solid ${X.border}`, boxShadow: X.surfaceShadow, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 16, fontWeight: 600, color: X.textSec }}>{k}</span><span style={{ color: c.color, fontSize: 18 }}>{c.icon}</span>

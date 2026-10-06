@@ -1,5 +1,6 @@
 import { pD } from "@/lib/utils";
 import { taskRole } from "@/lib/taskOwner";
+import { matchesStatusFilter } from "@/lib/statusFilter";
 
 const SOON_DAYS = 7;
 
@@ -27,16 +28,24 @@ export function daysLeft(end, today) {
 
 const NO_DATE = 8.64e15; // 無 end 排最後（用有限值避免 Infinity - Infinity = NaN）
 const byDue = (a, b) => (a.end ? pD(a.end) : NO_DATE) - (b.end ? pD(b.end) : NO_DATE);
+const byDoneDesc = (a, b) => (b.end ? pD(b.end) : -NO_DATE) - (a.end ? pD(a.end) : -NO_DATE); // 新到舊，無 end 最後
 
-/** 我的未完成任務，依到期日分三組；已完成不進群組。無 end 歸「之後」。 */
-export function groupMyTasks(tasks, name, today) {
+/**
+ * 我的任務，依到期日分三組（無 end 歸「之後」）。
+ * statuses：狀態多選（[] = 不篩，語意同 statusFilter.matchesStatusFilter）。
+ * 已完成預設不進三組；只有 statuses 含「已完成」時才多回傳 `done`（依 end 由新到舊，無 end 排最後）。
+ */
+export function groupMyTasks(tasks, name, today, statuses = []) {
   const g = { overdue: [], soon: [], later: [] };
+  const wantDone = statuses.includes("已完成");
+  if (wantDone) g.done = [];
   for (const t of tasks) {
-    if (!isMine(t, name) || t.status === "已完成") continue;
+    if (!isMine(t, name) || !matchesStatusFilter(t.status, statuses)) continue;
+    if (t.status === "已完成") { if (wantDone) g.done.push(t); continue; }
     const d = daysLeft(t.end, today);
     (d === null ? g.later : d < 0 ? g.overdue : d <= SOON_DAYS ? g.soon : g.later).push(t);
   }
-  for (const k in g) g[k].sort(byDue);
+  for (const k in g) g[k].sort(k === "done" ? byDoneDesc : byDue);
   return g;
 }
 

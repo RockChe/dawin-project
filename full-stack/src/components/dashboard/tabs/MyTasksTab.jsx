@@ -1,8 +1,10 @@
 "use client";
-import { useMemo, memo } from "react";
+import { useMemo, useState, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { fD, toBusinessDateString } from "@/lib/utils";
+import { STATUS_FILTERS } from "@/lib/constants";
+import { toggleStatus } from "@/lib/statusFilter";
 import { groupMyTasks, myTaskKpis, daysLeft, roleBadge } from "@/lib/myTasks";
 
 // 唯讀清單：登入者（userName）名下、尚未完成的任務，依到期日分三組。
@@ -10,9 +12,10 @@ import { groupMyTasks, myTaskKpis, daysLeft, roleBadge } from "@/lib/myTasks";
 function MyTasksTab({ twp, userName, pcMap, setModalTask, today: todayProp }) {
   const { X, SC } = useTheme();
   const today = todayProp || toBusinessDateString();
-  const groups = useMemo(() => groupMyTasks(twp, userName, today), [twp, userName, today]);
+  const [sel, setSel] = useState([]); // 狀態多選，[] = 不篩；不持久化
+  const groups = useMemo(() => groupMyTasks(twp, userName, today, sel), [twp, userName, today, sel]);
   const kpis = useMemo(() => myTaskKpis(twp, userName, today), [twp, userName, today]);
-  const total = groups.overdue.length + groups.soon.length + groups.later.length;
+  const total = groups.overdue.length + groups.soon.length + groups.later.length + (groups.done?.length || 0);
 
   const cards = [
     { l: "已逾期", n: kpis.overdue, c: X.red },
@@ -24,6 +27,7 @@ function MyTasksTab({ twp, userName, pcMap, setModalTask, today: todayProp }) {
     { k: "overdue", l: "逾期", c: X.red },
     { k: "soon", l: "7 天內", c: X.amber },
     { k: "later", l: "之後", c: X.textDim },
+    { k: "done", l: "已完成", c: X.green },
   ];
 
   return (<>
@@ -36,13 +40,19 @@ function MyTasksTab({ twp, userName, pcMap, setModalTask, today: todayProp }) {
       ))}
     </div>
 
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+      {STATUS_FILTERS.map(s => { const a = s === "全部" ? sel.length === 0 : sel.includes(s), c = SC[s]; return (
+        <button key={s} type="button" aria-pressed={a} onClick={() => setSel(v => toggleStatus(v, s))}
+          style={{ padding: "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
+    </div>
+
     {total === 0 && (
       <div style={{ background: X.surface, borderRadius: 12, padding: 40, border: `1px solid ${X.border}`, textAlign: "center", color: X.textDim, fontSize: 14 }}>
         沒有指派給你的任務 🎉
       </div>
     )}
 
-    {sections.map(s => groups[s.k].length > 0 && (
+    {sections.map(s => groups[s.k]?.length > 0 && (
       <div key={s.k} style={{ background: X.surface, borderRadius: 12, border: `1px solid ${X.border}`, marginBottom: 12, overflow: "hidden" }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${X.border}` }}>
           <span style={{ width: 3, height: 14, background: s.c, borderRadius: 2 }} />{s.l}
