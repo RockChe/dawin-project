@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
+import { jumpToProject, backFromProject, switchTab } from "@/lib/mobileNav";
 import { F } from "@/lib/theme";
 import { toBusinessDateString } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
@@ -37,13 +38,17 @@ export default function MobileApp({ initialData }) {
     toast, showToast, updateTask, toggleSub, addSub, configOwners,
   } = useTaskManager(initialData);
   const { settings: userSettings } = useUserSettings({}, showToast, initialData?.settings);
-  const [tab, setTab] = useState("mytasks");
-  const [selectedProjectId, setSelectedProjectId] = useState(null); // 專案分頁的詳情；時程點列時由外部設定
-  const selectProject = useCallback(id => { setSelectedProjectId(id); setTab("projects"); }, []);
+  // returnTab：從別的分頁（如時程）點進專案詳情時的來源，詳情的返回回到那裡（見 lib/mobileNav）
+  const [nav, setNav] = useState({ tab: "mytasks", selectedProjectId: null, returnTab: null });
+  const { tab, selectedProjectId, returnTab } = nav;
+  const setTab = useCallback(t => setNav(n => switchTab(n, t)), []);
+  const setSelectedProjectId = useCallback(id => setNav(n => ({ ...n, selectedProjectId: id })), []); // 專案清單點列；時程點列走 selectProject
+  const selectProject = useCallback(id => setNav(n => jumpToProject(n, id)), []);
+  const goBackFromProject = useCallback(() => setNav(backFromProject), []);
   const [sheetTaskId, setSheetTaskId] = useState(null); // TaskSheet 的開關；抽屜本身由 Task 7 渲染
   const openTask = useCallback(id => setSheetTaskId(id), []);
   const closeSheet = useCallback(() => setSheetTaskId(null), []);
-  const goHome = useCallback(() => setTab("mytasks"), []); // 手機的「首頁」= 我的任務
+  const goHome = useCallback(() => setTab("mytasks"), [setTab]); // 手機的「首頁」= 我的任務
   const sheetTask = sheetTaskId ? (twp || []).find(t => t.id === sheetTaskId) : null;
 
   const userName = initialData?.session?.name;
@@ -58,7 +63,7 @@ export default function MobileApp({ initialData }) {
   }, [projects, twp, PJC]);
 
   const Screen = SCREENS[tab];
-  const screenProps = { twp, allS, projects, userName, userRole, today, X, openTask, updateTask, toggleSub, addSub, pcMap, configOwners, upcomingDays, upcomingLimit, selectedProjectId, setSelectedProjectId, onSelectProject: selectProject, onHome: goHome };
+  const screenProps = { twp, allS, projects, userName, userRole, today, X, openTask, updateTask, toggleSub, addSub, pcMap, configOwners, upcomingDays, upcomingLimit, selectedProjectId, setSelectedProjectId, returnTab, onBackFromProject: goBackFromProject, onSelectProject: selectProject, onHome: goHome };
 
   return (
     <PermissionProvider role={userRole}>
