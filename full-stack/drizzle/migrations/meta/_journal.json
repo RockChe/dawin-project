@@ -50,6 +50,13 @@
       "when": 1791279749070,
       "tag": "0006_quick_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791328710635,
+      "tag": "0007_lowly_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }

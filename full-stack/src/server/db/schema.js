@@ -48,6 +48,7 @@ export const projects = pgTable('projects', {
   sortOrder: integer('sort_order').default(0).notNull(),
   source: varchar('source', { length: 50 }),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  archivedAt: timestamp('archived_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
