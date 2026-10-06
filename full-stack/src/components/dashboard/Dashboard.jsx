@@ -13,10 +13,11 @@ import SettingsTab from "./tabs/SettingsTab";
 import TimelineTab from "./tabs/TimelineTab";
 import DashboardHeader from "./tabs/DashboardHeader";
 import OverviewTab from "./tabs/OverviewTab";
+import MyTasksTab from "./tabs/MyTasksTab";
 import ProjectsTab, { toggleHidden, PROJECT_TASK_VIEW_DEFAULT } from "./tabs/ProjectsTab";
 import DataTab from "./tabs/DataTab";
 
-const TAB_KEYS = ["overview", "projects", "timeline", "table", "settings"];
+const TAB_KEYS = ["overview", "mytasks", "projects", "timeline", "table", "settings"];
 
 export default function Dashboard({ initialData }) {
   const { themeKey, cycleTheme, X, SC, PC, PJC } = useTheme();
@@ -228,12 +229,15 @@ export default function Dashboard({ initialData }) {
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: `1px solid ${X.border}`, marginBottom: isMobile ? 12 : 20, ...(isMobile ? { overflowX: "auto" } : {}) }}>
-          {[{ k: "overview", l: "Overview" }, { k: "projects", l: "Projects" }, { k: "timeline", l: "Timeline" }, { k: "table", l: "Data" }, { k: "settings", l: "Settings" }].map(t => (
+          {[{ k: "overview", l: "Overview" }, { k: "mytasks", l: "My Tasks" }, { k: "projects", l: "Projects" }, { k: "timeline", l: "Timeline" }, { k: "table", l: "Data" }, { k: "settings", l: "Settings" }].map(t => (
             <button key={t.k} onClick={() => changeTab(t.k)} style={{ padding: isMobile ? "10px 14px" : "12px 20px", border: "none", background: "transparent", color: tab === t.k ? X.accent : X.textSec, fontSize: 14, fontWeight: tab === t.k ? 700 : 400, cursor: "pointer", borderBottom: tab === t.k ? `2px solid ${X.accent}` : "2px solid transparent", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0, transition: "color 0.2s, border-color 0.2s" }}>{t.l}</button>))}
         </div>
 
         {/* OVERVIEW */}
         {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
+
+        {/* MY TASKS */}
+        {tab === "mytasks" && <MyTasksTab twp={twp} userName={initialData?.session?.name} isMobile={isMobile} pcMap={pcMap} setModalTask={handleSetModalTask} />}
 
         {/* PROJECTS */}
         {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}

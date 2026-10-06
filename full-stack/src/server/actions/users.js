@@ -1,8 +1,9 @@
 'use server';
 
 import { db } from '@/server/db';
-import { users } from '@/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { users, tasks, configTable as config } from '@/server/db/schema';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { replaceOwnerToken, replaceNameInList } from '@/lib/ownerNames';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/audit';
 import { withCap } from '@/lib/withCap';
@@ -138,7 +139,31 @@ export async function updateUser(userId, data) {
     }
 
     if (hasName) {
-      await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+      const [prev] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+      if (!prev) return { error: '使用者不存在' };
+
+      // 改名連動：tasks.owner 與 config 'owners' 存的是名字字串（不是 FK），不同步就會變孤兒。
+      // neon-http 沒有互動式 transaction → 全部 UPDATE 收進同一個 db.batch（單次往返、全成功或全回滾）。
+      // 每筆 UPDATE 都帶「值仍等於剛讀到的舊值」守衛，避免蓋掉讀寫之間別人剛改的內容。
+      const stmts = [db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId))];
+      if (prev.name !== name) {
+        // ponytail: 撈全部有 owner 的任務在 JS 比對（資料量為單一團隊規模）；變大再改 SQL 層過濾。
+        const owned = await db.select({ id: tasks.id, owner: tasks.owner }).from(tasks).where(isNotNull(tasks.owner));
+        for (const t of owned) {
+          const next = replaceOwnerToken(t.owner, prev.name, name);
+          if (next !== t.owner) {
+            stmts.push(db.update(tasks).set({ owner: next }).where(and(eq(tasks.id, t.id), eq(tasks.owner, t.owner))));
+          }
+        }
+        const [cfg] = await db.select({ value: config.value }).from(config).where(eq(config.key, 'owners')).limit(1);
+        let list;
+        try { list = JSON.parse(cfg?.value); } catch { /* 非 JSON → 略過 */ }
+        if (Array.isArray(list)) {
+          stmts.push(db.update(config).set({ value: JSON.stringify(replaceNameInList(list, prev.name, name)), updatedAt: new Date() })
+            .where(and(eq(config.key, 'owners'), eq(config.value, cfg.value))));
+        }
+      }
+      await db.batch(stmts);
     }
 
     if (hasRole) {

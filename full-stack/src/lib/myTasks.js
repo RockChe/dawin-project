@@ -1,0 +1,43 @@
+import { pD } from "@/lib/utils";
+
+const SOON_DAYS = 7;
+
+/** owner 是逗號分隔字串；與 name 完全相等的 token 才算「我的」。 */
+export function isMine(task, name) {
+  if (!name) return false;
+  return (task.owner || "").split(",").map(o => o.trim()).includes(name);
+}
+
+/** end 距 today（皆為 YYYY-MM-DD / YYYY/MM/DD 日期字串）幾個日曆天；無 end → null。 */
+export function daysLeft(end, today) {
+  if (!end) return null;
+  return Math.round((pD(end) - pD(today)) / 864e5);
+}
+
+const NO_DATE = 8.64e15; // 無 end 排最後（用有限值避免 Infinity - Infinity = NaN）
+const byDue = (a, b) => (a.end ? pD(a.end) : NO_DATE) - (b.end ? pD(b.end) : NO_DATE);
+
+/** 我的未完成任務，依到期日分三組；已完成不進群組。無 end 歸「之後」。 */
+export function groupMyTasks(tasks, name, today) {
+  const g = { overdue: [], soon: [], later: [] };
+  for (const t of tasks) {
+    if (!isMine(t, name) || t.status === "已完成") continue;
+    const d = daysLeft(t.end, today);
+    (d === null ? g.later : d < 0 ? g.overdue : d <= SOON_DAYS ? g.soon : g.later).push(t);
+  }
+  for (const k in g) g[k].sort(byDue);
+  return g;
+}
+
+/** KPI：逾期 / 7 天內 / 進行中 / 本月已完成（已完成任務以 end 落在 today 同月計）。 */
+export function myTaskKpis(tasks, name, today) {
+  const g = groupMyTasks(tasks, name, today);
+  const mine = tasks.filter(t => isMine(t, name));
+  const month = today.replace(/\//g, "-").slice(0, 7);
+  return {
+    overdue: g.overdue.length,
+    soon: g.soon.length,
+    inProgress: mine.filter(t => t.status === "進行中").length,
+    doneThisMonth: mine.filter(t => t.status === "已完成" && (t.end || "").replace(/\//g, "-").slice(0, 7) === month).length,
+  };
+}
