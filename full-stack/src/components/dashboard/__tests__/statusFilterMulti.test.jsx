@@ -21,7 +21,7 @@ vi.mock('@/hooks/useTaskManager', () => ({
   }),
 }));
 vi.mock('@/hooks/useUserSettings', () => ({
-  default: (d) => ({ settings: d, updateSetting: () => {} }),
+  default: (d) => ({ settings: d, updateSetting: () => {}, ready: true }),
 }));
 vi.mock('@/components/dashboard/tabs/OverviewTab', () => ({
   default: ({ filtered }) => <ul data-testid="list">{filtered.map(t => <li key={t.id}>{t.task}</li>)}</ul>,

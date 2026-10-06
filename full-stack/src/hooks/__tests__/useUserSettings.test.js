@@ -137,3 +137,35 @@ describe('updateSetting', () => {
     expect(ret).toEqual({ success: true });
   });
 });
+
+// ── 3. ready flag: page must not render with unsaved defaults ─────────────
+describe('ready', () => {
+  it('is false until getUserSettings resolves, then true with merged settings', async () => {
+    let resolve;
+    mockGetUserSettings.mockReturnValue(new Promise(r => { resolve = r; }));
+
+    const { result } = renderHook(() => useUserSettings({ zoom: 150 }));
+    expect(result.current.ready).toBe(false);
+
+    await act(async () => { resolve({ success: true, data: { zoom: 100 } }); });
+
+    expect(result.current.ready).toBe(true);
+    expect(result.current.settings.zoom).toBe(100);
+  });
+
+  it('becomes true (keeping defaults) when the server returns success:false', async () => {
+    mockGetUserSettings.mockResolvedValue({ success: false });
+    const { result } = renderHook(() => useUserSettings({ zoom: 150 }));
+    await act(async () => {});
+    expect(result.current.ready).toBe(true);
+    expect(result.current.settings.zoom).toBe(150);
+  });
+
+  it('becomes true when getUserSettings rejects, so the page never hangs', async () => {
+    mockGetUserSettings.mockRejectedValue(new Error('network'));
+    const { result } = renderHook(() => useUserSettings({ zoom: 150 }));
+    await act(async () => {});
+    expect(result.current.ready).toBe(true);
+    expect(result.current.settings.zoom).toBe(150);
+  });
+});

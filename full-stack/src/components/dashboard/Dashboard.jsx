@@ -36,7 +36,7 @@ export default function Dashboard({ initialData }) {
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
-  const { settings: userSettings, updateSetting } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: false, projectTaskView: PROJECT_TASK_VIEW_DEFAULT }, showToast);
+  const { settings: userSettings, updateSetting, ready: settingsReady } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: false, projectTaskView: PROJECT_TASK_VIEW_DEFAULT }, showToast);
   const zoom = userSettings.zoom ?? 150;
   const onZoomChange = useCallback(v => updateSetting('zoom', v), [updateSetting]);
   // #4a Projects card/list view (per-account)
@@ -130,11 +130,12 @@ export default function Dashboard({ initialData }) {
   const allProjNames = useMemo(() => [...new Set([...projects.map(p => p.name), ...twp.map(d => d.project), ...customProjects])], [projects, twp, customProjects]);
   const pcMap = useMemo(() => { const m = {}; allProjNames.forEach((p, i) => { m[p] = PJC[i % PJC.length]; }); return m; }, [allProjNames, PJC]);
 
-  if (loading) {
+  // 設定載入前 zoom 只是未存檔的預設值（150），用它渲染會先巨大再縮小——骨架固定 zoom 1。
+  if (loading || !settingsReady) {
     const shimmerBg = `linear-gradient(90deg, ${X.surfaceLight || X.surface} 25%, ${X.surface} 50%, ${X.surfaceLight || X.surface} 75%)`;
     const shimmerStyle = { backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 12, background: shimmerBg };
     return (
-      <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, zoom: zoom / 100 }}>
+      <div style={{ minHeight: "100vh", background: X.bg, fontFamily: F, color: X.text, zoom: settingsReady ? zoom / 100 : 1 }}>
         <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
         <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 20px" }}>
           {/* Header skeleton */}

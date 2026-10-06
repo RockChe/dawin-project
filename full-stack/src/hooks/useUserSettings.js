@@ -6,6 +6,7 @@ import useForbiddenHandler from './useForbiddenHandler';
 export default function useUserSettings(defaults = {}, showToast) {
   const handleForbidden = useForbiddenHandler(showToast || (() => {}));
   const [settings, setSettings] = useState(defaults);
+  const [ready, setReady] = useState(false);
   // Keep a ref to the latest settings so we can read current value synchronously
   // before any async gap (needed for optimistic-update rollback).
   const settingsRef = useRef(settings);
@@ -16,7 +17,11 @@ export default function useUserSettings(defaults = {}, showToast) {
   });
 
   useEffect(() => {
-    getUserSettings().then(res => { if (res?.success) setSettings(s => ({ ...s, ...res.data })); });
+    // ready flips on success AND failure so a caller gating on it never hangs.
+    getUserSettings()
+      .then(res => { if (res?.success) setSettings(s => ({ ...s, ...res.data })); })
+      .catch(() => {})
+      .finally(() => setReady(true));
   }, []);
 
   const update = useCallback(async (key, value) => {
@@ -34,5 +39,5 @@ export default function useUserSettings(defaults = {}, showToast) {
     return res;
   }, [handleForbidden]);
 
-  return { settings, updateSetting: update };
+  return { settings, updateSetting: update, ready };
 }
