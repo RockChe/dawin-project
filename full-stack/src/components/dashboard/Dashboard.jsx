@@ -36,7 +36,7 @@ export default function Dashboard({ initialData }) {
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
-  const { settings: userSettings, updateSetting, ready: settingsReady } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: false, projectTaskView: PROJECT_TASK_VIEW_DEFAULT }, showToast);
+  const { settings: userSettings, updateSetting, ready: settingsReady } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: true, projectTaskView: PROJECT_TASK_VIEW_DEFAULT }, showToast);
   const zoom = userSettings.zoom ?? 150;
   const onZoomChange = useCallback(v => updateSetting('zoom', v), [updateSetting]);
   // #4a Projects card/list view (per-account)
@@ -52,7 +52,7 @@ export default function Dashboard({ initialData }) {
     [userSettings.projectTaskView]);
   const setProjectTaskView = useCallback(v => updateSetting('projectTaskView', v), [updateSetting]);
   // #T8 Timeline default collapsed (per-account)
-  const timelineDefaultCollapsed = userSettings.timelineDefaultCollapsed ?? false;
+  const timelineDefaultCollapsed = userSettings.timelineDefaultCollapsed ?? true;
   const setTimelineDefaultCollapsed = useCallback(v => updateSetting('timelineDefaultCollapsed', v), [updateSetting]);
   const [fpSet, setFPSet] = useState(new Set());
   const toggleFP = useCallback(p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; }), []);

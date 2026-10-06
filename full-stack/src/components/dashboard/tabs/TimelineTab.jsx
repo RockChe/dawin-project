@@ -25,7 +25,7 @@ function TimelineTab({
   configOwners = [],
   hiddenProjects = [],
   projects = [],
-  timelineDefaultCollapsed = false,
+  timelineDefaultCollapsed = true,
   setTimelineDefaultCollapsed,
 }) {
   const [timeDim, setTimeDim] = useState("月");
@@ -33,12 +33,17 @@ function TimelineTab({
   const { settings, updateSetting } = useUserSettings({ timelineSort: "manual" });
   const timelineSort = settings.timelineSort;
 
+  // All project ids visible on this timeline (excludes hidden projects).
+  const allProjectIds = useMemo(
+    () => uniqueProjectIds(twp, hiddenProjects),
+    [twp, hiddenProjects]
+  );
+
   // ── Collapse state (lifted from GanttTimeline, controlled parent) ─────────
-  // Initialise from localStorage; if no LS record, start with [].
-  const [collapsed, setCollapsed] = useState(() => {
-    const fromLS = readCollapsedLS();
-    return fromLS !== null ? fromLS : [];
-  });
+  // Initialise from localStorage, else from the default (system default = all
+  // collapsed) so the very first render is already collapsed — no expanded flash.
+  const [collapsed, setCollapsed] = useState(() =>
+    resolveInitialCollapsed(readCollapsedLS(), timelineDefaultCollapsed, allProjectIds));
 
   // Track whether user has intentionally interacted with collapse state
   // (either via LS record at mount, or by clicking toggle/button).
@@ -49,12 +54,6 @@ function TimelineTab({
   // NOTE: no blanket persist effect — writing LS on mount would freeze a record
   // even without user interaction, defeating the per-account default fallback.
   // localStorage is written explicitly only inside onToggleCollapse / handleCollapseExpandAll.
-
-  // All project ids visible on this timeline (excludes hidden projects).
-  const allProjectIds = useMemo(
-    () => uniqueProjectIds(twp, hiddenProjects),
-    [twp, hiddenProjects]
-  );
 
   // Apply server-persisted default — only when no localStorage record exists and
   // the user hasn't touched the state. `timelineDefaultCollapsed` arrives async
@@ -67,7 +66,9 @@ function TimelineTab({
     if (userTouchedRef.current) return;
     if (!allProjectIds.length) return;
     if (!timelineDefaultCollapsed) return;
-    setCollapsed(resolveInitialCollapsed(null, timelineDefaultCollapsed, allProjectIds));
+    const next = resolveInitialCollapsed(null, timelineDefaultCollapsed, allProjectIds);
+    // keep prev when unchanged — an unstable `hiddenProjects` default ([]) would otherwise loop
+    setCollapsed(prev => (prev.length === next.length && next.every((id, i) => prev[i] === id) ? prev : next));
   }, [timelineDefaultCollapsed, allProjectIds]);
 
   const effectiveCollapsed = collapsed ?? [];
