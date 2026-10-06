@@ -9,6 +9,8 @@ import useUserSettings from "@/hooks/useUserSettings";
 import MobileTabBar from "./MobileTabBar";
 import MoreScreen from "./MoreScreen";
 import OverviewScreen from "./OverviewScreen";
+import TaskSheet from "./TaskSheet";
+import { can } from "@/lib/permissions";
 
 // 暫位畫面：後續 task 4–8 把真正的畫面換進 SCREENS（唯一替換點）。
 function ScreenPlaceholder({ name, X }) {
@@ -33,6 +35,8 @@ export default function MobileApp({ initialData }) {
   const [tab, setTab] = useState("mytasks");
   const [sheetTaskId, setSheetTaskId] = useState(null); // TaskSheet 的開關；抽屜本身由 Task 7 渲染
   const openTask = useCallback(id => setSheetTaskId(id), []);
+  const closeSheet = useCallback(() => setSheetTaskId(null), []);
+  const sheetTask = sheetTaskId ? (twp || []).find(t => t.id === sheetTaskId) : null;
 
   const userName = initialData?.session?.name;
   const today = toBusinessDateString();
@@ -55,6 +59,8 @@ export default function MobileApp({ initialData }) {
         {loading ? <div style={{ padding: 16, color: X.textDim }}>載入中…</div>
           : tab === "more" ? <MoreScreen userName={userName} />
           : <Screen {...screenProps} />}
+        {sheetTask && !loading && <TaskSheet key={sheetTask.id} task={sheetTask} subs={allS.filter(s => s.taskId === sheetTask.id).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))}
+          configOwners={configOwners} canWrite={can(userRole, "write")} onClose={closeSheet} updateTask={updateTask} toggleSub={toggleSub} />}
         {toast && <div role="status" style={{ position: "fixed", bottom: "calc(72px + env(safe-area-inset-bottom))", left: 12, right: 12, zIndex: 60, background: X.surface, border: `1px solid ${X.border}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, color: X.text }}>{toast.msg}</div>}
         <MobileTabBar tab={tab} onChange={setTab} />
       </div>
