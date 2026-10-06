@@ -1203,6 +1203,13 @@
 </table>
 <p class="hint">平板版另開計畫：<code>/t</code> 路由群組、窄導覽列、專案主從雙欄、完整甘特；<code>ENABLED_DEVICES</code> 加 <code>'tablet'</code>；iPad 以客戶端元件寫 <code>device_auto</code> cookie。真機驗收清單見計畫 Task 9（由 user 操作）。</p>
 
+<h3>13.5　補記 2026-10-07：專案封存持久化</h3>
+<ul>
+  <li><b>專案封存改存資料庫</b>：原本桌機 Projects 的 Archive 只是 <code>useState(new Set())</code>，切分頁或重新整理就消失。現在是專案層級、全團隊共享的屬性：<code>projects.archived_at</code>（nullable timestamp，Migration 0007）；新 server action <code>archiveProject</code>／<code>unarchiveProject</code>（<code>write</code> cap、寫 audit），<code>useTaskManager</code> 樂觀更新、失敗回復。
+    封存是刪除專案的安全替代：可還原、不動任務資料。已封存專案不出現在桌機專案主列表、桌機 Timeline、手機專案清單與手機時程；Overview／My Tasks／資料表不變。viewer 看不到封存／還原按鈕。
+    <b>上線順序：先在正式庫手動執行 0007（<code>ALTER TABLE "projects" ADD COLUMN "archived_at" timestamp;</code>），再部署程式</b>——新程式的 SELECT 會讀 <code>archived_at</code>，欄位沒先加會直接報錯。</li>
+</ul>
+
 </main>
 
 <script type="module">

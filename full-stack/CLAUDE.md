@@ -94,7 +94,7 @@ scripts/
 |----|------|---------|
 | users | 使用者帳號 | id, email, passwordHash, role, name, mustChangePassword |
 | sessions | 登入 session | id, userId→users, token, expiresAt |
-| projects | 專案 | id, name, sortOrder, bannerR2Key, createdBy→users |
+| projects | 專案 | id, name, sortOrder, bannerR2Key, archivedAt（封存，Migration 0007）, createdBy→users |
 | tasks | 任務 | id, projectId→projects, task, status, category, startDate, endDate, duration, owner（= 執行人 ∪ 關注人，見「負責人模型」）, watchers（關注人，Migration 0006）, priority, notes, sortOrder（`reorderTasks` 寫入） |
 | subtasks | 子任務 | id, taskId→tasks, name, owner, done, doneDate, notes, sortOrder |
 | links | 連結 | id, taskId→tasks, url, title, createdBy→users |
@@ -224,6 +224,7 @@ export async function actionName(params) {
 - **Migration 0006**：`tasks.watchers varchar(500)`（僅 `ADD COLUMN`，可為 NULL），2026-10-06 **已手動在正式庫執行，沒有走 `drizzle migrate`**，所以 `__drizzle_migrations` 沒有 0006 的紀錄。
   0006 不是冪等寫法：日後對正式庫跑 `db:migrate` 會撞 `column already exists`——跑之前先補 journal 紀錄，或把該句改成 `ADD COLUMN IF NOT EXISTS`（同 0005 的教訓）
 - **上線順序（含 schema 變更時）**：欄位（migration）→ 資料整理（`node scripts/backfill-task-owners.js` 先 dry-run、看過再 `--apply`，需 `DB_WRITE_CONFIRM=backfill-task-owners@<db-host>`）→ 部署程式。新程式的 SELECT 會讀 `watchers`，欄位沒先加會直接報錯。Vercel Function Region 設為 sin1（與 Neon ap-southeast-1 同區；Vercel 專案設定，不在 repo）
+- **專案封存（2026-10-07）**：封存持久化在 `projects.archived_at`（nullable timestamp，Migration 0007，全團隊共享；`archiveProject`／`unarchiveProject` 兩支 `write` action，`useTaskManager` 樂觀更新）。已封存專案不出現在桌機專案主列表／Timeline、手機專案清單／時程；Overview／My Tasks／資料表不過濾。**0007 必須先手動在正式庫執行（`ALTER TABLE "projects" ADD COLUMN "archived_at" timestamp;`，同 0006 沒走 `drizzle migrate`），再部署程式**——新程式的 SELECT 會讀 `archived_at`，欄位沒先加會直接報錯
 - **新增 server action / API route 必須包 `withCap` / `withRouteCap`**，並登記進 `src/lib/permissionsMatrix.js`——沒登記或漏包，`src/__tests__/authzCoverage.test.js` 會紅（default-deny 護欄）
 - **前端隱藏編輯按鈕只是 UI policy，不是安全邊界**：`getInitialData()` 會把全量任務資料送進任何登入者的瀏覽器（`useTaskManager` 的 `allT` state），DataTab 的 Export CSV 是純前端從 `allT` 產生——藏按鈕擋不住 DevTools。真正的牆是後端的 `withCap` / `withRouteCap`；前端隱藏只是避免使用者對著點不動的按鈕困惑
 - **Migration baseline（技術債，已解決）**：曾用一支臨時 idempotent 腳本把 0000–0004 標記為「已套用」到 `__drizzle_migrations`（讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入，已存在則跳過），已對 prod 執行並驗證、**腳本已刪除，不在 repo 中**；之後 `db:migrate` 只會套 0005+
