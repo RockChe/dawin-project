@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isMine, daysLeft, groupMyTasks, myTaskKpis } from '@/lib/myTasks';
+import { isMine, daysLeft, groupMyTasks, myTaskKpis, myRole } from '@/lib/myTasks';
 
 const T = '2026-10-06';
 const mk = (id, owner, end, status = '進行中') => ({ id, owner, end, status });
@@ -60,5 +60,24 @@ describe('myTaskKpis', () => {
       mk('g', 'Bob', '2026-10-05'),
     ];
     expect(myTaskKpis(tasks, 'Amy', T)).toEqual({ overdue: 1, soon: 1, inProgress: 2, doneThisMonth: 2 });
+  });
+});
+
+describe('關注人：isMine 看聯集（owner 已含關注人），myRole 標身分', () => {
+  const t = { owner: 'Felien,幸真', watchers: '幸真', subOwner: 'Felien' };
+  it('關注人也算 isMine', () => {
+    expect(isMine(t, '幸真')).toBe(true);
+    expect(isMine(t, 'Felien')).toBe(true);
+  });
+  it('myRole：關注人且不是子任務執行人 → watcher；子任務執行人 → executor', () => {
+    expect(myRole(t, '幸真')).toBe('watcher');
+    expect(myRole(t, 'Felien')).toBe('executor');
+  });
+  it('單純任務 owner（沒有 subOwner / watchers）→ null', () => {
+    expect(myRole({ owner: 'Amy' }, 'Amy')).toBeNull();
+    expect(myRole({ owner: 'Amy', watchers: null, subOwner: '' }, 'Amy')).toBeNull();
+  });
+  it('既是關注人又是子任務執行人 → executor', () => {
+    expect(myRole({ owner: 'Amy', watchers: 'Amy', subOwner: 'Amy' }, 'Amy')).toBe('executor');
   });
 });

@@ -7,7 +7,7 @@ import { deleteFromR2 } from '@/lib/r2';
 import { isValidUUID, toBusinessDateString } from '@/lib/utils';
 import { withCap } from '@/lib/withCap';
 import { logAudit } from '@/lib/audit';
-import { ownerTokens } from '@/lib/taskOwner';
+import { ownerTokens, deriveTaskOwner } from '@/lib/taskOwner';
 
 // ── tasks.owner 由子任務 owner 自動帶出 ──
 // 規則與 lib/taskOwner.js 的 deriveTaskOwner 相同：依 sort_order → created_at 取子任務 owner 的 token，
@@ -24,8 +24,43 @@ const DERIVED_OWNER_SQL = `(SELECT string_agg(d.tok, ',' ORDER BY d.pos) FROM (
   ) x WHERE x.tok <> '' AND x.tok <> '—' GROUP BY x.tok
 ) d)`.replace(/\s+/g, ' ');
 
-// 手動輸入的 owner 只在「沒有任何子任務 owner」時才生效；有的話以推得值為準（不報錯、直接忽略）。
-const ownerUnlessDerived = (manual) => sql`COALESCE(${sql.raw(DERIVED_OWNER_SQL)}, ${manual})`;
+// ── 關注人（tasks.watchers）：tasks.owner = 執行人 ∪ 關注人（執行人在前、同名留第一次）。規則見 lib/taskOwner.js 檔頭 ──
+// 兩串逗號清單 a、b 的聯集（a 先 b 後、去空白、丟掉 ''/'—'）；全空 → NULL。a / b 是 sql 片段（欄位、子查詢或參數）。
+const unionSql = (a, b) => sql`(SELECT string_agg(y.tok, ',' ORDER BY y.pos) FROM (
+  SELECT x.tok, MIN(x.pos) AS pos FROM (
+    SELECT btrim(u.piece) AS tok, u.ord AS pos FROM unnest(string_to_array(${a}, ',')) WITH ORDINALITY AS u(piece, ord)
+    UNION ALL
+    SELECT btrim(v.piece), 1000000 + v.ord FROM unnest(string_to_array(${b}, ',')) WITH ORDINALITY AS v(piece, ord)
+  ) x WHERE x.tok <> '' AND x.tok <> '—' GROUP BY x.tok
+) y)`;
+
+const DERIVED = sql.raw(DERIVED_OWNER_SQL);
+const WATCHERS_COL = sql.raw('tasks.watchers');
+// 沒有子任務 owner 時，手動執行人 = 現有 owner 扣掉現有關注人（沒有第三個欄位可存，見 lib/taskOwner.js 邊界說明）
+const MANUAL_EXEC = sql.raw(`(SELECT string_agg(btrim(m.piece), ',' ORDER BY m.ord) FROM unnest(string_to_array(tasks.owner, ',')) WITH ORDINALITY AS m(piece, ord)
+  WHERE btrim(m.piece) NOT IN ('', '—') AND NOT EXISTS (SELECT 1 FROM unnest(string_to_array(tasks.watchers, ',')) AS w(piece) WHERE btrim(w.piece) = btrim(m.piece)))`.replace(/\s+/g, ' '));
+
+// 寫入一個手動 owner：有子任務 owner 時以推得值為準（傳入值不報錯、直接忽略），再接上關注人。
+// 全空（清空 owner 且沒有關注人）→ 退回傳入值，維持 "—" / null 的舊行為。watchers 預設沿用資料庫現值。
+const ownerUnlessDerived = (manual, watchers = WATCHERS_COL) =>
+  sql`COALESCE(${unionSql(sql`COALESCE(${DERIVED}, ${manual})`, watchers)}, ${manual})`;
+
+// 只改關注人（沒帶 owner）：執行人 = 推得值，否則由現有 owner 復原；再接上新關注人。全空 → NULL。
+const ownerFromWatchers = (watchers) => unionSql(sql`COALESCE(${DERIVED}, ${MANUAL_EXEC})`, watchers);
+
+// 關注人名單：正規化成 "A,B"（空 → null）並驗證都是已知使用者。回傳 { value } 或 { error }。
+const normalizeWatchers = async (raw) => {
+  const names = ownerTokens(raw);
+  if (names.length) {
+    const found = await db.select({ name: users.name }).from(users).where(inArray(users.name, names));
+    const foundNames = new Set(found.map(u => u.name));
+    const missing = names.filter(n => !foundNames.has(n));
+    if (missing.length > 0) return { error: `關注人 "${missing.join(', ')}" 不存在` };
+  }
+  const value = names.length ? names.join(',') : null;
+  if (value && value.length > 500) return { error: '關注人名單過長（上限 500 字元）' };
+  return { value };
+};
 
 // 這些任務裡「有子任務 owner」的 id 集合。傳入的 owner 對它們會被 SQL 忽略，呼叫端據此跳過驗證。
 const tasksWithDerivedOwner = async (ids) => {
@@ -34,8 +69,9 @@ const tasksWithDerivedOwner = async (ids) => {
 };
 
 // 重算單一任務的 owner；taskIdSql 是 SQL 片段（參數或子查詢）。回傳 db.batch 可收的 statement。
+// 有子任務 owner → 推得值 ∪ 關注人；沒有 → 維持原 owner（它已含關注人）。
 const syncTaskOwner = (taskIdSql) =>
-  db.execute(sql`UPDATE tasks SET owner = COALESCE(${sql.raw(DERIVED_OWNER_SQL)}, tasks.owner) WHERE tasks.id = ${taskIdSql}`);
+  db.execute(sql`UPDATE tasks SET owner = COALESCE(CASE WHEN ${DERIVED} IS NULL THEN NULL ELSE ${unionSql(DERIVED, WATCHERS_COL)} END, tasks.owner) WHERE tasks.id = ${taskIdSql}`);
 
 // ── Tasks ──
 
@@ -70,6 +106,10 @@ export async function createTask(data) {
         }
       }
 
+      // 關注人：驗證後寫入；owner 相容欄位 = 執行人 ∪ 關注人（新任務還沒有子任務，直接在 JS 合併）
+      const w = await normalizeWatchers(data.watchers);
+      if (w.error) return { error: w.error };
+
       const result = await db.insert(tasks).values({
         projectId: data.projectId,
         task: data.task.trim(),
@@ -78,7 +118,8 @@ export async function createTask(data) {
         startDate: data.startDate || null,
         endDate: data.endDate || null,
         duration: data.duration || null,
-        owner: data.owner || null,
+        owner: deriveTaskOwner([], data.owner || null, w.value) || null,
+        watchers: w.value,
         priority: data.priority || '中',
         notes: data.notes || null,
         sortOrder: data.sortOrder || 0,
@@ -99,7 +140,7 @@ export async function updateTask(id, data) {
     if (!isValidUUID(id)) return { error: 'Invalid task ID' };
 
     // Whitelist allowed fields to prevent tampering with createdBy, projectId, etc.
-    const ALLOWED = ['task', 'status', 'category', 'startDate', 'endDate', 'duration', 'owner', 'priority', 'notes', 'sortOrder'];
+    const ALLOWED = ['task', 'status', 'category', 'startDate', 'endDate', 'duration', 'owner', 'watchers', 'priority', 'notes', 'sortOrder'];
     const updateData = { updatedAt: new Date() };
     for (const key of ALLOWED) {
       if (key in data) updateData[key] = data[key];
@@ -117,8 +158,18 @@ export async function updateTask(id, data) {
       }
     }
 
-    // 有子任務 owner 的任務以推得值為準：傳進來的 owner 交給 SQL 忽略（不報錯）
-    if ('owner' in updateData) updateData.owner = ownerUnlessDerived(updateData.owner ?? null);
+    // 關注人（獨立欄位，不受子任務影響 → 一律驗證）。正規化後與 owner 重算同一個 UPDATE 寫入。
+    let watchersSql;
+    if ('watchers' in updateData) {
+      const w = await normalizeWatchers(updateData.watchers);
+      if (w.error) return { error: w.error };
+      updateData.watchers = w.value;
+      watchersSql = sql`${w.value}`;
+    }
+
+    // 有子任務 owner 的任務以推得值為準：傳進來的 owner 交給 SQL 忽略（不報錯）；owner 一律再接上關注人
+    if ('owner' in updateData) updateData.owner = ownerUnlessDerived(updateData.owner ?? null, watchersSql);
+    else if (watchersSql) updateData.owner = ownerFromWatchers(watchersSql);
 
     try {
       await db.update(tasks).set(updateData).where(eq(tasks.id, id));
@@ -596,7 +647,7 @@ export async function getDashboardData() {
         id: tasks.id, projectId: tasks.projectId, task: tasks.task,
         status: tasks.status, category: tasks.category,
         startDate: tasks.startDate, endDate: tasks.endDate,
-        duration: tasks.duration, owner: tasks.owner,
+        duration: tasks.duration, owner: tasks.owner, watchers: tasks.watchers,
         priority: tasks.priority, notes: tasks.notes,
         sortOrder: tasks.sortOrder, source: tasks.source,
         createdBy: tasks.createdBy, createdAt: tasks.createdAt,

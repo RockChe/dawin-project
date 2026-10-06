@@ -22,7 +22,7 @@ export async function getInitialData() {
         id: tasks.id, projectId: tasks.projectId, task: tasks.task,
         status: tasks.status, category: tasks.category,
         startDate: tasks.startDate, endDate: tasks.endDate,
-        duration: tasks.duration, owner: tasks.owner,
+        duration: tasks.duration, owner: tasks.owner, watchers: tasks.watchers,
         priority: tasks.priority, notes: tasks.notes,
         sortOrder: tasks.sortOrder, source: tasks.source,
         createdBy: tasks.createdBy, createdAt: tasks.createdAt,
@@ -48,7 +48,9 @@ export async function getInitialData() {
         .orderBy(asc(projects.sortOrder), asc(projects.createdAt)),
       db.select().from(config).where(inArray(config.key, ['categories'])),
       db.select({ name: users.name }).from(users),
-      db.select().from(userSettings).where(eq(userSettings.userId, session.userId)),
+      // 個人設定是加分項：查詢失敗（例如表還沒 migrate）降級成空設定，不拖垮整個首次載入
+      Promise.resolve(db.select().from(userSettings).where(eq(userSettings.userId, session.userId)))
+        .catch(err => { console.error('[getInitialData] user_settings query failed, using empty settings:', err); return []; }),
     ]);
 
     const userNames = allUsers.map(u => u.name);

@@ -36,7 +36,7 @@ function modalProps(task, allS, over = {}) {
 describe('TaskModal 負責人欄', () => {
   it('子任務有 owner → 沒有 TagInput，顯示推得值（不是過期的 task.owner）＋提示', () => {
     wrap('admin', <TaskModal {...modalProps(LOCKED, SUBS)} />);
-    expect(screen.queryByPlaceholderText('新增負責人...')).toBeNull();
+    expect(screen.queryByPlaceholderText('新增執行人...')).toBeNull();
     expect(screen.getAllByText('Amy').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Bob').length).toBeGreaterThan(0);
     expect(screen.queryByText('Stale')).toBeNull();
@@ -45,13 +45,13 @@ describe('TaskModal 負責人欄', () => {
 
   it('子任務沒有 owner → 照舊可編輯（有 TagInput、無提示）', () => {
     wrap('admin', <TaskModal {...modalProps({ ...FREE, owner: null }, SUBS)} />);
-    expect(screen.getByPlaceholderText('新增負責人...')).toBeTruthy();
+    expect(screen.getByPlaceholderText('新增執行人...')).toBeTruthy();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 
   it('沒有任何子任務 → 可編輯', () => {
     wrap('admin', <TaskModal {...modalProps({ ...FREE, owner: null }, [])} />);
-    expect(screen.getByPlaceholderText('新增負責人...')).toBeTruthy();
+    expect(screen.getByPlaceholderText('新增執行人...')).toBeTruthy();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 

@@ -63,6 +63,7 @@ export const tasks = pgTable('tasks', {
   endDate: date('end_date'),
   duration: integer('duration'),
   owner: varchar('owner', { length: 500 }),
+  watchers: varchar('watchers', { length: 500 }),
   priority: priorityEnum('priority').default('中').notNull(),
   notes: text('notes'),
   sortOrder: integer('sort_order').default(0).notNull(),

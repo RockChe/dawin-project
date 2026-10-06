@@ -18,7 +18,7 @@ function sql() { return { text: '', values: [] }; }
 sql.raw = () => ({});
 vi.mock('drizzle-orm', () => ({ eq, and, isNotNull, sql }));
 
-const T = (name) => ({ __t: name, id: 'id', name: 'name', owner: 'owner', key: 'key', value: 'value', updatedAt: 'updatedAt' });
+const T = (name) => ({ __t: name, id: 'id', name: 'name', owner: 'owner', watchers: 'watchers', key: 'key', value: 'value', updatedAt: 'updatedAt' });
 const usersT = T('users'), tasksT = T('tasks'), subtasksT = T('subtasks'), configT = T('config');
 vi.mock('@/server/db/schema', () => ({ users: usersT, tasks: tasksT, subtasks: subtasksT, configTable: configT }));
 
@@ -64,11 +64,11 @@ beforeEach(() => {
   tables = {
     users: [{ id: UID, name: 'Amy', role: 'admin' }],
     tasks: [
-      { id: 't1', owner: 'Amy' },
-      { id: 't2', owner: 'Bob, Amy, Cat' },
-      { id: 't3', owner: 'Amy Lin' },
-      { id: 't4', owner: null },
-      { id: 't5', owner: 'Bob' },
+      { id: 't1', owner: 'Amy', watchers: null },
+      { id: 't2', owner: 'Bob, Amy, Cat', watchers: 'Amy' },
+      { id: 't3', owner: 'Amy Lin', watchers: 'Amy Lin' },
+      { id: 't4', owner: null, watchers: null },
+      { id: 't5', owner: 'Bob', watchers: 'Bob,Amy' },
     ],
     subtasks: [
       { id: 's1', owner: 'Amy' },
@@ -140,5 +140,32 @@ describe('updateUser 改名同步', () => {
   it('名字沒變 → 不動 subtasks', async () => {
     await updateUser(UID, { name: 'Amy' });
     expect(tables.subtasks[0].owner).toBe('Amy');
+  });
+
+  it('tasks.watchers 也同步（整個 token 才換、保留順序與分隔、相似前綴不誤中），且與 owner 在同一個 batch', async () => {
+    await updateUser(UID, { name: 'Amanda' });
+    expect(batchCalls).toHaveLength(1);
+    expect(tables.tasks.map((t) => t.watchers)).toEqual([null, 'Amanda', 'Amy Lin', null, 'Bob,Amanda']);
+    expect(tables.tasks.map((t) => t.owner)).toEqual(['Amanda', 'Bob, Amanda, Cat', 'Amy Lin', null, 'Bob']);
+  });
+
+  it('tasks.watchers 守衛：讀寫之間被別人改過的列不被蓋掉', async () => {
+    mockDb.batch.mockImplementationOnce(async (list) => {
+      tables.tasks[1].watchers = 'Amy,Zed'; // 讀完之後別人改了
+      batchCalls.push(list.length);
+      list.forEach((b) => b.__apply());
+      return [];
+    });
+    await updateUser(UID, { name: 'Amanda' });
+    expect(tables.tasks[1].watchers).toBe('Amy,Zed');
+    expect(tables.tasks[4].watchers).toBe('Bob,Amanda');
+  });
+
+  it('改名後 tasks.watchers 會超過 varchar(500) → 回錯誤、整個 batch 不執行', async () => {
+    tables.tasks[1].watchers = 'Amy,' + 'x'.repeat(495);
+    const res = await updateUser(UID, { name: 'A'.repeat(20) });
+    expect(res.error).toBeTruthy();
+    expect(mockDb.batch).not.toHaveBeenCalled();
+    expect(tables.users[0].name).toBe('Amy');
   });
 });

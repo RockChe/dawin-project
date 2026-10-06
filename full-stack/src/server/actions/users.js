@@ -142,7 +142,7 @@ export async function updateUser(userId, data) {
       const [prev] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
       if (!prev) return { error: '使用者不存在' };
 
-      // 改名連動：tasks.owner 與 config 'owners' 存的是名字字串（不是 FK），不同步就會變孤兒。
+      // 改名連動：tasks.owner／tasks.watchers／subtasks.owner 與 config 'owners' 存的是名字字串（不是 FK），不同步就會變孤兒。
       // neon-http 沒有互動式 transaction → 全部 UPDATE 收進同一個 db.batch（單次往返、全成功或全回滾）。
       // 每筆 UPDATE 都帶「值仍等於剛讀到的舊值」守衛，避免蓋掉讀寫之間別人剛改的內容。
       const stmts = [db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId))];
@@ -150,13 +150,14 @@ export async function updateUser(userId, data) {
         // ponytail: 撈全部有 owner 的任務在 JS 比對（資料量為單一團隊規模）；變大再改 SQL 層過濾。
         // subtasks.owner（varchar 255）同樣要換，否則下次編輯子任務會用舊名重新推得父任務 owner。
         // 新名比舊名長時可能超過欄位上限 → 先檢查，超過就整個改名拒絕（不寫半套）。
-        for (const [table, limit] of [[tasks, 500], [subtasks, 255]]) {
-          const owned = await db.select({ id: table.id, owner: table.owner }).from(table).where(isNotNull(table.owner));
+        // tasks.watchers（關注人）格式同 owner，一起同步。
+        for (const [table, col, limit] of [[tasks, 'owner', 500], [tasks, 'watchers', 500], [subtasks, 'owner', 255]]) {
+          const owned = await db.select({ id: table.id, [col]: table[col] }).from(table).where(isNotNull(table[col]));
           for (const t of owned) {
-            const next = replaceOwnerToken(t.owner, prev.name, name);
-            if (next === t.owner) continue;
-            if (next.length > limit) return { error: `改名後負責人欄位超過 ${limit} 字元上限，請先縮短該筆資料` };
-            stmts.push(db.update(table).set({ owner: next }).where(and(eq(table.id, t.id), eq(table.owner, t.owner))));
+            const next = replaceOwnerToken(t[col], prev.name, name);
+            if (next === t[col]) continue;
+            if (next.length > limit) return { error: `改名後${col === 'watchers' ? '關注人' : '負責人'}欄位超過 ${limit} 字元上限，請先縮短該筆資料` };
+            stmts.push(db.update(table).set({ [col]: next }).where(and(eq(table.id, t.id), eq(table[col], t[col]))));
           }
         }
         const [cfg] = await db.select({ value: config.value }).from(config).where(eq(config.key, 'owners')).limit(1);

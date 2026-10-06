@@ -35,7 +35,7 @@ export const TASK_COL_TO_DB_FIELD = {
 
 /** Mirrors the ALLOWED whitelist in server/actions/tasks.js updateTask. */
 export const SERVER_WRITABLE_TASK_FIELDS = [
-  'task', 'status', 'category', 'startDate', 'endDate', 'duration', 'owner', 'priority', 'notes', 'sortOrder',
+  'task', 'status', 'category', 'startDate', 'endDate', 'duration', 'owner', 'watchers', 'priority', 'notes', 'sortOrder',
 ];
 
 /** Mirrors the ALLOWED whitelist in server/actions/tasks.js updateSubtask. */

@@ -43,6 +43,13 @@
       "when": 1788881285868,
       "tag": "0005_nostalgic_lord_hawal",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791279749070,
+      "tag": "0006_quick_wither",
+      "breakpoints": true
     }
   ]
 }

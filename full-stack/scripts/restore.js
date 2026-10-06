@@ -155,6 +155,7 @@ async function main() {
             endDate: t.endDate,
             duration: t.duration,
             owner: t.owner,
+            watchers: t.watchers ?? null, // 舊備份沒有此欄位 → null
             priority: t.priority,
             notes: t.notes,
             sortOrder: t.sortOrder ?? 0,

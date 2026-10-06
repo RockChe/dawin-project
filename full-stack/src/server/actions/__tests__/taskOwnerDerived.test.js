@@ -6,7 +6,7 @@
  * 測試據此證明沒有「兩次獨立寫入」的縫隙。
  * 這裡只能鎖住「發出什麼 statement」，SQL 本身的語意另以真 Postgres 驗過（見回報）。
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 let currentSession = null;
 vi.mock('@/lib/auth', () => ({
@@ -30,7 +30,7 @@ vi.mock('drizzle-orm', () => ({
   inArray: (f, v) => ({ f, v }), sql,
 }));
 vi.mock('@/server/db/schema', () => ({
-  tasks: { id: 'tasks.id', owner: 'tasks.owner', projectId: 'tasks.projectId' },
+  tasks: { id: 'tasks.id', owner: 'tasks.owner', watchers: 'tasks.watchers', projectId: 'tasks.projectId' },
   subtasks: { id: 'subtasks.id', taskId: 'subtasks.taskId', owner: 'subtasks.owner' },
   links: {}, files: {}, projects: { id: 'projects.id', name: 'projects.name' }, users: { name: 'users.name' },
 }));
@@ -80,7 +80,7 @@ describe('推得 owner 的 SQL 規則', () => {
     expect(sync.text).toMatch(/MIN\(x\.pos\)/);                 // 同名留第一次
     expect(sync.text).toMatch(/x\.tok <> ''/);
     expect(sync.text).toContain("x.tok <> '—'");
-    expect(sync.text).toMatch(/COALESCE\(\(SELECT string_agg[\s\S]*\), tasks\.owner\)/); // 沒推得值 → 保留
+    expect(sync.text).toMatch(/CASE WHEN \(SELECT string_agg[\s\S]*IS NULL THEN NULL ELSE[\s\S]*tasks\.watchers[\s\S]*END, tasks\.owner\)/); // 沒推得值 → 保留；有 → 推得 ∪ 關注人
     expect(sync.text).toMatch(/s\.task_id = tasks\.id/);        // 相關子查詢綁在被更新的任務
   });
 });
@@ -169,9 +169,9 @@ describe('updateTask：推得值為準，傳進來的 owner 不報錯、交給 S
     expect(res).toEqual({ success: true });
     const upd = direct.find(d => d.__op === 'update');
     expect(upd.__set.status).toBe('進行中');
-    expect(upd.__set.owner.text).toMatch(/^COALESCE\(\(SELECT string_agg/);
-    expect(upd.__set.owner.text).toMatch(/\), \?\)$/);
-    expect(upd.__set.owner.values).toEqual(['Amy']); // 只有一個參數：傳入的 owner
+    expect(upd.__set.owner.text).toMatch(/string_agg/);
+    expect(upd.__set.owner.text).toMatch(/tasks\.watchers/); // 關注人沿用資料庫現值
+    expect(upd.__set.owner.values).toEqual(['Amy', 'Amy']); // 傳入的 owner（推得值缺席時的手動執行人；全空時的 fallback）
   });
 
   it('沒帶 owner → 不碰 owner 欄位', async () => {
@@ -183,7 +183,7 @@ describe('updateTask：推得值為準，傳進來的 owner 不報錯、交給 S
   it('owner 設成 null（清空）→ 仍走 COALESCE，無子任務 owner 時變 null', async () => {
     await T.updateTask(TASK, { owner: null });
     const upd = direct.find(d => d.__op === 'update');
-    expect(upd.__set.owner.values).toEqual([null]);
+    expect(upd.__set.owner.values).toEqual([null, null]);
   });
 });
 
@@ -226,8 +226,8 @@ describe('updateManyTasks：有子任務 owner 的任務在 SQL 層被略過', (
     const res = await T.updateManyTasks([TASK], { owner: 'Amy' });
     expect(res).toEqual({ success: true, updated: 1 });
     const upd = direct.find(d => d.__op === 'update');
-    expect(upd.__set.owner.text).toMatch(/^COALESCE\(\(SELECT string_agg/);
-    expect(upd.__set.owner.values).toEqual(['Amy']);
+    expect(upd.__set.owner.text).toMatch(/string_agg/);
+    expect(upd.__set.owner.values).toEqual(['Amy', 'Amy']);
   });
 
   it('改 status 時不動 owner', async () => {
@@ -242,8 +242,8 @@ describe('upsertTasks（CSV 匯入）：覆寫既有任務時不蓋掉推得的 
     const res = await T.upsertTasks([{ project: 'P', task: 'T', owner: 'Zed', status: '進行中' }]);
     expect(res).toMatchObject({ success: true, updated: 1, failed: 0 });
     const upd = direct.find(d => d.__op === 'update');
-    expect(upd.__set.owner.text).toMatch(/^COALESCE\(\(SELECT string_agg/);
-    expect(upd.__set.owner.values).toEqual(['Zed']);
+    expect(upd.__set.owner.text).toMatch(/string_agg/);
+    expect(upd.__set.owner.values).toEqual(['Zed', 'Zed']);
   });
 
   it('新增任務（沒有子任務）→ owner 照 CSV 寫入', async () => {
@@ -255,5 +255,110 @@ describe('upsertTasks（CSV 匯入）：覆寫既有任務時不蓋掉推得的 
     expect(res).toMatchObject({ success: true, inserted: 1 });
     const ins = direct.find(d => d.__op === 'insert');
     expect(ins.__v.owner).toBe('Zed');
+  });
+});
+
+describe('關注人 watchers（owner = 執行人 ∪ 關注人，單一語句寫入）', () => {
+  it('updateTask({watchers})：驗證名字、正規化後與重算的 owner 在同一個 UPDATE', async () => {
+    selectRows = [{ name: '幸真' }];
+    const res = await T.updateTask(TASK, { watchers: ' 幸真 , ,—' });
+    expect(res).toEqual({ success: true });
+    const upds = direct.filter(d => d.__op === 'update');
+    expect(upds).toHaveLength(1); // 沒有第二次獨立寫入
+    expect(upds[0].__set.watchers).toBe('幸真');
+    const o = upds[0].__set.owner;
+    expect(o.text).toMatch(/string_agg/);
+    expect(o.text).toMatch(/NOT EXISTS/);       // 沒帶 owner → 以「owner 扣掉舊關注人」復原手動執行人
+    expect(o.text).toMatch(/tasks\.watchers/);  // 舊關注人
+    expect(o.values).toContain('幸真');          // 新關注人
+  });
+
+  it('updateTask({watchers:""})：清空 → 寫 null、owner 同步重算', async () => {
+    await T.updateTask(TASK, { watchers: '' });
+    const upd = direct.find(d => d.__op === 'update');
+    expect(upd.__set.watchers).toBeNull();
+    expect(upd.__set.owner.values).toEqual([null]);
+  });
+
+  it('updateTask({watchers})：未知使用者 → 回錯誤、不寫入', async () => {
+    selectRows = [];
+    const res = await T.updateTask(TASK, { watchers: 'Ghost' });
+    expect(res.error).toMatch(/Ghost/);
+    expect(direct.some(d => d.__op === 'update')).toBe(false);
+  });
+
+  it('updateTask({watchers})：有子任務 owner 時照樣驗證關注人（關注人不會被忽略）', async () => {
+    selectRows = [{ taskId: TASK, owner: 'Amy' }]; // users 查詢也回這份 → 查無 Ghost
+    const res = await T.updateTask(TASK, { watchers: 'Ghost' });
+    expect(res.error).toMatch(/Ghost/);
+  });
+
+  it('updateTask({owner}) 沒帶 watchers → 重算時沿用資料庫的 tasks.watchers，不會把關注人蓋掉', async () => {
+    selectRows = [{ name: 'Amy' }];
+    await T.updateTask(TASK, { owner: 'Amy' });
+    const upd = direct.find(d => d.__op === 'update');
+    expect('watchers' in upd.__set).toBe(false);
+    expect(upd.__set.owner.text).toMatch(/tasks\.watchers/);
+  });
+
+  it('updateTask({owner, watchers}) 同時帶 → 用新的關注人值重算', async () => {
+    selectRows = [{ name: 'Amy' }];
+    await T.updateTask(TASK, { owner: 'Amy', watchers: 'Amy' });
+    const upd = direct.find(d => d.__op === 'update');
+    expect(upd.__set.watchers).toBe('Amy');
+    expect(upd.__set.owner.values).toEqual(['Amy', 'Amy', 'Amy']); // 手動執行人 ×2（缺席值 / fallback）+ 新關注人
+  });
+
+  describe('createTask', () => {
+    // 這個 fake 的 insert().returning() 不是 thenable（給 batch 用）→ 這裡換成回傳插入值的版本
+    let origInsert;
+    beforeEach(() => {
+      origInsert = db.insert;
+      db.insert = () => ({ values: (v) => ({ returning: () => Promise.resolve([{ id: 'new-task', ...v }]) }) });
+    });
+    afterEach(() => { db.insert = origInsert; });
+
+    it('關注人驗證後寫入，owner = 執行人 ∪ 關注人', async () => {
+      selectRows = [{ id: PROJ, name: 'Amy' }, { id: PROJ, name: '幸真' }];
+      const res = await T.createTask({ projectId: PROJ, task: 'T', owner: 'Amy', watchers: '幸真' });
+      expect(res.success).toBe(true);
+      expect(res.task.watchers).toBe('幸真');
+      expect(res.task.owner).toBe('Amy,幸真');
+    });
+
+    it('只有關注人、owner 是 "—" → owner = 關注人', async () => {
+      selectRows = [{ id: PROJ, name: '幸真' }];
+      const res = await T.createTask({ projectId: PROJ, task: 'T', watchers: '幸真' });
+      expect(res.task.owner).toBe('幸真');
+    });
+
+    it('沒有關注人 → owner 照舊、watchers null', async () => {
+      selectRows = [{ id: PROJ, name: 'Amy' }];
+      const res = await T.createTask({ projectId: PROJ, task: 'T', owner: 'Amy' });
+      expect(res.task.owner).toBe('Amy');
+      expect(res.task.watchers).toBeNull();
+    });
+
+    it('關注人不存在 → 錯誤', async () => {
+      selectRows = [{ id: PROJ }];
+      const res = await T.createTask({ projectId: PROJ, task: 'T', watchers: 'Ghost' });
+      expect(res.error).toMatch(/Ghost/);
+    });
+  });
+
+  it('updateManyTasks 不碰 watchers（即使傳入），owner 重算沿用 tasks.watchers', async () => {
+    selectRows = [{ name: 'Amy' }];
+    await T.updateManyTasks([TASK], { owner: 'Amy', watchers: 'X' });
+    const upd = direct.find(d => d.__op === 'update');
+    expect('watchers' in upd.__set).toBe(false);
+    expect(upd.__set.owner.text).toMatch(/tasks\.watchers/);
+  });
+
+  it('CSV 匯入覆寫既有任務：不帶 watchers 欄位、owner 沿用 tasks.watchers', async () => {
+    selectRows = [{ id: TASK, name: 'P', sortOrder: 1 }];
+    await T.upsertTasks([{ project: 'P', task: 'T', owner: 'Zed' }]);
+    const upd = direct.find(d => d.__op === 'update');
+    expect('watchers' in upd.__set).toBe(false);
+    expect(upd.__set.owner.text).toMatch(/tasks\.watchers/);
   });
 });

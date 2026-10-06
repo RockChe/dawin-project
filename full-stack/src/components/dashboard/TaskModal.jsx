@@ -4,7 +4,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useCan } from "@/components/PermissionProvider";
 import { pD, fD, toISO, extractDomain, getFileCategory, formatFileSize } from "@/lib/utils";
 import { planTaskUpdates } from "@/lib/taskUpdates";
-import { deriveTaskOwner, hasSubOwners } from "@/lib/taskOwner";
+import { execTokens, hasSubOwners, subOwnerTokens, ownerTokens } from "@/lib/taskOwner";
 import { STATUSES } from "@/lib/constants";
 import useForbiddenHandler from "@/hooks/useForbiddenHandler";
 import CalendarPicker from "./CalendarPicker";
@@ -18,9 +18,13 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 
 export default function TaskModal({ task, projectId, projectName, onClose, addTask, updateTask, allS, addSub, deleteSub, toggleSub, updateSub, configCats, configOwners, reorderSubs, allL, allF, addLink, addFile, deleteLink, deleteFile, showToast }) {
   const isNew = task === "new";
+  // task.owner = 執行人 ∪ 關注人；這個表單的 owner 欄只放「執行人」（有關注人時以 owner 扣掉關注人復原），
+  // 也拿它當儲存時的 diff 基準，才不會把「顯示格式不同」誤判成改了 owner。
+  const [initOwner] = useState(() => isNew ? "—"
+    : (ownerTokens(task.watchers).length ? (execTokens(task, allS.filter(s => s.taskId === task.id)).join(",") || "—") : (task.owner || "—")));
   const [form, setForm] = useState(() => isNew
-    ? { task: "", start: "", end: "", category: "活動", priority: "中", owner: "—", status: "待辦", notes: "" }
-    : { task: task.task || "", start: task.startDate || task.start || "", end: task.endDate || task.end || "", category: task.category || "活動", priority: task.priority || "中", owner: task.owner || "—", status: task.status || "待辦", notes: task.notes || "" }
+    ? { task: "", start: "", end: "", category: "活動", priority: "中", owner: "—", watchers: "", status: "待辦", notes: "" }
+    : { task: task.task || "", start: task.startDate || task.start || "", end: task.endDate || task.end || "", category: task.category || "活動", priority: task.priority || "中", owner: initOwner, watchers: task.watchers || "", status: task.status || "待辦", notes: task.notes || "" }
   );
   const [subDraft, setSubDraft] = useState({ name: "", owner: "" });
   const [showSubInput, setShowSubInput] = useState(false);
@@ -33,7 +37,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
   const xhrRef = useRef(null);
   const mountedRef = useRef(true);
   const tSubs = isNew ? [] : allS.filter(s => s.taskId === task.id).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  // 任務負責人由子任務自動帶出：任一子任務有 owner 時，這格唯讀並顯示推得值（隨子任務即時變動）
+  // 執行人由子任務自動帶出：任一子任務有 owner 時，這格唯讀並顯示推得值（隨子任務即時變動）；關注人不受影響
   const ownerLocked = hasSubOwners(tSubs);
   const tLinks = isNew ? [] : (allL || []).filter(l => l.taskId === task.id);
   const tFiles = isNew ? [] : (allF || []).filter(f => f.taskId === task.id);
@@ -63,6 +67,7 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           endDate: form.end ? toISO(form.end) : null,
           duration: dur,
           owner: form.owner,
+          watchers: form.watchers,
           category: form.category,
           priority: form.priority,
           notes: form.notes,
@@ -73,8 +78,11 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
           return;
         }
       } else {
-        for (const { field, value } of planTaskUpdates(task, form)) {
+        for (const { field, value } of planTaskUpdates({ ...task, owner: initOwner }, form)) {
           await updateTask(task.id, field, value);
+        }
+        if (ownerTokens(form.watchers).join(",") !== ownerTokens(task.watchers).join(",")) {
+          await updateTask(task.id, "watchers", form.watchers);
         }
       }
       onClose();
@@ -159,8 +167,12 @@ export default function TaskModal({ task, projectId, projectName, onClose, addTa
             <div><div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>優先度</div>{canWrite ? <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} style={{ ...iS2, cursor: "pointer" }}><option>高</option><option>中</option><option>低</option></select> : <div style={{ fontSize: 14, color: X.text }}>{form.priority || "—"}</div>}</div>
           </div>
           <div>
-            <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>負責人</div>
-            {canWrite && !ownerLocked ? <TagInput value={form.owner} onChange={v => setForm(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="新增負責人..." /> : <OwnerTags value={ownerLocked ? deriveTaskOwner(tSubs, form.owner) : form.owner} configOwners={configOwners} />}
+            <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>關注人<span style={{ marginLeft: 6 }}>（掛名關注，不一定做子任務）</span></div>
+            {canWrite ? <TagInput value={form.watchers} onChange={v => setForm(p => ({ ...p, watchers: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="新增關注人..." /> : <OwnerTags value={form.watchers} configOwners={configOwners} />}
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: X.textDim, marginBottom: 4 }}>執行人</div>
+            {canWrite && !ownerLocked ? <TagInput value={form.owner} onChange={v => setForm(p => ({ ...p, owner: v }))} suggestions={configOwners} configOwners={configOwners} placeholder="新增執行人..." /> : <OwnerTags value={ownerLocked ? subOwnerTokens(tSubs).join(",") : form.owner} configOwners={configOwners} />}
             {ownerLocked && <div style={{ fontSize: 11, color: X.textDim, marginTop: 4 }}>由子任務自動帶出</div>}
           </div>
           {!isNew && <div>

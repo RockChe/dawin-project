@@ -6,6 +6,7 @@ import { useCan } from "@/components/PermissionProvider";
 import useForbiddenHandler from "@/hooks/useForbiddenHandler";
 import { pD, fD } from "@/lib/utils";
 import { STATUSES } from "@/lib/constants";
+import { ownerTokens, watcherTokens, subOwnerTokens } from "@/lib/taskOwner";
 import EditableCell from "../EditableCell";
 import InlineNote from "../InlineNote";
 import OwnerTags from "../OwnerTags";
@@ -147,6 +148,18 @@ function SortableProjectRow({ project, pn, pt, c, ts, avg, stC, icon, dragEnable
       </div>
     </div>
   );
+}
+
+// 任務標題的負責人 chips：顯示 owner 聯集（執行人 ∪ 關注人）；「只關注、沒做子任務」的人旁邊加小「關注」標籤。
+function TaskOwnerChips({ task, subs, configOwners }) {
+  const { X } = useTheme();
+  const execs = subOwnerTokens(subs);
+  const watchOnly = new Set(watcherTokens(task).filter(w => !execs.includes(w)));
+  const names = ownerTokens(task.owner);
+  if (!watchOnly.size || !names.length) return <OwnerTags value={task.owner} configOwners={configOwners} />;
+  return (<span style={{ display: "inline-flex", gap: 3, flexWrap: "wrap" }}>{names.map(n => watchOnly.has(n)
+    ? <span key={n} style={{ display: "inline-flex", alignItems: "center" }}><OwnerTags value={n} configOwners={configOwners} /><span style={{ fontSize: 11, borderRadius: 6, padding: "0 6px", marginLeft: 3, background: X.accent, color: "#fff" }}>關注</span></span>
+    : <OwnerTags key={n} value={n} configOwners={configOwners} />)}</span>);
 }
 
 function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange }) {
@@ -509,7 +522,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
               <div style={{ flex: "1 1 200px", minWidth: 140 }}>
                 <div className="dash-name-1line" style={{ fontSize: 14, fontWeight: 500 }}>{task.task}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
-                  <OwnerTags value={task.owner} configOwners={configOwners} /><span style={{ fontSize: 14, color: X.textDim }}>·</span>
+                  <TaskOwnerChips task={task} subs={tSubs} configOwners={configOwners} /><span style={{ fontSize: 14, color: X.textDim }}>·</span>
                   <span style={{ fontFamily: FM, fontSize: 14, color: X.textSec }}>{fD(task.start)} → {fD(task.end)}</span>
                 </div>
               </div>

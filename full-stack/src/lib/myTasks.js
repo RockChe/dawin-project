@@ -1,4 +1,5 @@
 import { pD } from "@/lib/utils";
+import { taskRole } from "@/lib/taskOwner";
 
 const SOON_DAYS = 7;
 
@@ -7,6 +8,12 @@ export function isMine(task, name) {
   if (!name) return false;
   return (task.owner || "").split(",").map(o => o.trim()).includes(name);
 }
+
+/**
+ * 我在這個任務的身分徽章：'watcher'（我關注）／'executor'（我執行，經由子任務）／null（單純任務 owner）。
+ * twp 列帶 `subOwner`（子任務負責人聯集字串，useTaskManager 算好）與 `watchers`。
+ */
+export const myRole = (task, name) => taskRole(task, [{ owner: task.subOwner }], name);
 
 /** end 距 today（皆為 YYYY-MM-DD / YYYY/MM/DD 日期字串）幾個日曆天；無 end → null。 */
 export function daysLeft(end, today) {

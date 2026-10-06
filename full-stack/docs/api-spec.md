@@ -134,7 +134,7 @@ curl -H "Authorization: Bearer YOUR_KEY" https://your-app.vercel.app/api/mcp/pro
 |------|------|------|
 | `projectId` | UUID | 篩選特定專案 |
 | `status` | string | `已完成`、`進行中`、`待辦`、`提案中`、`待確認` |
-| `owner` | string | 負責人（模糊匹配） |
+| `owner` | string | 負責人（模糊匹配）。搜尋的是 `owner` 欄位，內容 = 執行人 ∪ 關注人 |
 | `offset` | number | 跳過前 N 筆（預設 0） |
 | `limit` | number | 回傳數量上限（預設 50，最大 200） |
 
@@ -165,7 +165,8 @@ curl -H "Authorization: Bearer YOUR_KEY" https://your-app.vercel.app/api/mcp/pro
   "startDate": "2026-03-22", // 選填，ISO 格式
   "endDate": "2026-04-01",   // 選填，ISO 格式
   "duration": 10,             // 選填，天數
-  "owner": "小王",            // 選填
+  "owner": "小王",            // 選填（執行人；有子任務負責人時以子任務聯集為準）
+  "watchers": "小林",         // 選填（關注人，逗號分隔，須為既有使用者；不執行子任務）
   "priority": "高",           // 選填，預設 '中'，可選 '高'/'中'/'低'
   "notes": "備註內容"         // 選填
 }
@@ -174,6 +175,11 @@ curl -H "Authorization: Bearer YOUR_KEY" https://your-app.vercel.app/api/mcp/pro
 #### `PATCH /api/mcp/tasks/:id`
 
 部分更新任務（只傳需要修改的欄位）。
+
+> **owner / watchers 模型**：任務有兩個人員欄位。`watchers`（關注人）是獨立欄位；`owner` 是相容欄位，
+> 永遠 = 執行人 ∪ 關注人（執行人在前、去重）。執行人 = 子任務負責人聯集（任一子任務有負責人時），否則為手動設定的執行人。
+> 因此 GET 回傳的 `owner` 已包含關注人；PATCH `owner` 時伺服端會自動併回現有 `watchers`，PATCH `watchers` 時會同步重算 `owner`。
+> 已知邊界：沒有子任務負責人時，「同時是手動執行人又是關注人」的人只會被視為關注人。
 
 ```json
 { "status": "已完成", "owner": "小李" }

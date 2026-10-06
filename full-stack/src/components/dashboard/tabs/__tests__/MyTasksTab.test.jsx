@@ -43,4 +43,20 @@ describe('MyTasksTab', () => {
     fireEvent.click(screen.getByText('task-1'));
     expect(setModalTask).toHaveBeenCalledWith(mine);
   });
+
+  it('role badges: 我關注 for watcher-only, 我執行 for sub executor, none for plain owner', () => {
+    renderTab({
+      twp: [
+        task('w', 'Felien,Amy', '2026-10-08', '進行中', { watchers: 'Amy', subOwner: 'Felien' }),
+        task('e', 'Amy', '2026-10-09', '進行中', { subOwner: 'Amy' }),
+        task('p', 'Amy', '2026-10-10'),
+      ],
+    });
+    expect(screen.getAllByText('我關注')).toHaveLength(1);
+    expect(screen.getAllByText('我執行')).toHaveLength(1);
+    const row = n => screen.getByText(`task-${n}`).closest('div[style*="cursor"]');
+    expect(row('w').textContent).toContain('我關注');
+    expect(row('e').textContent).toContain('我執行');
+    expect(row('p').textContent).not.toMatch(/我關注|我執行/);
+  });
 });

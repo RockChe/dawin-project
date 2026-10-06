@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { computeAllProgress, toISO, toBusinessDateString } from '@/lib/utils';
-import { deriveTaskOwner, hasSubOwners } from '@/lib/taskOwner';
+import { deriveTaskOwner, hasSubOwners, execTokens, ownerTokens, subOwnerTokens } from '@/lib/taskOwner';
 import { getInitialData } from '@/server/actions/dashboard';
 import {
   createTask as createTaskAction,
@@ -68,9 +68,9 @@ export function mergeRestore(current, originalSnapshot, removedItems) {
 }
 
 // tasks.owner 由子任務 owner 自動帶出：子任務一變，就用「變動後的子任務清單」重算本地父任務的 owner，
-// 跟伺服端 db.batch 內的重算結果一致（規則見 lib/taskOwner.js）。
+// 跟伺服端 db.batch 內的重算結果一致（規則見 lib/taskOwner.js；owner 一律是 執行人 ∪ 關注人）。
 const withDerivedOwner = (tasks, subs, taskId) => tasks.map(t => (t.id === taskId
-  ? { ...t, owner: deriveTaskOwner(subs.filter(s => s.taskId === taskId), t.owner) }
+  ? { ...t, owner: deriveTaskOwner(subs.filter(s => s.taskId === taskId), t.owner, t.watchers) }
   : t));
 
 export default function useTaskManager(initialData) {
@@ -230,14 +230,16 @@ export default function useTaskManager(initialData) {
     // (startDate/endDate), and `twp` re-derives the view aliases start/end
     // from them — so an optimistic write under the form name (`start`) would
     // be silently overwritten by twp and the UI would keep the old value.
-    const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', priority: 'priority', notes: 'notes' };
+    const fieldMap = { task: 'task', status: 'status', category: 'category', start: 'startDate', end: 'endDate', duration: 'duration', owner: 'owner', watchers: 'watchers', priority: 'priority', notes: 'notes' };
     const dbField = fieldMap[field] || field;
 
     // Date columns are PG `date`, and callers disagree on shape: TaskModal
     // sends ISO, DataTab's inline cell sends CalendarPicker output
     // ("2026/09/01 14:30"). Normalise here so the local row and the persisted
     // row always hold the same string. toISO is idempotent on ISO input.
-    const value = DATE_COLUMNS.has(dbField) ? (toISO(rawValue ?? '') || null) : rawValue;
+    let value = DATE_COLUMNS.has(dbField) ? (toISO(rawValue ?? '') || null) : rawValue;
+    // 關注人：正規化成 "A,B"（空 / "—" → null），與伺服端寫入值一致
+    if (dbField === 'watchers') value = ownerTokens(rawValue).join(',') || null;
 
     // 有子任務 owner 的任務，owner 由子任務自動帶出，不接受直接編輯（伺服端也會忽略）。
     if (dbField === 'owner' && hasSubOwners(allSRef.current.filter(s => s.taskId === id))) return;
@@ -250,8 +252,18 @@ export default function useTaskManager(initialData) {
     const prevRow = allTRef.current.find(t => t.id === id);
     const hadRow = !!prevRow;
     const prevValue = prevRow ? prevRow[dbField] : undefined;
+    const prevOwner = prevRow?.owner;
 
-    setAllT(p => p.map(t => t.id === id ? { ...t, [dbField]: value } : t));
+    // owner 永遠是 執行人 ∪ 關注人：改關注人 → 以舊關注人算出執行人，再接新關注人；
+    // 改執行人（此處必無子任務 owner）→ 輸入值接上現有關注人。其餘欄位原樣。
+    let patch = { [dbField]: value };
+    if (dbField === 'watchers' && prevRow) {
+      const exec = execTokens(prevRow, allSRef.current.filter(s => s.taskId === id)).join(',');
+      patch.owner = deriveTaskOwner([], exec, value) || null;
+    } else if (dbField === 'owner' && prevRow) {
+      patch.owner = deriveTaskOwner([], value, prevRow.watchers);
+    }
+    setAllT(p => p.map(t => t.id === id ? { ...t, ...patch } : t));
     const updateData = {};
     updateData[dbField] = value;
     try {
@@ -260,7 +272,7 @@ export default function useTaskManager(initialData) {
       if (result?.error) {
         // Roll back only this field, so a concurrent edit to another field
         // on the same task isn't clobbered.
-        if (hadRow) setAllT(p => p.map(t => t.id === id ? { ...t, [dbField]: prevValue } : t));
+        if (hadRow) setAllT(p => p.map(t => t.id === id ? { ...t, [dbField]: prevValue, ...('owner' in patch && { owner: prevOwner }) } : t));
         if (!handleForbidden(result)) showToast(result.error, 'error');
       } else {
         // The cached snapshot is now stale. loadData() short-circuits on a
@@ -567,7 +579,8 @@ export default function useTaskManager(initialData) {
     }
     const skipped = allIds.length - ids.length;
     const prevValues = new Map(allTRef.current.filter(t => ids.includes(t.id)).map(t => [t.id, t[field]]));
-    setAllT(p => p.map(t => ids.includes(t.id) ? { ...t, [field]: value } : t));
+    // owner 一律保留各任務的關注人（owner = 執行人 ∪ 關注人）
+    setAllT(p => p.map(t => ids.includes(t.id) ? { ...t, [field]: field === 'owner' ? deriveTaskOwner([], value, t.watchers) : value } : t));
     invalidateCache();
     const fieldMap = { task: 'task', status: 'status', category: 'category', owner: 'owner', priority: 'priority' };
     const result = await updateManyTasksAction(ids, { [fieldMap[field] || field]: value });
@@ -680,6 +693,8 @@ export default function useTaskManager(initialData) {
   const twp = useMemo(() => {
     const progressMap = computeAllProgress(allS, allT);
     const projMap = new Map(projects.map(pr => [pr.id, pr.name]));
+    const subsByTask = new Map();
+    for (const sub of allS) { if (!subsByTask.has(sub.taskId)) subsByTask.set(sub.taskId, []); subsByTask.get(sub.taskId).push(sub); }
     return allT.map(t => {
       const p = progressMap.get(t.id) || { total: 0, done: 0, pct: 0 };
       return {
@@ -689,6 +704,7 @@ export default function useTaskManager(initialData) {
         sDone: p.done,
         sTotal: p.total,
         timeBased: p.timeBased || false,
+        subOwner: subOwnerTokens(subsByTask.get(t.id)).join(','), // 子任務執行人聯集（「我的任務」身分徽章用）
         start: t.startDate,
         end: t.endDate,
       };
