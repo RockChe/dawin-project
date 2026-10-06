@@ -67,7 +67,7 @@ export default function MobileApp({ initialData }) {
 
   return (
     <PermissionProvider role={userRole}>
-      <div style={{ minHeight: "100dvh", background: X.bg, fontFamily: F, color: X.text, paddingBottom: "calc(64px + env(safe-area-inset-bottom))" }}>
+      <div className="mobile-app" style={{ minHeight: "100dvh", background: X.bg, fontFamily: F, color: X.text, paddingBottom: "calc(64px + env(safe-area-inset-bottom))" }}>
         <style>{`*{box-sizing:border-box}`}</style>
         {/* 麵包屑：專案分頁由 ProjectsScreen 自己畫（詳情多一層），其餘分頁畫在畫面頂端 */}
         {!loading && tab !== "projects" && <div style={{ paddingTop: 4 }}><Breadcrumbs size="mobile" items={tabCrumbs(tab, { mobile: true, onHome: goHome })} /></div>}

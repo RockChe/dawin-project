@@ -56,3 +56,8 @@ input, textarea, select { transition: none; }
 
 /* 名稱單行省略（桌機固定版；RWD 已移除，平板／手機版另行設計）。 */
 .dash-name-1line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 手機版（/m）：iOS Safari 在輸入框 font-size < 16px 時，focus 會自動放大整頁且不會自己縮回。
+   主題 inputStyle／TagInput 都是行內 14px，故需 !important。只作用在 .mobile-app，桌機不受影響。
+   不用 maximum-scale／user-scalable=no（會破壞無障礙縮放）。 */
+.mobile-app input, .mobile-app select, .mobile-app textarea { font-size: 16px !important; }
