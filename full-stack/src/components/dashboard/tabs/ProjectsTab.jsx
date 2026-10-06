@@ -56,7 +56,10 @@ export function withManualSort(view) {
 }
 
 /** 一組全域設定（非每專案一組），存 user_settings 的 projectTaskView。 */
-export const PROJECT_TASK_VIEW_DEFAULT = { sort: { field: "start", dir: "asc" }, status: [], owner: [], priority: [] };
+export const PROJECT_TASK_VIEW_DEFAULT = { sort: { field: "start", dir: "asc" }, status: [], owner: [], priority: [], hideDoneSubs: false };
+
+/** 「隱藏已完成子任務」：只影響列表渲染，進度／計數仍以全部子任務為準。 */
+export const visibleSubs = (subs, hideDone) => (hideDone ? subs.filter(s => !s.done) : subs);
 
 /** owner 是逗號分隔多人字串 → 拆成名字陣列，比對「包含這個人」而非子字串。 */
 const ownerNames = v => String(v || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -381,7 +384,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
   const patchView = patch => setProjectTaskView?.({ ...projectTaskView, ...patch });
   const toggleIn = (list, v) => (list.includes(v) ? list.filter(x => x !== v) : [...list, v]);
   const ownerOptions = [...new Set(pt.flatMap(t => String(t.owner || "").split(",").map(s => s.trim()).filter(Boolean)))];
-  const viewIsDefault = !projectTaskView.status.length && !projectTaskView.owner.length && !projectTaskView.priority.length
+  const viewIsDefault = !projectTaskView.status.length && !projectTaskView.owner.length && !projectTaskView.priority.length && !projectTaskView.hideDoneSubs
     && projectTaskView.sort.field === PROJECT_TASK_VIEW_DEFAULT.sort.field && projectTaskView.sort.dir === PROJECT_TASK_VIEW_DEFAULT.sort.dir;
   const pillStyle = on => ({ fontSize: 12, padding: isMobile ? "8px 12px" : "3px 10px", borderRadius: 20, cursor: "pointer",
     border: `1px solid ${on ? X.accent : X.border}`, background: on ? `${X.accent}15` : X.surface,
@@ -483,6 +486,11 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
             onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); patchView({ priority: toggleIn(projectTaskView.priority, p) }); } }}
             style={pillStyle(projectTaskView.priority.includes(p))}>{p}</span>)}
 
+          <span role="button" tabIndex={0} aria-pressed={!!projectTaskView.hideDoneSubs}
+            onClick={() => patchView({ hideDoneSubs: !projectTaskView.hideDoneSubs })}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); patchView({ hideDoneSubs: !projectTaskView.hideDoneSubs }); } }}
+            style={{ ...pillStyle(!!projectTaskView.hideDoneSubs), marginLeft: 6 }}>隱藏已完成子任務</span>
+
           {!viewIsDefault && <span role="button" tabIndex={0} onClick={() => setProjectTaskView?.(PROJECT_TASK_VIEW_DEFAULT)}
             onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setProjectTaskView?.(PROJECT_TASK_VIEW_DEFAULT); } }}
             style={{ fontSize: 12, color: X.red, cursor: "pointer", marginLeft: "auto" }}>重置</span>}
@@ -521,7 +529,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
               <div style={{ width: 90 }}><ProgressBar pct={task.progress} done={task.sDone} total={task.sTotal} timeBased={task.timeBased} /></div>
               {canWrite && <button onClick={e => { e.stopPropagation(); if (confirm("Delete?")) deleteTask(task.id); }} style={{ background: "transparent", border: "none", color: X.red, fontSize: 14, cursor: "pointer", padding: "4px 6px" }}>×</button>}
             </div>
-            {tSubs.length > 0 && (() => { const sortedSubs = [...tSubs].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); return <div style={{ paddingLeft: 32, paddingRight: 20, paddingBottom: sortedSubs.length > 0 ? 4 : 0 }}>
+            {visibleSubs(tSubs, projectTaskView.hideDoneSubs).length > 0 && (() => { const sortedSubs = [...visibleSubs(tSubs, projectTaskView.hideDoneSubs)].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); return <div style={{ paddingLeft: 32, paddingRight: 20, paddingBottom: sortedSubs.length > 0 ? 4 : 0 }}>
               {canWrite ? (
                 <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={ev => { if (ev.active && ev.over && ev.active.id !== ev.over.id) reorderSubs(task.id, ev.active.id, ev.over.id); }}>
                   <SortableContext items={sortedSubs.map(s => s.id)} strategy={verticalListSortingStrategy}>
