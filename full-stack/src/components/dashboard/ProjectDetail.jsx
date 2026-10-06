@@ -35,7 +35,6 @@ export default function ProjectDetail({ initialData }) {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <Breadcrumbs items={detailCrumbs('projects', project.name, { homeHref: '/dashboard', tabHref: '/dashboard' })} />
-        <a href="/dashboard" style={{ fontSize: 13, color: X.textDim, textDecoration: 'none' }}>← 返回儀表板</a>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: X.text, marginTop: 8 }}>{project.name}</h1>
       </div>
 

@@ -17,6 +17,11 @@ describe('ProjectDetail 麵包屑', () => {
     expect(screen.getByRole('link', { name: 'Projects' }).getAttribute('href')).toBe('/dashboard');
     expect(nav.querySelector('[aria-current="page"]').textContent).toBe('Alpha');
   });
+  it('不再有重複的「← 返回儀表板」連結，由麵包屑「首頁」取代', () => {
+    render(<ThemeProvider><ProjectDetail initialData={{ project: { id: 'p1', name: 'Alpha' }, tasks: [], subtasks: [] }} /></ThemeProvider>);
+    expect(screen.queryByText(/返回儀表板/)).toBeNull();
+    expect(screen.getAllByRole('link').filter(a => a.getAttribute('href') === '/dashboard').map(a => a.textContent)).toEqual(['首頁', 'Projects']);
+  });
 });
 
 const props = (task, over = {}) => ({
