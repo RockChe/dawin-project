@@ -10,6 +10,7 @@ import MobileTabBar from "./MobileTabBar";
 import MoreScreen from "./MoreScreen";
 import OverviewScreen from "./OverviewScreen";
 import ProjectsScreen from "./ProjectsScreen";
+import TimelineScreen from "./TimelineScreen";
 import TaskSheet from "./TaskSheet";
 import { can } from "@/lib/permissions";
 
@@ -23,7 +24,7 @@ const SCREENS = {
   mytasks: placeholder("我的任務"),
   overview: OverviewScreen,
   projects: ProjectsScreen,
-  timeline: placeholder("時程"),
+  timeline: TimelineScreen,
 };
 
 export default function MobileApp({ initialData }) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { upcomingDeadlines, statusCounts, projectSummaries, filterProjectTasks, visibleSubs } from '../mobileData';
+import { upcomingDeadlines, statusCounts, projectSummaries, filterProjectTasks, visibleSubs, projectBars } from '../mobileData';
 
 const T = (id, o = {}) => ({ id, task: `task-${id}`, project: 'P', owner: 'Amy', status: '進行中', end: '2026-10-10', ...o });
 const today = '2026-10-06';
@@ -63,5 +63,32 @@ describe('visibleSubs', () => {
   it('hideDone 只濾掉已完成子任務', () => {
     expect(visibleSubs(subs, false)).toEqual(subs);
     expect(visibleSubs(subs, true).map(s => s.id)).toEqual(['b']);
+  });
+});
+
+describe('projectBars', () => {
+  const projects = [{ id: 'p2', name: 'B' }, { id: 'p1', name: 'A' }, { id: 'p3', name: 'C' }];
+  const tasks = [
+    T('1', { projectId: 'p1', start: '2026-01-01', end: '2026-01-04', progress: 100 }),
+    T('2', { projectId: 'p1', start: '2026-01-05', end: '2026/01/10', progress: 0 }),
+    T('3', { projectId: 'p2', start: '2026-01-06', end: '2026-01-20', progress: 40 }),
+    T('4', { projectId: 'p3', start: null, end: null, progress: 90 }),
+  ];
+  it('範圍取全部專案、百分比相對總範圍、順序同 projects、無日期專案略過', () => {
+    const r = projectBars(projects, tasks, '2026-01-11');
+    expect(r.rangeStart).toBe('2026-01-01');
+    expect(r.rangeEnd).toBe('2026-01-20');
+    expect(r.todayPct).toBe(50);
+    expect(r.rows).toEqual([
+      { id: 'p2', name: 'B', leftPct: 25, widthPct: 75, progressPct: 40 },
+      { id: 'p1', name: 'A', leftPct: 0, widthPct: 50, progressPct: 50 },
+    ]);
+  });
+  it('todayPct 夾在 0–100', () => {
+    expect(projectBars(projects, tasks, '2025-06-01').todayPct).toBe(0);
+    expect(projectBars(projects, tasks, '2027-06-01').todayPct).toBe(100);
+  });
+  it('完全沒有日期 → 空 rows', () => {
+    expect(projectBars(projects, [tasks[3]], '2026-01-11')).toEqual({ rangeStart: null, rangeEnd: null, todayPct: null, rows: [] });
   });
 });

@@ -39,3 +39,34 @@ export const filterProjectTasks = (tasks, { status = [] } = {}) => tasks.filter(
 
 // 與桌機 ProjectsTab 的 visibleSubs 同語意；不直接 import 是為了不把整個 ProjectsTab（dnd-kit 等）帶進手機 bundle。
 export const visibleSubs = (subs, hideDone) => (hideDone ? subs.filter(s => !s.done) : subs);
+
+const dayDiff = (a, b) => Math.round((a - b) / 864e5); // round：跨 DST 的本地午夜相差不是整數天
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/**
+ * 簡化時程：每個專案一條橫條，百分比相對於「全部專案」的總範圍。
+ * 專案 start/end = 其任務最早/最晚日期（沒有任何日期的專案略過）；progressPct = 任務 progress 平均；順序同 projects。
+ */
+export function projectBars(projects, tasks, today) {
+  const spans = projects.map(p => {
+    const mine = tasks.filter(t => t.projectId === p.id);
+    const dates = mine.flatMap(t => [t.start, t.end]).filter(Boolean).map(pD);
+    if (!dates.length) return null;
+    return {
+      id: p.id, name: p.name, s: new Date(Math.min(...dates)), e: new Date(Math.max(...dates)),
+      progressPct: Math.round(mine.reduce((n, t) => n + (t.progress || 0), 0) / mine.length),
+    };
+  }).filter(Boolean);
+  if (!spans.length) return { rangeStart: null, rangeEnd: null, todayPct: null, rows: [] };
+  const mn = new Date(Math.min(...spans.map(x => x.s))), mx = new Date(Math.max(...spans.map(x => x.e)));
+  const td = dayDiff(mx, mn) + 1;
+  return {
+    rangeStart: iso(mn), rangeEnd: iso(mx),
+    todayPct: Math.min(100, Math.max(0, dayDiff(pD(today), mn) / td * 100)),
+    rows: spans.map(x => ({
+      id: x.id, name: x.name, progressPct: x.progressPct,
+      leftPct: dayDiff(x.s, mn) / td * 100,
+      widthPct: Math.max(1, (dayDiff(x.e, x.s) + 1) / td * 100),
+    })),
+  };
+}
