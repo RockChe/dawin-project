@@ -20,9 +20,9 @@ export function statusCounts(tasks) {
   return c;
 }
 
-/** 專案卡片資料：依 projects 既有順序；avgProgress = 任務 progress 平均（四捨五入）；endDate = 最晚 end（原字串）。 */
+/** 專案卡片資料：依 projects 既有順序（已封存 archivedAt 的專案不列；手機沒有封存 UI）；avgProgress = 任務 progress 平均（四捨五入）；endDate = 最晚 end（原字串）。 */
 export function projectSummaries(projects, tasks) {
-  return projects.map(p => {
+  return projects.filter(p => !p.archivedAt).map(p => {
     const mine = tasks.filter(t => t.projectId === p.id);
     const ends = mine.filter(t => t.end);
     const last = ends.reduce((a, t) => (!a || pD(t.end) > pD(a.end) ? t : a), null);
@@ -48,7 +48,7 @@ const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")
  * 專案 start/end = 其任務最早/最晚日期（沒有任何日期的專案略過）；progressPct = 任務 progress 平均；順序同 projects。
  */
 export function projectBars(projects, tasks, today) {
-  const spans = projects.map(p => {
+  const spans = projects.filter(p => !p.archivedAt).map(p => {
     const mine = tasks.filter(t => t.projectId === p.id);
     const dates = mine.flatMap(t => [t.start, t.end]).filter(Boolean).map(pD);
     if (!dates.length) return null;

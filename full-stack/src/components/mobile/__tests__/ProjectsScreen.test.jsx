@@ -50,6 +50,18 @@ describe('ProjectsScreen 清單', () => {
   });
 });
 
+describe('ProjectsScreen 封存專案', () => {
+  it('已封存專案不出現在清單，專案數也不計入（手機沒有封存 UI，只是不顯示）', () => {
+    const arch = [{ id: 'p1', name: 'Alpha' }, { id: 'p2', name: 'Beta', archivedAt: '2026-10-01T00:00:00.000Z' }];
+    render(<ThemeProvider><PermissionProvider role="admin">
+      <ProjectsScreen projects={arch} twp={twp} allS={allS} configOwners={[]} selectedProjectId={null} setSelectedProjectId={() => {}} openTask={() => {}} toggleSub={() => {}} onHome={() => {}} />
+    </PermissionProvider></ThemeProvider>);
+    expect(screen.getByRole('button', { name: /Alpha/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Beta/ })).toBeNull();
+    expect(screen.getByText('1 個專案')).toBeTruthy();
+  });
+});
+
 const crumbItems = () => [...screen.getByRole('navigation', { name: 'breadcrumb' }).querySelectorAll('li')].map(li => li.textContent.replace('›', ''));
 
 describe('ProjectsScreen 麵包屑', () => {

@@ -48,6 +48,20 @@ describe('projectSummaries', () => {
   });
 });
 
+describe('封存專案（archivedAt）不出現在手機清單／時程', () => {
+  const projects = [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B', archivedAt: '2026-10-01T00:00:00.000Z' }];
+  const tasks = [
+    T('1', { projectId: 'p1', progress: 50, start: '2026-01-01', end: '2026-02-01' }),
+    T('2', { projectId: 'p2', progress: 50, start: '2026-01-01', end: '2026-02-01' }),
+  ];
+  it('projectSummaries 略過已封存專案', () => {
+    expect(projectSummaries(projects, tasks).map(p => p.id)).toEqual(['p1']);
+  });
+  it('projectBars 略過已封存專案', () => {
+    expect(projectBars(projects, tasks, '2026-01-15').rows.map(r => r.id)).toEqual(['p1']);
+  });
+});
+
 describe('filterProjectTasks', () => {
   const ts = [T('1'), T('2', { status: '待辦' }), T('3', { status: '已完成' })];
   it('空狀態 = 不篩；多選取聯集；不改動輸入', () => {

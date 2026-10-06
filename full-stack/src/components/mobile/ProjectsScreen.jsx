@@ -140,7 +140,7 @@ export default function ProjectsScreen({ projects = [], twp = [], allS = [], con
   return (
     <>
       <div style={{ paddingTop: 4 }}><Breadcrumbs size="mobile" items={tabCrumbs("projects", { mobile: true, onHome })} /></div>
-      <Header X={X} title="專案" sub={`${projects.length} 個專案`} />
+      <Header X={X} title="專案" sub={`${summaries.length} 個專案`} />
       <div style={{ padding: "0 12px 12px" }}>
         {summaries.map(p => (
           <button key={p.id} type="button" onClick={() => setSelectedProjectId(p.id)}
