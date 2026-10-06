@@ -57,6 +57,55 @@ describe('MyTasksScreen', () => {
     expect(screen.getByText('沒有指派給你的任務 🎉')).toBeTruthy();
   });
 
+  describe('狀態篩選', () => {
+    const chip = n => screen.getByRole('button', { name: n });
+    const kpiText = () => screen.getByTestId('kpi').textContent;
+
+    it('沒選：全部 chip 亮、無「已完成」群組', () => {
+      setup();
+      expect(chip('全部').getAttribute('aria-pressed')).toBe('true');
+      expect(screen.queryByRole('heading', { name: /^已完成/ })).toBeNull();
+    });
+
+    it('chip 列單行可橫向捲動、每顆至少 44px', () => {
+      setup();
+      const row = screen.getByTestId('status-chips');
+      expect(row.style.overflowX).toBe('auto');
+      expect(row.style.flexWrap).not.toBe('wrap');
+      expect(chip('進行中').style.minHeight).toBe('44px');
+    });
+
+    it('選進行中 → 其他狀態卡片隱藏', () => {
+      setup({ twp: [...twp, mk('f', '待辦任務', { status: '待辦', end: '2026-10-09' })] });
+      fireEvent.click(chip('進行中'));
+      expect(screen.getByRole('button', { name: /近期任務/ })).toBeTruthy();
+      expect(screen.queryByText('待辦任務')).toBeNull();
+      expect(screen.queryByText('已完成任務')).toBeNull();
+    });
+
+    it('選已完成 → 出現「已完成」群組列出已完成任務', () => {
+      setup();
+      fireEvent.click(chip('已完成'));
+      expect(within(group('已完成')).getByRole('button', { name: /已完成任務/ })).toBeTruthy();
+      expect(screen.queryByText('逾期任務')).toBeNull();
+    });
+
+    it('「全部」清空選取', () => {
+      setup();
+      fireEvent.click(chip('已完成'));
+      fireEvent.click(chip('全部'));
+      expect(screen.queryByText('已完成任務')).toBeNull();
+      expect(screen.getByText('逾期任務')).toBeTruthy();
+    });
+
+    it('KPI 不受篩選影響', () => {
+      setup();
+      const before = kpiText();
+      fireEvent.click(chip('已完成'));
+      expect(kpiText()).toBe(before);
+    });
+  });
+
   it('關注人（非執行人）顯示「我關注」、子任務執行人顯示「我執行」＋子任務進度', () => {
     setup({
       twp: [

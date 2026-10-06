@@ -1,15 +1,18 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
+import { STATUS_FILTERS } from "@/lib/constants";
+import { toggleStatus } from "@/lib/statusFilter";
 import { groupMyTasks, myTaskKpis, daysLeft, roleBadge } from "@/lib/myTasks";
 
 // 手機首頁「我的任務」：登入者名下未完成任務，依到期日分逾期／7 天內／之後（草圖 ①）。
 export default function MyTasksScreen({ twp, userName, today, pcMap = {}, openTask }) {
   const { X, SC } = useTheme();
-  const groups = useMemo(() => groupMyTasks(twp, userName, today), [twp, userName, today]);
+  const [sel, setSel] = useState([]); // 狀態多選，[] = 不篩；不持久化
+  const groups = useMemo(() => groupMyTasks(twp, userName, today, sel), [twp, userName, today, sel]);
   const kpis = useMemo(() => myTaskKpis(twp, userName, today), [twp, userName, today]);
-  const total = groups.overdue.length + groups.soon.length + groups.later.length;
+  const total = groups.overdue.length + groups.soon.length + groups.later.length + (groups.done?.length || 0);
 
   const cards = [
     { l: "逾期", n: kpis.overdue, c: X.red },
@@ -20,6 +23,7 @@ export default function MyTasksScreen({ twp, userName, today, pcMap = {}, openTa
     { k: "overdue", l: "逾期", c: X.red },
     { k: "soon", l: "7 天內", c: X.amber },
     { k: "later", l: "之後", c: X.textDim },
+    { k: "done", l: "已完成", c: X.green },
   ];
 
   return (
@@ -38,13 +42,19 @@ export default function MyTasksScreen({ twp, userName, today, pcMap = {}, openTa
         ))}
       </div>
 
+      <div data-testid="status-chips" style={{ display: "flex", flexWrap: "nowrap", gap: 6, overflowX: "auto", marginBottom: 4, paddingBottom: 2 }}>
+        {STATUS_FILTERS.map(st => { const a = st === "全部" ? sel.length === 0 : sel.includes(st), c = SC[st]; return (
+          <button key={st} type="button" aria-pressed={a} onClick={() => setSel(v => toggleStatus(v, st))}
+            style={{ flexShrink: 0, minHeight: 44, minWidth: 44, padding: "0 16px", whiteSpace: "nowrap", font: "inherit", fontSize: 14, fontWeight: a ? 700 : 400, cursor: "pointer", borderRadius: 22, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec }}>{st}</button>); })}
+      </div>
+
       {total === 0 && (
         <div style={{ background: X.surface, borderRadius: 12, padding: 32, border: `1px solid ${X.border}`, textAlign: "center", color: X.textDim, fontSize: 14 }}>
           沒有指派給你的任務 🎉
         </div>
       )}
 
-      {sections.map(s => groups[s.k].length > 0 && (
+      {sections.map(s => groups[s.k]?.length > 0 && (
         <section key={s.k}>
           <h3 style={{ fontSize: 13, fontWeight: 700, margin: "10px 0 4px", display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 3, height: 12, background: s.c, borderRadius: 2 }} />{s.l}
