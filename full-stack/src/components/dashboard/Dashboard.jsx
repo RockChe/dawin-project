@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { F, FM } from "@/lib/theme";
 import { STATUS_FILTERS } from "@/lib/constants";
+import { toggleStatus, matchesStatusFilter } from "@/lib/statusFilter";
 import { useTheme } from "@/components/ThemeProvider";
 import { PermissionProvider, useCan } from "@/components/PermissionProvider";
 import useTaskManager from "@/hooks/useTaskManager";
@@ -55,7 +56,8 @@ export default function Dashboard({ initialData }) {
   const setTimelineDefaultCollapsed = useCallback(v => updateSetting('timelineDefaultCollapsed', v), [updateSetting]);
   const [fpSet, setFPSet] = useState(new Set());
   const toggleFP = useCallback(p => setFPSet(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; }), []);
-  const [fs, setFS] = useState("全部");
+  const [fs, setFS] = useState([]); // 多選狀態篩選，[] = 不篩（非持久化）
+  const toggleFS = useCallback(s => setFS(prev => toggleStatus(prev, s)), []);
   const [fpr, setFPR] = useState("全部");
   // #5 persist active tab across refresh (per-device ephemeral → localStorage)
   const [tab, changeTab] = useLocalStorageState("dash-activeTab", "overview",
@@ -121,7 +123,7 @@ export default function Dashboard({ initialData }) {
   }, []);
 
   // Computed
-  const filtered = useMemo(() => twp.filter(d => { if (fpSet.size > 0 && !fpSet.has(d.project)) return false; if (fs !== "全部" && d.status !== fs) return false; if (fpr !== "全部" && d.priority !== fpr) return false; if (searchQ) { const q = searchQ.toLowerCase(); if (!(d.task || "").toLowerCase().includes(q) && !(d.project || "").toLowerCase().includes(q) && !(d.owner || "").toLowerCase().includes(q) && !(d.notes || "").toLowerCase().includes(q)) return false; } return true; }), [fpSet, fs, fpr, twp, searchQ]);
+  const filtered = useMemo(() => twp.filter(d => { if (fpSet.size > 0 && !fpSet.has(d.project)) return false; if (!matchesStatusFilter(d.status, fs)) return false; if (fpr !== "全部" && d.priority !== fpr) return false; if (searchQ) { const q = searchQ.toLowerCase(); if (!(d.task || "").toLowerCase().includes(q) && !(d.project || "").toLowerCase().includes(q) && !(d.owner || "").toLowerCase().includes(q) && !(d.notes || "").toLowerCase().includes(q)) return false; } return true; }), [fpSet, fs, fpr, twp, searchQ]);
   const stats = useMemo(() => { const s = {}; Object.keys(SC).forEach(k => s[k] = 0); twp.forEach(d => s[d.status]++); return s; }, [twp]);
   const avgProg = useMemo(() => filtered.length === 0 ? 0 : Math.round(filtered.reduce((s, d) => s + d.progress, 0) / filtered.length), [filtered]);
   const priStats = useMemo(() => { const p = { "高": 0, "中": 0, "低": 0 }; filtered.forEach(d => p[d.priority]++); return p; }, [filtered]);
@@ -186,8 +188,8 @@ export default function Dashboard({ initialData }) {
         <div aria-disabled={tab === "projects"} title={tab === "projects" ? "Projects 分頁使用專案內的篩選" : undefined}
           style={{ display: "flex", gap: isMobile ? 6 : 8, marginBottom: isMobile ? 12 : 20, flexWrap: "wrap", alignItems: "center",
             opacity: tab === "projects" ? 0.4 : 1, pointerEvents: tab === "projects" ? "none" : "auto" }}>
-          {STATUS_FILTERS.map(s => { const a = fs === s, c = SC[s]; return (
-            <button key={s} onClick={() => setFS(s)} style={{ padding: isMobile ? "4px 10px" : "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
+          {STATUS_FILTERS.map(s => { const a = s === "全部" ? fs.length === 0 : fs.includes(s), c = SC[s]; return (
+            <button key={s} onClick={() => toggleFS(s)} style={{ padding: isMobile ? "4px 10px" : "6px 16px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{s}</button>); })}
           <div style={{ width: 1, height: 20, background: X.border }} />
           {["全部", "高", "中", "低"].map(p => { const a = fpr === p, c = PC[p]; return (
             <button key={p} onClick={() => setFPR(p)} style={{ padding: isMobile ? "4px 10px" : "6px 14px", borderRadius: 20, border: a ? "none" : `1px solid ${X.border}`, background: a ? (c?.color || X.textDim) : X.surface, color: a ? "#fff" : X.textSec, fontSize: isMobile ? 13 : 14, fontWeight: a ? 700 : 400, cursor: "pointer" }}>{p === "全部" ? "Priority" : p}</button>); })}
@@ -201,7 +203,7 @@ export default function Dashboard({ initialData }) {
         <div aria-disabled={tab === "projects"}
           style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(160px, 1fr))", gap: isMobile ? 8 : 12, marginBottom: isMobile ? 12 : 20,
             opacity: tab === "projects" ? 0.4 : 1, pointerEvents: tab === "projects" ? "none" : "auto" }}>
-          {Object.entries(SC).map(([k, c]) => (<div key={k} onClick={() => setFS(fs === k ? "全部" : k)} style={{ background: X.surface, borderRadius: 12, padding: isMobile ? "12px 14px" : "16px 18px", border: fs === k ? `1px solid ${c.color}` : `1px solid ${X.border}`, boxShadow: X.surfaceShadow, cursor: "pointer" }}>
+          {Object.entries(SC).map(([k, c]) => (<div key={k} onClick={() => toggleFS(k)} style={{ background: X.surface, borderRadius: 12, padding: isMobile ? "12px 14px" : "16px 18px", border: fs.includes(k) ? `1px solid ${c.color}` : `1px solid ${X.border}`, boxShadow: X.surfaceShadow, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 16, fontWeight: 600, color: X.textSec }}>{k}</span><span style={{ color: c.color, fontSize: 18 }}>{c.icon}</span>
             </div>
