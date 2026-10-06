@@ -21,7 +21,7 @@ function TimelineTab({
   ganttWidths,
   timelineHeight,
   configOwners = [],
-  hiddenProjects = [],
+  hiddenProjects: userHidden = [],
   projects = [],
   timelineDefaultCollapsed = true,
   setTimelineDefaultCollapsed,
@@ -31,6 +31,12 @@ function TimelineTab({
   onTimelineSortChange,
 }) {
   const { X } = useTheme();
+
+  // 個人隱藏（眼睛）+ 已封存專案（projects.archived_at，全團隊共享）一律不畫在時程上。
+  const hiddenProjects = useMemo(() => {
+    const archived = projects.filter(p => p.archivedAt).map(p => p.id);
+    return archived.length ? [...userHidden, ...archived] : userHidden;
+  }, [userHidden, projects]);
 
   // All project ids visible on this timeline (excludes hidden projects).
   const allProjectIds = useMemo(
