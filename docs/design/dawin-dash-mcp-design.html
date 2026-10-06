@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MCP 伺服器規劃</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:#1d2330;font:14px/1.6 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.w{max-width:1080px;margin:0 auto}h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:26px 0 8px;border-left:3px solid #2f8fd1;padding-left:8px}
+.q{background:#fff;border:1px solid #d7dce2;border-left:4px solid #2f8fd1;border-radius:8px;padding:8px 14px;margin:4px 0;color:#1d2330}
+.box{background:#fff;border:1px solid #d7dce2;border-radius:10px;padding:10px 14px;margin:8px 0;color:#1d2330}
+.warn{background:#fff7e6;border:1px solid #e8c77a;border-radius:10px;padding:10px 14px;margin:8px 0;color:#1d2330}
+.red{background:#fdeeec;border:1px solid #e3a49c;border-radius:10px;padding:10px 14px;margin:8px 0;color:#1d2330}
+.flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin:10px 0}
+.nd{background:#fff;border:1px solid #c9d0d8;border-radius:10px;padding:8px 12px;font-size:13px;color:#1d2330;min-width:150px}.nd b{display:block;font-size:12px;color:#2f8fd1}
+.nd.k{border:2px solid #2f8fd1;background:#eaf4fc}.nd.n{border:2px dashed #d99a1e;background:#fff9ec}
+.ar{align-self:center;color:#2f8fd1;font-size:20px}
+table{width:100%;border-collapse:collapse;background:#fff;color:#1d2330;font-size:13px}th,td{border:1px solid #d7dce2;padding:6px 10px;text-align:left;vertical-align:top}th{background:#eceff3}
+code{background:#eef0f3;border-radius:4px;padding:0 4px;font-size:12px}
+.tag{display:inline-block;border-radius:99px;padding:0 8px;font-size:11px;color:#fff;margin-right:4px}.r{background:#2e9d6a}.wt{background:#d99a1e}.d{background:#d9483b}
+</style></head><body><div class="w">
+<h1>MCP 伺服器規劃（讓每個人的 Claude 查詢與操作儀表板）</h1>
+<p style="color:#5b6676;font-size:12px;margin:0 0 10px">狀態：<b>待 user 核准</b>；尚未過 Codex 審查（未經 confer）。2026-10-07。</p>
+
+<h2>1. 你的原話</h2>
+<div class="q">「若想做個 mcp 讓agent 可以去查詢 操作編輯dashboard 該如何規劃」</div>
+<div class="q">使用者選擇：「團隊每個人各自的 Claude」；「一開始就含寫入」；後來改為「好 先不開放刪除」。</div>
+
+<h2>2. 查證</h2>
+<table><tr><th>項目</th><th>結果</th></tr>
+<tr><td>現成的 REST API</td><td><code>docs/api-spec.md</code> 寫的 <code>/api/mcp/*</code> 與 <code>MCP_API_KEY</code> <b>只有規格、沒有實作</b>（程式與歷史都查過）；<code>chatbot/</code> 只有文件。要從頭做。</td></tr>
+<tr><td>現成輪子</td><td>Vercel <code>mcp-handler</code>：把 MCP 伺服器掛進 Next.js 路由、有 <code>withMcpAuth</code>。Apache-2.0、近半年有發版（v2.2.0）。<b>682★ 未達 1k 門檻</b>（領域冷門，放寬並明講）。</td></tr>
+<tr><td>版本風險</td><td>2.x 需 MCP SDK 第 2 版＋zod 4＋Node 20（你們 Node 22）。<b>SDK v2 已於 2026-07-27 成為穩定版</b>（官方 main 分支，2026-10-07 查證）；採用 v2，不保留 1.x 備案（1.x 只剩約半年維護期）。<s>原稿「穩定度未確認」是舊索引資料，已更正。</s></td></tr>
+<tr><td>可重用的既有資產</td><td>權限矩陣（read／write／manage／self）、稽核紀錄、關注人與執行人推導規則、已有的後端動作與測試。</td></tr>
+<tr><td>主要缺口</td><td>後端動作全綁「登入 cookie 的人」，MCP 沒有登入畫面；動作核心要抽成「給定身分即可執行」才能共用。</td></tr></table>
+
+<h2>3. 架構</h2>
+<div class="flow">
+ <div class="nd"><b>每個人的 Claude</b>帶自己的金鑰<br><code>Authorization: Bearer dd_…</code></div><span class="ar">→</span>
+ <div class="nd k"><b>/api/mcp（新）</b>Streamable HTTP、無狀態<br>mcp-handler ＋ 驗金鑰</div><span class="ar">→</span>
+ <div class="nd k"><b>金鑰 → 身分</b>查 api_keys，得 user＋角色＋範圍<br>用同一份權限矩陣檢查</div><span class="ar">→</span>
+ <div class="nd k"><b>domain 函式（抽出）</b>createTask、updateTask…<br>網頁動作也改成呼叫它</div><span class="ar">→</span>
+ <div class="nd"><b>Neon 資料庫</b>＋稽核紀錄</div>
+</div>
+<div class="flow"><div class="nd n"><b>新增資料表 api_keys</b>（要你核准才對正式庫建立）</div></div>
+
+<h2>4. 工具清單</h2>
+<table><tr><th>工具</th><th>權限</th><th>說明</th></tr>
+<tr><td><span class="tag r">讀</span><code>list_projects</code>、<code>get_project</code></td><td>read</td><td>專案清單；專案詳情含任務與子任務</td></tr>
+<tr><td><span class="tag r">讀</span><code>search_tasks</code>、<code>get_task</code>、<code>my_tasks</code>、<code>list_people</code></td><td>read</td><td>依狀態、負責人、專案、到期日搜尋；我的任務含「我關注／我執行」；人名清單</td></tr>
+<tr><td><span class="tag wt">寫</span><code>create_task</code>、<code>update_task</code></td><td>write</td><td>建立與修改（狀態、日期、優先度、備註、<b>關注人</b>；執行人在有子任務時由子任務帶出，沿用現有規則）</td></tr>
+<tr><td><span class="tag wt">寫</span><code>create_subtask</code>、<code>update_subtask</code>、<code>set_subtask_done</code></td><td>write</td><td>子任務建立、改名／執行人／備註、設定完成與否（<b>不做 toggle</b>，重試會把狀態切回去；改執行人會自動重算任務負責人）</td></tr>
+<tr><td><span class="tag wt">寫</span><code>create_project</code>、<code>rename_project</code></td><td>write</td><td>專案建立與改名</td></tr>
+<tr><td><span class="tag d">刪</span>（無）</td><td>—</td><td><b>決定：先不開放任何刪除</b>（任務、子任務、專案、批次、全部刪除都不做）。之後若要，等「封存」做成真的功能再讓 agent 用封存取代</td></tr></table>
+
+<h2>5. 金鑰與身分</h2>
+<table><tr><th>項目</th><th>做法</th></tr>
+<tr><td>誰發金鑰</td><td>每個人在<b>設定頁</b>自助建立、可撤銷；金鑰<b>只在建立時顯示一次</b></td></tr>
+<tr><td>綁定</td><td>金鑰綁建立者的帳號，角色跟著帳號（viewer 的金鑰只能讀）；建立時可再縮成「唯讀」</td></tr>
+<tr><td>儲存</td><td>只存雜湊（SHA-256；金鑰是 32 位元組隨機值，不需要慢雜湊）與前綴；格式 <code>dd_live_…</code></td></tr>
+<tr><td>資料表</td><td><code>api_keys(id, user_id, name, key_prefix, key_hash 唯一, scope 讀/寫, created_at, last_used_at, expires_at, revoked_at)</code></td></tr>
+<tr><td>帳號被刪或降權</td><td>金鑰隨帳號失效（外鍵連鎖刪除、每次驗證都重讀目前角色）</td></tr></table>
+
+<h2>6. 稽核與限速</h2>
+<div class="box">每次工具呼叫記一筆稽核：動作名 <code>MCP_工具名</code>、哪個人、哪把金鑰、參數摘要。限速以資料庫計數（每把金鑰每分鐘次數），因為無伺服器的記憶體限速只對單一實例有效。</div>
+
+<h2>7. 刪除：先不開放（已決定）</h2>
+<div class="box"><b>原因：</b>專案目前的刪除是永久的（沒有垃圾桶，只有每天凌晨 4 點的備份可還原）；而畫面上的「Archive」只是暫時隱藏、<b>沒有存進資料庫</b>（重新整理就消失）。所以 MCP 第一版<b>完全沒有刪除工具</b>。<br>
+<b>寫入的保護：</b>稽核（誰、哪把金鑰、做了什麼）、每把金鑰限速、viewer 金鑰唯讀。Claude 客戶端本來就會在每次工具呼叫前請你核准，所以不另加「預覽再確認」。<br>
+<b>之後若要：</b>先把「封存」做成真的功能（資料庫欄位＋畫面），MCP 再提供封存工具取代刪除。這是另一項工作，不在本計畫內。</div>
+
+<h2>8. 重構範圍（讓網頁與 MCP 共用）</h2>
+<div class="box">把 <code>server/actions/tasks.js</code> 與 <code>projects.js</code> 裡 create／update／delete／toggle 的核心抽到 <code>server/domain/</code>，函式簽名為 <code>(actor, args)</code>；網頁動作改成「withCap 驗登入 → 呼叫 domain」，MCP 工具改成「驗金鑰 → 呼叫 domain」。既有 800+ 個測試保護行為不變；每抽一支就跑一次全套測試。</div>
+
+<h2>9. 分期</h2>
+<table><tr><th>期</th><th>內容</th><th>要動正式庫嗎</th></tr>
+<tr><td>0</td><td>確認套件版本（mcp-handler／SDK／zod）、Codex 審查本設計</td><td>否</td></tr>
+<tr><td>1</td><td>抽出 domain 函式（網頁行為不變）</td><td>否</td></tr>
+<tr><td>2</td><td>api_keys 資料表＋設定頁發金鑰／撤銷＋金鑰驗證</td><td><b>是：新增資料表（要你點頭）</b></td></tr>
+<tr><td>3</td><td>/api/mcp 路由＋讀取工具</td><td>否</td></tr>
+<tr><td>4</td><td>寫入與刪除工具＋稽核＋限速</td><td>否</td></tr>
+<tr><td>5</td><td>文件、各人設定 Claude 的教學、用真實 Claude 端對端驗收</td><td>否</td></tr></table>
+
+<h2>10. 不做什麼</h2>
+<div class="box">不做任何刪除（任務、子任務、專案、批次、全部刪除）；不開放帳號管理、備份、設定、金鑰管理本身；不做 OAuth 登入流程（金鑰就夠，之後再加）；不替既有 <code>api-spec.md</code> 的 REST 規格補實作（除非之後要接 LINE 機器人）。</div>
+
+<h2>11. 待你核准</h2>
+<div class="warn">① 本設計（含「不開放刪除」的決定）；② 之後第 2 期要在正式資料庫新增 <code>api_keys</code>（屆時再單獨問你）。建議在動手前先讓 Codex 審一次（金鑰設計與權限）。</div>
+<h2>12. Codex 審查結果與修訂（2026-10-07，結論：需修訂）</h2>
+<p style="font-size:12px;color:#5b6676;margin:0 0 6px">模型 gpt-6.1-sol、high；整體信心 0.98。三項關鍵主張我已用原始資料核對（標「已查證」）。</p>
+<table><tr><th>#</th><th>發現</th><th>查證</th><th>處置</th></tr>
+<tr><td>P1</td><td>每個工具要有唯一的「工具→權限」登記表；實際檢查 = 帳號權限 ∩ 金鑰範圍 ∩ 工具允許；未知工具預設拒絕；domain 模組要 server-only，避免變成可被客戶端呼叫的 Server Action</td><td>合理（本專案權限矩陣即此模式）</td><td><b>採納</b>：新增 MCP 工具矩陣並納入 authzCoverage 測試</td></tr>
+<tr><td>P1</td><td><code>withMcpAuth</code> 的 <code>required</code> 預設 false，驗證失敗會放行</td><td><b>已查證</b>（官方原始碼 <code>required = false</code>）</td><td><b>採納</b>：一律 <code>required:true</code>，並測無金鑰、無效金鑰、只有 cookie 皆被擋</td></tr>
+<tr><td>P1</td><td>抽 domain 時必須保留完整 <code>db.batch</code> 邊界；owner 重算要有並行鎖策略（先鎖父任務再改）；要有真實 Postgres 並行測試</td><td>合理；既有 batch 是原子的，並行重算是新增風險</td><td><b>採納</b>：先整段 batch 搬移、不拆開；加並行測試。團隊規模小，列入第 1 期驗收</td></tr>
+<tr><td>P1</td><td>業務寫入與稽核必須同一 batch 提交；稽核含 user、key、request_id、目標與前後值；不存原始金鑰</td><td>合理</td><td><b>採納</b></td></tr>
+<tr><td>P1</td><td>移除 toggle 改 <code>set_subtask_done</code>；建立類工具加 <code>operation_id</code> 冪等（資料庫唯一約束、同交易提交）</td><td>合理（逾時重試會重複建立）</td><td><b>採納</b>：新增冪等紀錄表（第 2 期一併建）</td></tr>
+<tr><td>P1</td><td>「每人各自的 Claude」要先驗證實際客戶端：Team／Enterprise 的共用 connector 憑證是共用的，會造成稽核歸屬錯誤</td><td>官方說明連結見審查原文；<b>我未逐條核對</b></td><td><b>需你決定</b>：團隊用哪種 Claude？（見下方問題）</td></tr>
+<tr><td>P1</td><td>Vercel Hobby 限非商業個人使用，公司業務不符</td><td><b>已查證</b>（官方原文「restricts users to non-commercial, personal use only」）</td><td><b>需你決定</b>：現有部署就在 Hobby，與 MCP 無關但 MCP 會放大風險</td></tr>
+<tr><td>P2</td><td>金鑰政策要寫完整：CSPRNG、期限、撤銷、洩漏處置、帳號停用連動、在途請求界線</td><td>合理</td><td><b>採納</b>：預設有效期 90 天、可自助撤銷、停用帳號即全部失效</td></tr>
+<tr><td>P2</td><td>更新工具要版本條件（expected_version），避免覆蓋人或別的 agent 的新修改</td><td>合理（需新增版本欄位）</td><td><b>採納</b>為第 2 期；先用 <code>updated_at</code> 條件更新，不新增欄位</td></tr>
+<tr><td>P2</td><td>限速要原子計數、獨立計數表、使用者總額、讀寫分開、提前啟用</td><td>合理</td><td><b>採納</b>：第 3 期讀取工具公開時就上</td></tr>
+<tr><td>P2</td><td>domain 要嚴格輸入驗證（白名單、長度、owner 聯集不得超過 500 字）；my_tasks 取自可信身分；list_people 不回整列</td><td>合理</td><td><b>採納</b></td></tr>
+<tr><td>P2</td><td>notes 提示注入無法靠標記解決；高影響修改要預覽＋網頁端簽發的短效批准；要有快速停用 MCP 寫入的開關</td><td>合理（本設計原先說「Claude 客戶端會問你核准」，仍會被間接注入繞過）</td><td><b>部分採納</b>：先做全域「停用寫入」開關與逐工具 allowlist；網頁端批准 token 列為後續</td></tr>
+<tr><td>P2</td><td>middleware 例外要精確匹配（不用 startsWith）、失敗回 401 不 redirect、Origin allowlist、no-store、遮罩 Authorization</td><td>合理</td><td><b>採納</b></td></tr>
+<tr><td>P2</td><td>明訂短請求、禁止長連線；設定 maxDuration；逾時不代表沒提交（與冪等配套）</td><td>合理</td><td><b>採納</b></td></tr>
+<tr><td>P2</td><td>1.x 備案要有可部署適配；SDK v2 已穩定</td><td><b>已查證</b>（v2 為穩定線）</td><td><b>採納</b>：改採 v2，鎖定 lockfile，不保留 1.x；第 0 期先做「一讀一寫」端對端 smoke test</td></tr></table>
+<div class="box"><b>修訂後的分期：</b>0 依賴 smoke test（mcp-handler 2.x＋SDK v2＋一個讀取＋一個寫入工具，用真實 Claude 連）→ 1 抽 domain（保留完整 batch）→ 2 金鑰表、冪等表、設定頁、驗證 → 3 讀取工具＋限速 → 4 寫入工具＋稽核同交易＋停用開關 → 5 文件與多人端對端驗收。</div>
+<div class="warn"><b>要你回答兩件事才能繼續：</b>① 團隊成員各自用哪種 Claude（Claude Code、個人 claude.ai／桌面版、還是公司的 Team／Enterprise）？這決定用「每人一把金鑰」還是要改做 OAuth 登入。② 儀表板是否屬公司業務使用？若是，Vercel Hobby 不符合條款，需評估升級方案。</div>
+</div></body></html>
