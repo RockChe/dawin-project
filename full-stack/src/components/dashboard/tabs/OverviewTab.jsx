@@ -3,7 +3,6 @@ import { useState, useMemo, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, toBusinessDateString } from "@/lib/utils";
-import { getOwnerColor } from "@/lib/theme";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
 import OwnerTags from "../OwnerTags";
@@ -28,8 +27,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
   const [ovHover, setOvHover] = useState(null);
   const [timeDim, setTimeDim] = useState("月");
 
-  const { projStats, projBarsData } = useMemo(() => {
-    const stats = {};
+  const projBarsData = useMemo(() => {
     const barsMap = {};
     twp.forEach(d => {
       // projBars: accumulate date ranges and progress per project (from twp)
@@ -40,20 +38,14 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
         barsMap[d.project].dates.push(pD(d.start), pD(d.end));
       }
     });
-    filtered.forEach(d => {
-      // projStats: from filtered data only
-      if (!stats[d.project]) stats[d.project] = { total: 0, pSum: 0 };
-      stats[d.project].total++;
-      stats[d.project].pSum += d.progress;
-    });
     const bars = Object.entries(barsMap).map(([pn, info]) => {
       if (!info.dates.length) return null;
       const s = new Date(Math.min(...info.dates)), e = new Date(Math.max(...info.dates));
       const avg = Math.round(info.progressSum / info.count);
       return { name: pn, start: s, end: e, avg };
     }).filter(Boolean);
-    return { projStats: stats, projBarsData: bars };
-  }, [twp, filtered]);
+    return bars;
+  }, [twp]);
 
   const pieData = useMemo(() => {
     const entries = Object.entries(SC).map(([k, c]) => ({ label: k, count: stats[k] || 0, color: c.color }));
@@ -123,28 +115,8 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
       })()}
     </div>
 
-    {/* Overdue + Upcoming */}
+    {/* Upcoming + Status */}
     <div className="dash-grid-2col">
-      {(() => {
-        const now = new Date();
-        const overdue = filtered.filter(t => { if (!t.end || t.status === "已完成") return false; return pD(t.end) < now; }).sort((a, b) => pD(a.end) - pD(b.end));
-        return (<div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.red, borderRadius: 2 }} />Overdue Tasks</h3>
-          {overdue.length === 0 ? (<div style={{ padding: 30, textAlign: "center" }}><div style={{ fontSize: 32, marginBottom: 8 }}>&#10003;</div><div style={{ fontSize: 14, fontWeight: 600, color: X.green }}>No overdue tasks</div><div style={{ fontSize: 13, color: X.textDim, marginTop: 4 }}>All tasks are on track</div></div>)
-          : overdue.map(t => { const ed = pD(t.end); const days = Math.ceil((now - ed) / 864e5);
-            return (<div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${X.border}22` }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[t.project] || X.accent, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="dash-name-1line" style={{ fontSize: 14, fontWeight: 500 }}>{t.task}</div>
-                <div style={{ fontSize: 12, color: X.textSec, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>{t.project} · <OwnerTags value={t.owner} configOwners={configOwners} /></div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, fontFamily: FM, color: X.red }}>-{days}d</div>
-                <div style={{ fontSize: 11, color: X.textSec, fontFamily: FM }}>{fD(t.end)}</div>
-              </div>
-            </div>); })}
-        </div>);
-      })()}
       {(() => {
         const now = new Date(); const inDays = new Date(now.getTime() + upcomingDays * 864e5);
         const upcoming = filtered.filter(t => { if (!t.end || t.status === "已完成") return false; const ed = pD(t.end); return ed >= now && ed <= inDays; }).sort((a, b) => pD(a.end) - pD(b.end)).slice(0, upcomingLimit);
@@ -165,23 +137,6 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
             </div>); })}
         </div>);
       })()}
-    </div>
-
-    {/* Project Progress + Status Distribution */}
-    <div className="dash-grid-2col" style={{ marginTop: 16 }}>
-      <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.accent, borderRadius: 2 }} />Project Progress</h3>
-        {Object.entries(projStats).map(([proj, s]) => { const avg = s.total > 0 ? Math.round(s.pSum / s.total) : 0; return (
-          <div key={proj} style={{ marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[proj] }} />
-                {projBanners[proj] && <img src={projBanners[proj]} style={{ width: 20, height: 20, borderRadius: 5, objectFit: "cover" }} />}{proj}
-              </span>
-              <span style={{ fontFamily: FM, fontSize: 12, color: X.textDim }}>{avg}%</span>
-            </div>
-            <div style={{ height: 5, background: X.surfaceLight, borderRadius: 2, overflow: "hidden" }}><div style={{ height: "100%", width: `${avg}%`, background: pcMap[proj], borderRadius: 2, opacity: 0.8 }} /></div>
-          </div>); })}
-      </div>
       <div style={{ background: X.surface, borderRadius: 12, padding: 16, border: `1px solid ${X.border}` }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 8px" }}>Status Distribution</h3>
         {pieData && (<div className="dash-chart-wrap">
@@ -201,42 +156,6 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
               </div>))}
             </div>
           </div>)}
-      </div>
-    </div>
-
-    {/* Team Workload + Tasks per Project */}
-    <div className="dash-grid-2col" style={{ marginTop: 16 }}>
-      {(() => {
-        const ownerMap = {}; filtered.forEach(t => { (t.owner || '').split(',').map(o => o.trim()).filter(Boolean).forEach(o => { ownerMap[o] = (ownerMap[o] || 0) + 1; }); });
-        const owners = Object.entries(ownerMap).map(([n, c]) => ({ name: n, count: c })).sort((a, b) => b.count - a.count);
-        const gm = Math.ceil(Math.max(...owners.map(o => o.count), 1) / 2) * 2;
-        return (<div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.purple, borderRadius: 2 }} />Team Workload</h3>
-          {owners.map((o, i) => (<div key={o.name} style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
-            <div style={{ width: 80, minWidth: 80, textAlign: "right", paddingRight: 10, fontSize: 14, color: X.textSec, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
-            <div style={{ flex: 1, height: 20, position: "relative" }}>
-              <div style={{ height: "100%", width: `${(o.count / gm) * 100}%`, background: getOwnerColor(X, o.name, configOwners).color, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6, minWidth: o.count > 0 ? 24 : 0 }}>
-                <span style={{ fontFamily: FM, fontSize: 14, fontWeight: 600, color: "#fff" }}>{o.count}</span>
-              </div>
-            </div>
-          </div>))}
-        </div>);
-      })()}
-      <div style={{ background: X.surface, borderRadius: 12, padding: 20, border: `1px solid ${X.border}` }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px" }}>Tasks per Project</h3>
-        {(() => { const pc = Object.entries(projStats).map(([n, s]) => ({ name: n, count: s.total })).sort((a, b) => b.count - a.count); const gm = Math.ceil(Math.max(...pc.map(p => p.count), 1) / 2) * 2;
-          return (<div>{pc.map((p, i) => (<div key={i} style={{ marginBottom: isMobile ? 8 : 6 }}>
-            {isMobile && <div style={{ fontSize: 13, color: X.textSec, marginBottom: 2, display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[p.name] || X.accent }} />{p.name}</div>}
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {!isMobile && <div title={p.name} className="dash-tpp-label" style={{ textAlign: "right", paddingRight: 10, fontSize: 14, color: X.textSec, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>}
-              <div style={{ flex: 1, height: 20, position: "relative" }}>
-                <div style={{ height: "100%", width: `${(p.count / gm) * 100}%`, background: pcMap[p.name] || X.accent, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6, minWidth: p.count > 0 ? 24 : 0 }}>
-                  <span style={{ fontFamily: FM, fontSize: 14, fontWeight: 600, color: "#fff" }}>{p.count}</span>
-                </div>
-              </div>
-            </div>
-          </div>))}</div>);
-        })()}
       </div>
     </div>
   </>);
