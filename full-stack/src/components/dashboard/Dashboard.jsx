@@ -7,7 +7,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { PermissionProvider, useCan } from "@/components/PermissionProvider";
 import useTaskManager from "@/hooks/useTaskManager";
 import useUserSettings from "@/hooks/useUserSettings";
-import useLocalStorageState from "@/hooks/useLocalStorageState";
+import { resolveTab, resolveTimeDim, resolveGanttWidths, collectLegacySettings } from "@/lib/personalSettings";
 import TaskModal from "./TaskModal";
 import FileManagerModal from "./FileManagerModal";
 import SettingsTab from "./tabs/SettingsTab";
@@ -17,8 +17,6 @@ import OverviewTab from "./tabs/OverviewTab";
 import MyTasksTab from "./tabs/MyTasksTab";
 import ProjectsTab, { toggleHidden, PROJECT_TASK_VIEW_DEFAULT } from "./tabs/ProjectsTab";
 import DataTab from "./tabs/DataTab";
-
-const TAB_KEYS = ["overview", "mytasks", "projects", "timeline", "table", "settings"];
 
 export default function Dashboard({ initialData }) {
   const { themeKey, cycleTheme, X, SC, PC, PJC } = useTheme();
@@ -36,7 +34,7 @@ export default function Dashboard({ initialData }) {
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
-  const { settings: userSettings, updateSetting, ready: settingsReady } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: true, projectTaskView: PROJECT_TASK_VIEW_DEFAULT }, showToast);
+  const { settings: userSettings, updateSetting, ready: settingsReady } = useUserSettings({ zoom: 150, projectsView: 'card', hiddenProjects: [], timelineDefaultCollapsed: true, projectTaskView: PROJECT_TASK_VIEW_DEFAULT }, showToast, initialData?.settings);
   const zoom = userSettings.zoom ?? 150;
   const onZoomChange = useCallback(v => updateSetting('zoom', v), [updateSetting]);
   // #4a Projects card/list view (per-account)
@@ -59,9 +57,18 @@ export default function Dashboard({ initialData }) {
   const [fs, setFS] = useState([]); // 多選狀態篩選，[] = 不篩（非持久化）
   const toggleFS = useCallback(s => setFS(prev => toggleStatus(prev, s)), []);
   const [fpr, setFPR] = useState("全部");
-  // #5 persist active tab across refresh (per-device ephemeral → localStorage)
-  const [tab, changeTab] = useLocalStorageState("dash-activeTab", "overview",
-    raw => TAB_KEYS.includes(raw) ? raw : undefined);
+  // 個人設定：目前分頁／時間尺度／欄寬／Timeline 高度／Upcoming 都存 user_settings（per-account，跨裝置）
+  const tab = resolveTab(userSettings.activeTab);
+  const changeTab = useCallback(v => updateSetting('activeTab', v), [updateSetting]);
+  const timeDimOverview = resolveTimeDim(userSettings.timeDimOverview);
+  const timeDimTimeline = resolveTimeDim(userSettings.timeDimTimeline);
+  const timeDimProject = resolveTimeDim(userSettings.timeDimProject);
+  const setTimeDimOverview = useCallback(v => updateSetting('timeDimOverview', v), [updateSetting]);
+  const setTimeDimTimeline = useCallback(v => updateSetting('timeDimTimeline', v), [updateSetting]);
+  const setTimeDimProject = useCallback(v => updateSetting('timeDimProject', v), [updateSetting]);
+  // Timeline 排序：與 Dashboard 共用同一份設定，TimelineTab 不再自開 hook（否則多一次 fetch）
+  const timelineSort = userSettings.timelineSort ?? 'manual';
+  const setTimelineSort = useCallback(v => updateSetting('timelineSort', v), [updateSetting]);
   const [customProjects, setCustomProjects] = useState(new Set());
   const [modalTask, setModalTask] = useState(null);
   const [showFileManager, setShowFileManager] = useState(null);
@@ -84,22 +91,25 @@ export default function Dashboard({ initialData }) {
   useEffect(() => { return () => { if (searchTimer.current) clearTimeout(searchTimer.current); }; }, []);
   const clearSearch = useCallback(() => { setSearchInput(""); setSearchQ(""); }, []);
   const defaultGW = { day: 20, week: 50, month: 50, quarter: 100 };
-  const defaultGanttWidths = { overview: { ...defaultGW }, project: { ...defaultGW }, timeline: { ...defaultGW } };
-  const [ganttWidths, setGanttWidths] = useLocalStorageState("dash-ganttWidths", defaultGanttWidths, raw => {
-    const parsed = JSON.parse(raw);
-    // 舊格式遷移：早期版本只存單一組寬度（無 overview/project/timeline 分組），
-    // 攤成三份沿用，不然舊使用者的設定會壞掉。
-    if (parsed.day !== undefined && !parsed.overview) return { overview: { ...parsed }, project: { ...parsed }, timeline: { ...parsed } };
-    return parsed;
-  });
-  const [ganttDraft, setGanttDraft] = useState(() => JSON.parse(JSON.stringify(defaultGanttWidths)));
+  const ganttWidths = useMemo(() => resolveGanttWidths(userSettings.ganttWidths), [userSettings.ganttWidths]);
+  const [ganttDraft, setGanttDraft] = useState(() => JSON.parse(JSON.stringify(ganttWidths)));
   useEffect(() => { setGanttDraft(JSON.parse(JSON.stringify(ganttWidths))); }, [ganttWidths]);
-  const saveGanttWidths = useCallback(() => { const filled = {}; for (const v of ["overview", "project", "timeline"]) { filled[v] = {}; for (const k of ["day", "week", "month", "quarter"]) { const val = ganttDraft[v]?.[k]; filled[v][k] = (val === '' || val == null) ? defaultGW[k] : Math.max(1, val); } } const deep = JSON.parse(JSON.stringify(filled)); setGanttWidths(deep); setGanttDraft(JSON.parse(JSON.stringify(deep))); showToast("Timeline widths saved", "success"); }, [ganttDraft, showToast, setGanttWidths]);
-  const [timelineHeight, setTimelineHeightRaw] = useLocalStorageState("dash-timelineHeight", 100, raw => parseInt(raw) || 100);
-  const saveTimelineHeight = useCallback((val) => { const v = Math.max(10, Math.min(200, parseInt(val) || 100)); setTimelineHeightRaw(v); showToast("Timeline height saved", "success"); }, [showToast, setTimelineHeightRaw]);
-  const [upcomingDays, setUpcomingDaysRaw] = useLocalStorageState("dash-upcomingDays", 30, raw => parseInt(raw) || 30);
-  const [upcomingLimit, setUpcomingLimitRaw] = useLocalStorageState("dash-upcomingLimit", 5, raw => parseInt(raw) || 5);
-  const saveUpcomingSettings = useCallback((days, limit) => { const d = Math.max(1, parseInt(days) || 30); const l = Math.max(1, parseInt(limit) || 5); setUpcomingDaysRaw(d); setUpcomingLimitRaw(l); showToast("Upcoming settings saved", "success"); }, [showToast, setUpcomingDaysRaw, setUpcomingLimitRaw]);
+  const saveGanttWidths = useCallback(() => { const filled = {}; for (const v of ["overview", "project", "timeline"]) { filled[v] = {}; for (const k of ["day", "week", "month", "quarter"]) { const val = ganttDraft[v]?.[k]; filled[v][k] = (val === '' || val == null) ? defaultGW[k] : Math.max(1, val); } } const deep = JSON.parse(JSON.stringify(filled)); updateSetting('ganttWidths', deep); setGanttDraft(JSON.parse(JSON.stringify(deep))); showToast("Timeline widths saved", "success"); }, [ganttDraft, showToast, updateSetting]);  // eslint-disable-line react-hooks/exhaustive-deps
+  const timelineHeight = userSettings.timelineHeight ?? 100;
+  const saveTimelineHeight = useCallback((val) => { const v = Math.max(10, Math.min(200, parseInt(val) || 100)); updateSetting('timelineHeight', v); showToast("Timeline height saved", "success"); }, [showToast, updateSetting]);
+  const upcomingDays = userSettings.upcomingDays ?? 30;
+  const upcomingLimit = userSettings.upcomingLimit ?? 5;
+  const saveUpcomingSettings = useCallback((days, limit) => { const d = Math.max(1, parseInt(days) || 30); const l = Math.max(1, parseInt(limit) || 5); updateSetting('upcomingDays', d); updateSetting('upcomingLimit', l); showToast("Upcoming settings saved", "success"); }, [showToast, updateSetting]);
+  // 一次性遷移：伺服器上還沒有的設定，若舊 localStorage 有就採用並寫入一次（不刪舊 key）。
+  // 等 settings ready 才跑（避免把「還沒載入」誤判成「沒有」），且只跑一次。
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (!settingsReady || migratedRef.current) return;
+    migratedRef.current = true;
+    let storage = null;
+    try { storage = window.localStorage; } catch {}
+    for (const [k, v] of Object.entries(collectLegacySettings(userSettings, storage))) updateSetting(k, v);
+  }, [settingsReady]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const h = () => setScrolled(window.scrollY > 10); window.addEventListener("scroll", h, { passive: true }); return () => window.removeEventListener("scroll", h); }, []);
   const [isMobile, setIsMobile] = useState(() => { try { return window.innerWidth <= 768; } catch { return false; } });
   useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
@@ -237,16 +247,16 @@ export default function Dashboard({ initialData }) {
         </div>
 
         {/* OVERVIEW */}
-        {tab === "overview" && <OverviewTab filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
+        {tab === "overview" && <OverviewTab projects={projects} timeDim={timeDimOverview} onTimeDimChange={setTimeDimOverview} filtered={filtered} twp={twp} allS={allS} isMobile={isMobile} pcMap={pcMap} ganttWidths={ganttWidthsOverview} projBanners={projBanners} stats={stats} upcomingDays={upcomingDays} upcomingLimit={upcomingLimit} configOwners={configOwners} />}
 
         {/* MY TASKS */}
         {tab === "mytasks" && <MyTasksTab twp={twp} userName={initialData?.session?.name} isMobile={isMobile} pcMap={pcMap} setModalTask={handleSetModalTask} />}
 
         {/* PROJECTS */}
-        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} reorderTasks={reorderTasks} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
+        {tab === "projects" && <ProjectsTab timeDim={timeDimProject} onTimeDimChange={setTimeDimProject} twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} reorderTasks={reorderTasks} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
 
         {/* TIMELINE */}
-        {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} timelineDefaultCollapsed={timelineDefaultCollapsed} setTimelineDefaultCollapsed={setTimelineDefaultCollapsed} />}
+        {tab === "timeline" && <TimelineTab timeDim={timeDimTimeline} onTimeDimChange={setTimeDimTimeline} timelineSort={timelineSort} onTimelineSortChange={setTimelineSort} twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} timelineDefaultCollapsed={timelineDefaultCollapsed} setTimelineDefaultCollapsed={setTimelineDefaultCollapsed} />}
 
         {/* DATA TABLE */}
         {tab === "table" && <DataTab filtered={filtered} allS={allS} allT={allT} twp={twp} projects={projects} updateTask={updateTask} deleteTask={deleteTask} addTask={addTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} configCats={configCats} configOwners={configOwners} isMobile={isMobile} pcMap={pcMap} importTasks={importTasks} deleteManyTasks={deleteManyTasks} updateManyTasks={updateManyTasks} deleteAllTasks={deleteAllTasks} showToast={showToast} setModalTask={handleSetModalTask} />}

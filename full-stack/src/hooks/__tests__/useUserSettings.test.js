@@ -169,3 +169,39 @@ describe('ready', () => {
     expect(result.current.settings.zoom).toBe(150);
   });
 });
+
+// ── 4. server-provided initial settings (first-load fold-in) ──────────────
+describe('initial settings from the server', () => {
+  it('starts ready with defaults+initial merged on the very first render, and never calls getUserSettings', async () => {
+    const { result } = renderHook(() => useUserSettings({ zoom: 150, a: 1 }, undefined, { zoom: 100 }));
+    // 第一次 render 就已就緒：不需 await 任何 effect
+    expect(result.current.ready).toBe(true);
+    expect(result.current.settings).toEqual({ zoom: 100, a: 1 });
+    await act(async () => {});
+    expect(mockGetUserSettings).not.toHaveBeenCalled();
+  });
+
+  it('an empty initial ({}) still counts as provided: ready, no fetch', async () => {
+    const { result } = renderHook(() => useUserSettings({ zoom: 150 }, undefined, {}));
+    expect(result.current.ready).toBe(true);
+    await act(async () => {});
+    expect(mockGetUserSettings).not.toHaveBeenCalled();
+  });
+
+  it('updateSetting still works optimistically and rolls back to the initial value', async () => {
+    mockSetUserSetting.mockResolvedValue({ error: 'DB error' });
+    const { result } = renderHook(() => useUserSettings({}, undefined, { zoom: 100 }));
+    await act(async () => { await result.current.updateSetting('zoom', 999); });
+    expect(result.current.settings.zoom).toBe(100);
+  });
+
+  it('without initial it still fetches on mount (unchanged behaviour)', async () => {
+    mockGetUserSettings.mockResolvedValue({ success: true, data: { zoom: 90 } });
+    const { result } = renderHook(() => useUserSettings({ zoom: 150 }));
+    expect(result.current.ready).toBe(false);
+    await act(async () => {});
+    expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
+    expect(result.current.settings.zoom).toBe(90);
+    expect(result.current.ready).toBe(true);
+  });
+});

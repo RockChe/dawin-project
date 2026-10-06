@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
-import useUserSettings from "@/hooks/useUserSettings";
 import GanttTimeline, {
   TimeScaleToggle,
   toggleCollapsed,
@@ -27,11 +26,12 @@ function TimelineTab({
   projects = [],
   timelineDefaultCollapsed = true,
   setTimelineDefaultCollapsed,
+  timeDim = "月",
+  onTimeDimChange,
+  timelineSort = "manual",
+  onTimelineSortChange,
 }) {
-  const [timeDim, setTimeDim] = useState("月");
   const { X } = useTheme();
-  const { settings, updateSetting } = useUserSettings({ timelineSort: "manual" });
-  const timelineSort = settings.timelineSort;
 
   // All project ids visible on this timeline (excludes hidden projects).
   const allProjectIds = useMemo(
@@ -115,7 +115,7 @@ function TimelineTab({
           <select
             aria-label="排序方式"
             value={timelineSort}
-            onChange={e => updateSetting("timelineSort", e.target.value)}
+            onChange={e => onTimelineSortChange?.(e.target.value)}
             style={pillStyle}
           >
             <option value="manual">手動</option>
@@ -130,7 +130,7 @@ function TimelineTab({
             {allCollapsed ? "全部展開" : "全部收折"}
           </button>
         </div>
-        <TimeScaleToggle value={timeDim} onChange={setTimeDim} />
+        <TimeScaleToggle value={timeDim} onChange={onTimeDimChange} />
       </div>
       <GanttTimeline
         tasks={twp}

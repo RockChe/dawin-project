@@ -6,6 +6,7 @@ import { pD, fD, toBusinessDateString } from "@/lib/utils";
 import GanttTimeline, { TimeScaleToggle, computeScaleDivisions } from "../GanttTimeline";
 import MobileProjectTimeline from "../MobileProjectTimeline";
 import OwnerTags from "../OwnerTags";
+import { orderProjBars } from "@/lib/personalSettings";
 
 /**
  * Percent-of-timeline position of "today", quantized to the Asia/Taipei
@@ -22,10 +23,9 @@ export function computeTodayPct(mn, td) {
   return ((pD(toBusinessDateString()) - mn) / 864e5) / td * 100;
 }
 
-function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5, configOwners = [] }) {
+function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBanners, stats, upcomingDays = 30, upcomingLimit = 5, configOwners = [], projects, timeDim = "月", onTimeDimChange }) {
   const { X, SC } = useTheme();
   const [ovHover, setOvHover] = useState(null);
-  const [timeDim, setTimeDim] = useState("月");
 
   const projBarsData = useMemo(() => {
     const barsMap = {};
@@ -44,8 +44,9 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
       const avg = Math.round(info.progressSum / info.count);
       return { name: pn, start: s, end: e, avg };
     }).filter(Boolean);
-    return bars;
-  }, [twp]);
+    // 順序跟 Projects 分頁一致（原本是 twp 裡專案的首次出現順序，純屬巧合）
+    return orderProjBars(bars, projects);
+  }, [twp, projects]);
 
   const pieData = useMemo(() => {
     const entries = Object.entries(SC).map(([k, c]) => ({ label: k, count: stats[k] || 0, color: c.color }));
@@ -63,7 +64,7 @@ function OverviewTab({ filtered, twp, allS, isMobile, pcMap, ganttWidths, projBa
     <div style={{ background: X.surface, borderRadius: 12, padding: isMobile ? 14 : 20, border: `1px solid ${X.border}`, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 16px", flexWrap: "wrap", gap: 8 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 3, height: 14, background: X.accent, borderRadius: 2 }} />Project Timeline</h3>
-        <TimeScaleToggle value={timeDim} onChange={setTimeDim} />
+        <TimeScaleToggle value={timeDim} onChange={onTimeDimChange} />
       </div>
       {(() => {
         const projBars = projBarsData.map(p => ({ ...p, color: pcMap[p.name] || X.accent }));

@@ -10,9 +10,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 const seen = []; // 每次 render 時 GanttTimeline 收到的 collapsed
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('@/hooks/useUserSettings', () => ({
-  default: (d) => ({ settings: d, updateSetting: () => {}, ready: true }),
-}));
+const settingsHook = vi.fn((d) => ({ settings: d, updateSetting: () => {}, ready: true }));
+vi.mock('@/hooks/useUserSettings', () => ({ default: (...a) => settingsHook(...a) }));
 vi.mock('@/components/dashboard/GanttTimeline', async (orig) => ({
   ...(await orig()),
   default: ({ collapsed }) => { seen.push(collapsed); return null; },
@@ -47,5 +46,11 @@ describe('TimelineTab default collapse', () => {
     const { rerender } = mount({}, []);
     rerender(<ThemeProvider><TimelineTab twp={twp} allS={[]} fpSet={new Set()} fs={[]} fpr="全部" /></ThemeProvider>);
     expect(seen.at(-1)).toEqual(['p1', 'p2']);
+  });
+
+  it('does not open its own useUserSettings instance (sort comes from props → no second fetch)', () => {
+    settingsHook.mockClear();
+    mount({ timelineSort: 'name' });
+    expect(settingsHook).not.toHaveBeenCalled();
   });
 });

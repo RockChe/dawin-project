@@ -3,6 +3,7 @@ import { db } from '@/server/db';
 import { userSettings } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { withCap } from '@/lib/withCap';
+import { parseSettingRows } from '@/lib/parseSettingRows';
 
 const MAX_SETTING_BYTES = 64 * 1024;
 
@@ -10,9 +11,7 @@ export async function getUserSettings() {
   return withCap('self', async (session) => {
     try {
       const rows = await db.select().from(userSettings).where(eq(userSettings.userId, session.userId));
-      const result = {};
-      for (const r of rows) { try { result[r.key] = JSON.parse(r.value); } catch (e) { console.warn(`[getUserSettings] JSON parse failed for key "${r.key}":`, e.message); result[r.key] = r.value; } }
-      return { success: true, data: result };
+      return { success: true, data: parseSettingRows(rows) };
     } catch (err) {
       console.error('[getUserSettings] error:', err);
       return { error: err.message || '讀取個人設定失敗' };

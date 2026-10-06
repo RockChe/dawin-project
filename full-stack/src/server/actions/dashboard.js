@@ -1,14 +1,15 @@
 'use server';
 
 import { db } from '@/server/db';
-import { tasks, subtasks, links, files, projects, users, configTable as config } from '@/server/db/schema';
+import { tasks, subtasks, links, files, projects, users, userSettings, configTable as config } from '@/server/db/schema';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { withCap } from '@/lib/withCap';
 import { getDownloadUrl } from '@/lib/r2';
 import { alias } from 'drizzle-orm/pg-core';
+import { parseSettingRows } from '@/lib/parseSettingRows';
 
 /**
- * Consolidated initial data loader — 1 auth check + 6 parallel queries.
+ * Consolidated initial data loader — 1 auth check + 8 parallel queries（含目前使用者的個人設定，省掉首屏後再讀一次）.
  * Replaces getDashboardData() + getProjects() + getConfigs() + getSessionInfo().
  */
 export async function getInitialData() {
@@ -16,7 +17,7 @@ export async function getInitialData() {
     const taskCreator = alias(users, 'taskCreator');
     const projCreator = alias(users, 'projCreator');
 
-    const [allTasks, allSubtasks, allLinks, allFiles, allProjects, configRows, allUsers] = await Promise.all([
+    const [allTasks, allSubtasks, allLinks, allFiles, allProjects, configRows, allUsers, settingRows] = await Promise.all([
       db.select({
         id: tasks.id, projectId: tasks.projectId, task: tasks.task,
         status: tasks.status, category: tasks.category,
@@ -47,6 +48,7 @@ export async function getInitialData() {
         .orderBy(asc(projects.sortOrder), asc(projects.createdAt)),
       db.select().from(config).where(inArray(config.key, ['categories'])),
       db.select({ name: users.name }).from(users),
+      db.select().from(userSettings).where(eq(userSettings.userId, session.userId)),
     ]);
 
     const userNames = allUsers.map(u => u.name);
@@ -87,6 +89,7 @@ export async function getInitialData() {
       projects: projectsWithBanners,
       configs,
       userNames,
+      settings: parseSettingRows(settingRows),
       session: { role: session.role, name: session.name, email: session.email },
     };
   });

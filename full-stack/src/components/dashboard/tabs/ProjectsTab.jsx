@@ -149,7 +149,7 @@ function SortableProjectRow({ project, pn, pt, c, ts, avg, stC, icon, dragEnable
   );
 }
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView }) {
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView, timeDim = "月", onTimeDimChange }) {
   const { X, SC, inputStyle } = useTheme();
   const canWrite = useCan("write");
   const handleForbidden = useForbiddenHandler(showToast);
@@ -162,7 +162,6 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
   const [uploadTarget, setUploadTarget] = useState(null);
   const [showSubAdd, setShowSubAdd] = useState(null);
   const [subDraft, setSubDraft] = useState({ name: "", owner: "" });
-  const [timeDim, setTimeDim] = useState("月");
   const [sortMode, setSortMode] = useState("manual");
   const [detailIconHover, setDetailIconHover] = useState(false);
   const [openStatusId, setOpenStatusId] = useState(null);
@@ -415,7 +414,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
       {canWrite && <button onClick={() => { if (confirm("Delete?")) deleteProj(selProj); }} style={{ background: "transparent", border: `1px solid ${X.red}50`, borderRadius: 20, padding: "6px 14px", fontSize: 14, color: X.red, cursor: "pointer", fontWeight: 600 }}>Delete</button>}
     </div>
     {pt.some(t => t.start) && (<div style={{ marginBottom: 20 }}>
-      <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={setTimeDim} /></div>
+      <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={onTimeDimChange} /></div>
       {/* 決策 B：詳情頁甘特跟著「下方那組」專案內篩選走，不吃上方跨專案的全域篩選。
           原本三個都寫死「全部」，所以它從來不被任何篩選影響。 */}
       <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={projectTaskView.status} fpr={projectTaskView.priority} fow={projectTaskView.owner} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} configOwners={configOwners} taskOrder={ptAll.map(t => t.id)} onReorderTasks={canWrite && reorderTasks ? onTaskMove : undefined} />
