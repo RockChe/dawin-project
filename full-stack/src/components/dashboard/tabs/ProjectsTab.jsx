@@ -17,6 +17,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import SortableProjectCard, { EyeToggle } from "../SortableProjectCard";
+import SortableTask, { lockHorizontal } from "../SortableTask";
 import { deleteProjectBanner } from "@/server/actions/projects";
 
 const STATUS_OPTIONS = ["已完成", "進行中", "待辦", "提案中", "待確認"];
@@ -42,7 +43,17 @@ export const TASK_SORT_FIELDS = [
   { key: "status", label: "狀態" },
   { key: "owner", label: "負責人" },
   { key: "priority", label: "緊急度" },
+  { key: "manual", label: "手動" },   // = tasks.sortOrder；拖移任務時自動切到這裡
 ];
+
+/**
+ * 拖移任務時：若目前不是手動排序就切成手動（user 決策：拖了就當要手動排）。
+ * 已是手動 → 回同一個物件，呼叫端可據此跳過多餘的 user_settings 寫入。
+ */
+export function withManualSort(view) {
+  if (view?.sort?.field === "manual") return view;
+  return { ...view, sort: { field: "manual", dir: "asc" } };
+}
 
 /** 一組全域設定（非每專案一組），存 user_settings 的 projectTaskView。 */
 export const PROJECT_TASK_VIEW_DEFAULT = { sort: { field: "start", dir: "asc" }, status: [], owner: [], priority: [] };
@@ -72,6 +83,7 @@ function taskSortKey(t, field) {
   if (field === "status") { const i = STATUSES.indexOf(t.status); return i < 0 ? null : i; }
   if (field === "priority") { const i = PRIORITY_ORDER.indexOf(t.priority); return i < 0 ? null : i; }
   if (field === "owner") return t.owner ? String(t.owner) : null;
+  if (field === "manual") return t.sortOrder || 0;
   const d = t[field] ? pD(t[field]) : null;   // start / end
   return d ? d.getTime() : null;
 }
@@ -85,7 +97,7 @@ function taskSortKey(t, field) {
  */
 export function sortProjectTasks(tasks, s = {}) {
   const { field = "start", dir = "asc" } = s || {};
-  const sign = dir === "desc" ? -1 : 1;
+  const sign = dir === "desc" && field !== "manual" ? -1 : 1;   // 手動序沒有「反向」
   return tasks
     .map((t, i) => [t, i])
     .sort(([a, ai], [b, bi]) => {
@@ -134,7 +146,7 @@ function SortableProjectRow({ project, pn, pt, c, ts, avg, stC, icon, dragEnable
   );
 }
 
-function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView }) {
+function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, isMobile, setModalTask, setShowFileManager, ganttWidths, timelineHeight, showToast, renameProject, addProject, deleteProject: deleteProjectAction, updateTask, deleteTask, toggleSub, updateSub, addSub, deleteSub, reorderSubs, reorderProjects, reorderTasks, projBanners, setProjBanners, onProjectRenamed, onProjectDeleted, projectsView = "card", setProjectsView, hiddenProjects = [], toggleHidden: onToggleHidden, projectTaskView = PROJECT_TASK_VIEW_DEFAULT, setProjectTaskView }) {
   const { X, SC, inputStyle } = useTheme();
   const canWrite = useCan("write");
   const handleForbidden = useForbiddenHandler(showToast);
@@ -355,7 +367,17 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
   // ptView drives ONLY the task list. pt stays unfiltered so Progress / Subtasks /
   // 狀態 chip 數字 / 甘特條 keep describing the whole project — a "47%" that moves
   // because of what you clicked is not a number anyone can read.
-  const ptView = sortProjectTasks(filterProjectTasks(pt, projectTaskView), projectTaskView.sort);
+  // ptAll = 目前「有效順序」下的整個專案 task（手動 = sortOrder；其餘 = 該欄位排序）。
+  // Tasks 列表與甘特左欄共用這一份順序；拖移以它為基準算新順序（不是以篩選後的 ptView）。
+  const ptAll = sortProjectTasks(pt, projectTaskView.sort);
+  const ptView = filterProjectTasks(ptAll, projectTaskView);
+  const onTaskMove = (activeId, overId) => {
+    const projectId = projects.find(p => p.name === selProj)?.id;
+    if (!projectId || !reorderTasks) return;
+    reorderTasks(projectId, activeId, overId, ptAll.map(t => t.id));
+    if (projectTaskView.sort.field !== "manual") setProjectTaskView?.(withManualSort(projectTaskView));
+  };
+  const handleTaskDragEnd = ev => { if (ev.active && ev.over && ev.active.id !== ev.over.id) onTaskMove(ev.active.id, ev.over.id); };
   const patchView = patch => setProjectTaskView?.({ ...projectTaskView, ...patch });
   const toggleIn = (list, v) => (list.includes(v) ? list.filter(x => x !== v) : [...list, v]);
   const ownerOptions = [...new Set(pt.flatMap(t => String(t.owner || "").split(",").map(s => s.trim()).filter(Boolean)))];
@@ -393,7 +415,7 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
       <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}><TimeScaleToggle value={timeDim} onChange={setTimeDim} /></div>
       {/* 決策 B：詳情頁甘特跟著「下方那組」專案內篩選走，不吃上方跨專案的全域篩選。
           原本三個都寫死「全部」，所以它從來不被任何篩選影響。 */}
-      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={projectTaskView.status} fpr={projectTaskView.priority} fow={projectTaskView.owner} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} configOwners={configOwners} />
+      <GanttTimeline tasks={twp} subtasks={allS} fp={selProj} fs={projectTaskView.status} fpr={projectTaskView.priority} fow={projectTaskView.owner} isMobile={isMobile} timeDim={timeDim} ganttWidths={ganttWidths} timelineHeight={timelineHeight} configOwners={configOwners} taskOrder={ptAll.map(t => t.id)} onReorderTasks={canWrite && reorderTasks ? onTaskMove : undefined} />
     </div>)}
     <div className="dash-detail-grid" style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -444,10 +466,10 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
             aria-label="排序欄位" style={{ ...inputStyle, fontSize: 12, padding: "3px 8px", borderRadius: 20, cursor: "pointer" }}>
             {TASK_SORT_FIELDS.map(f => <option key={f.key} value={f.key}>排序：{f.label}</option>)}
           </select>
-          <span role="button" tabIndex={0} title={projectTaskView.sort.dir === "asc" ? "升冪" : "降冪"}
+          {projectTaskView.sort.field !== "manual" && <span role="button" tabIndex={0} title={projectTaskView.sort.dir === "asc" ? "升冪" : "降冪"}
             onClick={() => patchView({ sort: { ...projectTaskView.sort, dir: projectTaskView.sort.dir === "asc" ? "desc" : "asc" } })}
             onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); patchView({ sort: { ...projectTaskView.sort, dir: projectTaskView.sort.dir === "asc" ? "desc" : "asc" } }); } }}
-            style={pillStyle(true)}>{projectTaskView.sort.dir === "asc" ? "↑" : "↓"}</span>
+            style={pillStyle(true)}>{projectTaskView.sort.dir === "asc" ? "↑" : "↓"}</span>}
 
           {ownerOptions.length > 0 && <span style={{ fontSize: 12, color: X.textDim, marginLeft: 6 }}>負責人</span>}
           {ownerOptions.map(o => <span key={o} role="button" tabIndex={0} aria-pressed={projectTaskView.owner.includes(o)}
@@ -466,14 +488,17 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
             style={{ fontSize: 12, color: X.red, cursor: "pointer", marginLeft: "auto" }}>重置</span>}
         </div>
         {pt.length > 0 && !ptView.length && <div style={{ padding: 40, textAlign: "center", color: X.textDim, fontSize: 14 }}>沒有符合目前篩選的 task</div>}
-        {ptView.map(task => { const sc = SC[task.status] || {}; const tSubs = allS.filter(s => s.taskId === task.id); return (
-          <div key={task.id} style={{ borderBottom: `1px solid ${X.border}` }}>
+        {(() => {
+          // dnd = { setNodeRef, style, handle }（admin 的拖移版）或 null（viewer：沒有 DndContext、沒有把手）
+          const renderTask = (task, dnd) => { const sc = SC[task.status] || {}; const tSubs = allS.filter(s => s.taskId === task.id); return (
+          <div key={task.id} ref={dnd?.setNodeRef} style={{ borderBottom: `1px solid ${X.border}`, ...dnd?.style }}>
             {/* flexWrap + a real minWidth floor: with `minWidth: 0` alone the title block
                 is allowed to shrink to ZERO once the badge/progress/× cluster runs out of
                 room (measured: width 0 with 131px of content at 360px × zoom 1.5), and the
                 text then spills over its siblings. The floor keeps ellipsis working while
                 forcing the right-hand cluster onto its own line instead. */}
             <div onClick={() => setModalTask(task)} style={{ padding: "12px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }} onMouseEnter={e => e.currentTarget.style.background = X.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              {dnd?.handle}
               <div style={{ flex: "1 1 200px", minWidth: 140 }}>
                 <div className="dash-name-1line" style={{ fontSize: 14, fontWeight: 500 }}>{task.task}</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
@@ -524,7 +549,16 @@ function ProjectsTab({ twp, allS, projects, configOwners, pcMap, allProjNames, i
                 : <span onClick={e => { e.stopPropagation(); setShowSubAdd(task.id); setSubDraft({ name: "", owner: "" }); }} style={{ fontSize: 13, color: X.accent, fontWeight: 500, cursor: "pointer", opacity: 0.5, padding: "2px 8px" }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>+ Add subtask</span>
               }
             </div>}
-          </div>); })}
+          </div>); };
+          if (!canWrite) return ptView.map(t => renderTask(t, null));
+          return (
+            <DndContext sensors={dndSensors} collisionDetection={closestCenter} modifiers={[lockHorizontal]} onDragEnd={handleTaskDragEnd}>
+              <SortableContext items={ptView.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {ptView.map(t => <SortableTask key={t.id} id={t.id}>{dnd => renderTask(t, dnd)}</SortableTask>)}
+              </SortableContext>
+            </DndContext>
+          );
+        })()}
         {!pt.length && <div style={{ padding: 60, textAlign: "center", color: X.textDim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📋</div><div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: X.textSec }}>No tasks yet</div><div style={{ fontSize: 14, marginBottom: 16 }}>Get started by creating a task for this project</div>{canWrite && <button onClick={openNewTaskModal} style={{ background: X.accent, color: "#fff", border: "none", borderRadius: 20, padding: "8px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Create</button>}</div>}
       </div>
     </div>

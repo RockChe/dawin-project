@@ -8,7 +8,7 @@ export const MATRIX = {
     createSubtask: 'write', updateSubtask: 'write', deleteSubtask: 'write',
     toggleSubtask: 'write', createLink: 'write', deleteLink: 'write',
     createFileRecord: 'write', deleteFile: 'write', upsertTasks: 'write',
-    updateManyTasks: 'write', deleteManyTasks: 'write',
+    updateManyTasks: 'write', deleteManyTasks: 'write', reorderTasks: 'write',
     deleteAllTasks: 'manage',
   },
   'src/server/actions/projects.js': {

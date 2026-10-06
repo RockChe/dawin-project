@@ -2,10 +2,11 @@
 
 import { db } from '@/server/db';
 import { tasks, subtasks, links, files, projects, users } from '@/server/db/schema';
-import { eq, and, asc, desc, inArray } from 'drizzle-orm';
+import { eq, and, asc, desc, inArray, sql } from 'drizzle-orm';
 import { deleteFromR2 } from '@/lib/r2';
 import { isValidUUID, toBusinessDateString } from '@/lib/utils';
 import { withCap } from '@/lib/withCap';
+import { logAudit } from '@/lib/audit';
 
 // ── Tasks ──
 
@@ -117,6 +118,39 @@ export async function deleteTask(id) {
     } catch (err) {
       console.error("deleteTask error:", err);
       return { error: err.message || "刪除任務失敗" };
+    }
+  });
+}
+
+// 專案內 task 拖移排序：只寫 sort_order，不碰日期。
+// neon-http 沒有互動式 transaction → 單一 UPDATE（CASE）一次寫完，天然原子；
+// WHERE 再帶 project_id 守門，即使驗證與寫入之間 task 被搬走也不會誤改別的專案。
+// CASE 結果要 ::int，否則綁定參數會被推斷成 text（同 reorderProjects 的坑）。
+export async function reorderTasks(projectId, orderedTaskIds) {
+  return withCap('write', async (session) => {
+    if (!isValidUUID(projectId)) return { error: 'Invalid project ID' };
+    if (!Array.isArray(orderedTaskIds) || orderedTaskIds.length === 0 || orderedTaskIds.length > 500
+      || !orderedTaskIds.every(isValidUUID) || new Set(orderedTaskIds).size !== orderedTaskIds.length) {
+      return { error: 'Invalid task IDs' };
+    }
+    try {
+      const owned = await db.select({ id: tasks.id }).from(tasks)
+        .where(and(eq(tasks.projectId, projectId), inArray(tasks.id, orderedTaskIds)));
+      if (owned.length !== orderedTaskIds.length) return { error: '部分任務不屬於此專案' };
+
+      const chunks = [sql`UPDATE tasks SET sort_order = (CASE`];
+      orderedTaskIds.forEach((id, i) => chunks.push(sql` WHEN id = ${id} THEN ${i + 1}`));
+      chunks.push(sql` END)::int, updated_at = NOW() WHERE project_id = ${projectId} AND id IN (`);
+      chunks.push(sql.join(orderedTaskIds.map(id => sql`${id}`), sql`, `));
+      chunks.push(sql`)`);
+      await db.execute(sql.join(chunks, sql.raw('')));
+      await logAudit('TASK_REORDER', session.userId, {
+        resourceType: 'project', resourceId: projectId, detail: `${orderedTaskIds.length} tasks`,
+      });
+      return { success: true };
+    } catch (err) {
+      console.error("reorderTasks error:", err);
+      return { error: err.message || "重新排序失敗" };
     }
   });
 }

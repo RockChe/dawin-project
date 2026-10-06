@@ -17,6 +17,7 @@ import {
   updateManyTasks as updateManyTasksAction,
   deleteManyTasks as deleteManyTasksAction,
   deleteAllTasks as deleteAllTasksAction,
+  reorderTasks as reorderTasksAction,
 } from '@/server/actions/tasks';
 import {
   createProject as createProjectAction,
@@ -25,7 +26,7 @@ import {
   reorderProjects as reorderProjectsAction,
 } from '@/server/actions/projects';
 import { saveConfig } from '@/server/actions/config';
-import { runReorder } from './reorderProjects';
+import { runReorder, moveWithinOrder } from './reorderProjects';
 import useForbiddenHandler from './useForbiddenHandler';
 
 const DEFAULT_CATS = ['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展'];
@@ -614,6 +615,30 @@ export default function useTaskManager(initialData) {
     }
   }, [projects, showToast, invalidateCache, handleForbidden]);
 
+  // ── Reorder tasks within a project ──
+  // baseOrderIds = the order currently DISPLAYED (may be a non-manual sort); falls
+  // back to sortOrder. Only sortOrder of that project's tasks changes — never dates.
+  // Rollback restores just those sortOrders so edits made meanwhile survive.
+  const reorderTasks = useCallback(async (projectId, activeId, overId, baseOrderIds) => {
+    const projTasks = allT.filter(t => t.projectId === projectId);
+    const byId = new Map(projTasks.map(t => [t.id, t]));
+    const base = baseOrderIds
+      ? [...baseOrderIds.map(id => byId.get(id)).filter(Boolean), ...projTasks.filter(t => !baseOrderIds.includes(t.id))]
+      : [...projTasks].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const plan = moveWithinOrder(base, activeId, overId);
+    if (!plan) return;
+    const prevOrder = new Map(projTasks.map(t => [t.id, t.sortOrder]));
+    const nextOrder = new Map(plan.optimistic.map(t => [t.id, t.sortOrder]));
+    invalidateCache();
+    setAllT(prev => prev.map(t => (nextOrder.has(t.id) ? { ...t, sortOrder: nextOrder.get(t.id) } : t)));
+    const result = await reorderTasksAction(projectId, plan.orderedIds);
+    if (checkAuthError(result)) return;
+    if (result?.error) {
+      setAllT(prev => prev.map(t => (prevOrder.has(t.id) ? { ...t, sortOrder: prevOrder.get(t.id) } : t)));
+      if (!handleForbidden(result)) showToast(result.error, 'error');
+    }
+  }, [allT, showToast, invalidateCache, handleForbidden]);
+
   // ── Computed: tasks with progress ──
   const twp = useMemo(() => {
     const progressMap = computeAllProgress(allS, allT);
@@ -661,7 +686,7 @@ export default function useTaskManager(initialData) {
     addLink, deleteLink,
     addFile, deleteFile: deleteFileHandler,
     renameProject, addProject, deleteProject: deleteProjectHandler,
-    reorderSubs, reorderProjects, importTasks,
+    reorderSubs, reorderProjects, reorderTasks, importTasks,
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
     reload: loadData,

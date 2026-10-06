@@ -31,7 +31,7 @@ export default function Dashboard({ initialData }) {
     addTask, deleteTask, addSub, deleteSub,
     addLink, deleteLink, addFile, deleteFile,
     renameProject, addProject, deleteProject: deleteProjectAction,
-    reorderSubs, reorderProjects, importTasks,
+    reorderSubs, reorderProjects, reorderTasks, importTasks,
     deleteManyTasks, updateManyTasks, deleteAllTasks,
     configCats, saveConfigCats, configOwners, saveConfigOwners,
   } = useTaskManager(initialData);
@@ -240,7 +240,7 @@ export default function Dashboard({ initialData }) {
         {tab === "mytasks" && <MyTasksTab twp={twp} userName={initialData?.session?.name} isMobile={isMobile} pcMap={pcMap} setModalTask={handleSetModalTask} />}
 
         {/* PROJECTS */}
-        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
+        {tab === "projects" && <ProjectsTab twp={twp} allS={allS} projects={projects} configOwners={configOwners} pcMap={pcMap} allProjNames={allProjNames} isMobile={isMobile} setModalTask={handleSetModalTask} setShowFileManager={handleSetShowFileManager} ganttWidths={ganttWidthsProject} timelineHeight={timelineHeight} showToast={showToast} renameProject={renameProject} addProject={addProject} deleteProject={deleteProjectAction} updateTask={updateTask} deleteTask={deleteTask} toggleSub={toggleSub} updateSub={updateSub} addSub={addSub} deleteSub={deleteSub} reorderSubs={reorderSubs} reorderProjects={reorderProjects} reorderTasks={reorderTasks} projBanners={projBanners} setProjBanners={setProjBanners} onProjectRenamed={handleProjectRenamed} onProjectDeleted={handleProjectDeleted} projectsView={projectsView} setProjectsView={setProjectsView} hiddenProjects={hiddenProjects} toggleHidden={toggleHiddenProject} projectTaskView={projectTaskView} setProjectTaskView={setProjectTaskView} />}
 
         {/* TIMELINE */}
         {tab === "timeline" && <TimelineTab twp={twp} allS={allS} fpSet={fpSet} fs={fs} fpr={fpr} isMobile={isMobile} ganttWidths={ganttWidthsTimeline} timelineHeight={timelineHeight} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} timelineDefaultCollapsed={timelineDefaultCollapsed} setTimelineDefaultCollapsed={setTimelineDefaultCollapsed} />}

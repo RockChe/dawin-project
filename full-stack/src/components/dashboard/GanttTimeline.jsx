@@ -4,6 +4,9 @@ import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { pD, fD, computeAllProgress, toBusinessDateString } from "@/lib/utils";
 import MobileGanttList from "./MobileGanttList";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import SortableTask, { lockHorizontal } from "./SortableTask";
 
 // 左右已合併成同一列，高度由內容決定；長條用 top:50% + translateY(-50%) 垂直置中。
 const TASK_MIN_H = 40;   // 列高下限；實際高度由內容決定
@@ -275,11 +278,27 @@ export function TimeScaleToggle({ value, onChange }) {
 
 export { computeScaleDivisions };
 
+// 甘特左欄 task 列的拖移容器：沒給 onMove（viewer／其他分頁）就原樣輸出，不掛 DndContext。
+// 只送出 (activeId, overId)，換位置的邏輯與持久化在呼叫端；這裡不碰日期，也沒有長條拖移。
+function TaskRowsDnd({ enabled, sensors, ids, onMove, children }) {
+  if (!enabled) return children;
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[lockHorizontal]}
+      onDragEnd={ev => { if (ev.active && ev.over && ev.active.id !== ev.over.id) onMove(ev.active.id, ev.over.id); }}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>{children}</SortableContext>
+    </DndContext>
+  );
+}
+
 // GanttTimeline is a controlled/uncontrolled hybrid for collapse state.
 // - Uncontrolled (Overview/Projects): owns internal state + persists to localStorage.
 // - Controlled (TimelineTab): collapsed + onToggleCollapse props are supplied.
-export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed, onToggleCollapse }) {
+export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMobile, timeDim = "月", ganttWidths, timelineHeight, configOwners = [], hiddenProjects = [], timelineSort = "manual", projects = [], collapsed, onToggleCollapse, taskOrder, onReorderTasks }) {
   const { X, SC, PC, PJC } = useTheme();
+  // taskOrder（task id 陣列）= 專案詳情頁的「有效順序」，覆蓋各專案內 task 列的順序；onReorderTasks 有給才啟用左欄拖移。
+  // 用字串當依賴：呼叫端每次 render 都會產生新陣列，直接依賴它會讓整張甘特每次都重算。
+  const taskOrderKey = taskOrder ? taskOrder.join(",") : "";
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   // ── ALL hooks unconditionally at top (fix rules-of-hooks) ─────────────────
   const [hI, setHI] = useState(null);
@@ -308,6 +327,10 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMob
     const gw = ganttWidths || { day: 20, week: 50, month: 50, quarter: 100 };
     const ganttMinW = timeDim === "日" ? Math.max(700, td * gw.day) : timeDim === "週" ? Math.max(700, Math.ceil(td / 7) * gw.week) : timeDim === "季" ? Math.max(700, months.length * gw.quarter) : Math.max(700, months.length * gw.month);
     const pMap = {}; fil.forEach(d => { if (!pMap[d.project]) pMap[d.project] = []; pMap[d.project].push(d); });
+    if (taskOrderKey) {
+      const pos = new Map(taskOrderKey.split(",").map((id, i) => [id, i]));
+      Object.values(pMap).forEach(arr => arr.sort((a, b) => (pos.get(a.id) ?? 1e9) - (pos.get(b.id) ?? 1e9)));
+    }
 
     // pcMap uses NATURAL order (color stability across sort changes)
     const pcMap = {}; [...new Set(tasks.map(d => d.project))].forEach((p, i) => { pcMap[p] = PJC[i % PJC.length]; });
@@ -351,7 +374,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMob
     });
     const todayPct = computeTodayPct(mn, td);
     return { months, ganttMinW, pcMap, rows, todayPct };
-  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsedState, isControlled]);
+  }, [tasks, subtasks, fp, fs, fpr, PJC, timeDim, ganttWidths, hiddenProjects, timelineSort, projects, collapsedState, isControlled, taskOrderKey]);
 
   // ── Early returns AFTER all hooks ─────────────────────────────────────────
   if (isMobile) return <MobileGanttList tasks={tasks} subtasks={subtasks} fp={fp} fs={fs} fpr={fpr} timeDim={timeDim} configOwners={configOwners} hiddenProjects={hiddenProjects} projects={projects} />;
@@ -394,6 +417,7 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMob
             </div>
           </div>
 
+          <TaskRowsDnd enabled={!!onReorderTasks} sensors={dndSensors} ids={rows.filter(r => r.type === "t").map(r => r.task.id)} onMove={onReorderTasks}>
           {rows.map((r, i) => {
             if (r.type === "h") {
               const c = pcMap[r.proj] || X.accent;
@@ -425,11 +449,12 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMob
             }
             const sc = SC[r.task.status] || {}, pc = PC[r.task.priority] || {};
             const bc = pcMap[r.proj], hv = hI === i, dn = r.task.status === "已完成", pp = r.task.status === "提案中" || r.task.status === "待確認";
-            return (<div key={`t-${r.task.id}`} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)}
-              style={{ display: "flex", position: "relative", zIndex: hv ? 10 : 1, borderBottom: `1px solid ${X.border}22` }}>
+            const taskRow = dnd => (<div key={`t-${r.task.id}`} ref={dnd?.setNodeRef} onMouseEnter={() => setHI(i)} onMouseLeave={() => setHI(null)}
+              style={{ display: "flex", position: "relative", zIndex: hv ? 10 : 1, borderBottom: `1px solid ${X.border}22`, ...dnd?.style }}>
               <div className={`dash-gantt-left dash-gantt-left-collapsible${leftHidden ? " dash-gantt-left-hidden" : ""}`}
-                style={{ position: "sticky", left: 0, zIndex: 2, minHeight: TASK_MIN_H, display: "flex", alignItems: "center", padding: leftHidden ? 0 : "6px 10px 6px 26px", overflow: "hidden", gap: 6,
+                style={{ position: "sticky", left: 0, zIndex: 2, minHeight: TASK_MIN_H, display: "flex", alignItems: "center", padding: leftHidden ? 0 : dnd ? "6px 10px 6px 10px" : "6px 10px 6px 26px", overflow: "hidden", gap: 6,
                   background: hv ? X.surfaceHover : X.surfaceLight, flexShrink: 0 }}>
+                {dnd?.handle}
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: pc.color, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0, fontSize: 14, color: X.text, lineHeight: 1.3, overflowWrap: "anywhere" }}>{r.task.task}</div>
                 <span style={{ fontSize: 14, padding: "1px 6px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{r.task.status}</span>
@@ -443,7 +468,9 @@ export default function GanttTimeline({ tasks, subtasks, fp, fs, fpr, fow, isMob
                 {hv && <div style={{ position: "absolute", left: `${Math.min(Math.max(r.l, 2), 65)}%`, bottom: "100%", background: X.surfaceLight, color: X.text, fontSize: 14, padding: "6px 12px", borderRadius: 8, whiteSpace: "nowrap", maxWidth: "90vw", overflow: "hidden", textOverflow: "ellipsis", zIndex: 30, boxShadow: `0 4px 16px ${X.shadowHeavy}`, border: `1px solid ${X.border}` }}>{fD(r.task.start)} → {fD(r.task.end)}　{r.task.duration}d　{r.task.progress}%</div>}
               </div>
             </div>);
+            return onReorderTasks ? <SortableTask key={`t-${r.task.id}`} id={r.task.id}>{taskRow}</SortableTask> : taskRow(null);
           })}
+          </TaskRowsDnd>
         </div>
       </div>
     </div>

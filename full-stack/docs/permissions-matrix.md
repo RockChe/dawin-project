@@ -41,6 +41,7 @@
 | `tasks.js` | upsertTasks | write | 匯入時批次新增/更新任務 |
 | `tasks.js` | updateManyTasks | write | 批次修改任務 |
 | `tasks.js` | deleteManyTasks | write | 批次刪除任務 |
+| `tasks.js` | reorderTasks | write | 調整專案內任務排序（只寫 sort_order，不動日期） |
 | `tasks.js` | deleteAllTasks | manage | 清空全部任務，破壞力等同管理操作，只給 super_admin |
 | `projects.js` | getProjects | read | 讀取專案清單 |
 | `projects.js` | getProjectWithTasks | read | 讀取單一專案含任務 |

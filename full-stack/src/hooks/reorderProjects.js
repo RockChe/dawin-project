@@ -15,14 +15,24 @@
  */
 export function planProjectReorder(projects, activeId, overId) {
   const sorted = [...projects].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  const oldIdx = sorted.findIndex(pr => pr.id === activeId);
-  const newIdx = sorted.findIndex(pr => pr.id === overId);
+  return moveWithinOrder(sorted, activeId, overId);
+}
+
+/**
+ * Same move, but the input is ALREADY in the order the user sees (no re-sort).
+ * Tasks use this: the displayed order may be a non-manual sort (by start date…),
+ * and a drag must be computed against what is on screen, not against sortOrder.
+ */
+export function moveWithinOrder(items, activeId, overId) {
+  const list = [...items];
+  const oldIdx = list.findIndex(x => x.id === activeId);
+  const newIdx = list.findIndex(x => x.id === overId);
   if (oldIdx === -1 || newIdx === -1) return null;
-  const [moved] = sorted.splice(oldIdx, 1);
-  sorted.splice(newIdx, 0, moved);
+  const [moved] = list.splice(oldIdx, 1);
+  list.splice(newIdx, 0, moved);
   return {
-    orderedIds: sorted.map(pr => pr.id),
-    optimistic: sorted.map((pr, i) => ({ ...pr, sortOrder: i + 1 })),
+    orderedIds: list.map(x => x.id),
+    optimistic: list.map((x, i) => ({ ...x, sortOrder: i + 1 })),
   };
 }
 
