@@ -1,13 +1,23 @@
 "use client";
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
 import { THEMES, THEME_ORDER, mkSC, mkPC, mkCC, mkPJC, F } from "@/lib/theme";
 
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [themeKey, setThemeKey] = useState(() => {
-    try { return localStorage.getItem("dash-theme") || "warm"; } catch { return "warm"; }
-  });
+  // 首次 render（SSR 與 client hydrate）必須一致，所以固定 "warm"；
+  // hydrate 完在 layout effect 同步讀 localStorage（paint 前套用，不多一幀）。
+  const [themeKey, setThemeKey] = useState("warm");
+  // 同步完成前不寫回 localStorage，否則會用預設 "warm" 蓋掉使用者存的深色
+  const [synced, setSynced] = useState(false);
+
+  useLayoutEffect(() => {
+    try {
+      const saved = localStorage.getItem("dash-theme");
+      if (saved && THEMES[saved]) setThemeKey(saved);
+    } catch {}
+    setSynced(true);
+  }, []);
 
   const cycleTheme = useCallback(() => {
     setThemeKey(p => {
@@ -30,9 +40,10 @@ export function ThemeProvider({ children }) {
   }, [themeKey, cycleTheme]);
 
   useEffect(() => {
+    if (!synced) return;
     try { localStorage.setItem("dash-theme", themeKey); } catch {}
     document.body.style.background = (THEMES[themeKey] || THEMES.warm).bg;
-  }, [themeKey]);
+  }, [themeKey, synced]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
