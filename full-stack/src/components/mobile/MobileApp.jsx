@@ -13,6 +13,8 @@ import ProjectsScreen from "./ProjectsScreen";
 import TimelineScreen from "./TimelineScreen";
 import MyTasksScreen from "./MyTasksScreen";
 import TaskSheet from "./TaskSheet";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { tabCrumbs } from "@/lib/breadcrumbs";
 import { can } from "@/lib/permissions";
 
 // 暫位畫面：後續 task 4–8 把真正的畫面換進 SCREENS（唯一替換點）。
@@ -41,6 +43,7 @@ export default function MobileApp({ initialData }) {
   const [sheetTaskId, setSheetTaskId] = useState(null); // TaskSheet 的開關；抽屜本身由 Task 7 渲染
   const openTask = useCallback(id => setSheetTaskId(id), []);
   const closeSheet = useCallback(() => setSheetTaskId(null), []);
+  const goHome = useCallback(() => setTab("mytasks"), []); // 手機的「首頁」= 我的任務
   const sheetTask = sheetTaskId ? (twp || []).find(t => t.id === sheetTaskId) : null;
 
   const userName = initialData?.session?.name;
@@ -55,12 +58,14 @@ export default function MobileApp({ initialData }) {
   }, [projects, twp, PJC]);
 
   const Screen = SCREENS[tab];
-  const screenProps = { twp, allS, projects, userName, userRole, today, X, openTask, updateTask, toggleSub, addSub, pcMap, configOwners, upcomingDays, upcomingLimit, selectedProjectId, setSelectedProjectId, onSelectProject: selectProject };
+  const screenProps = { twp, allS, projects, userName, userRole, today, X, openTask, updateTask, toggleSub, addSub, pcMap, configOwners, upcomingDays, upcomingLimit, selectedProjectId, setSelectedProjectId, onSelectProject: selectProject, onHome: goHome };
 
   return (
     <PermissionProvider role={userRole}>
       <div style={{ minHeight: "100dvh", background: X.bg, fontFamily: F, color: X.text, paddingBottom: "calc(64px + env(safe-area-inset-bottom))" }}>
         <style>{`*{box-sizing:border-box}`}</style>
+        {/* 麵包屑：專案分頁由 ProjectsScreen 自己畫（詳情多一層），其餘分頁畫在畫面頂端 */}
+        {!loading && tab !== "projects" && <div style={{ paddingTop: 4 }}><Breadcrumbs size="mobile" items={tabCrumbs(tab, { mobile: true, onHome: goHome })} /></div>}
         {loading ? <div style={{ padding: 16, color: X.textDim }}>載入中…</div>
           : tab === "more" ? <MoreScreen userName={userName} />
           : <Screen {...screenProps} />}

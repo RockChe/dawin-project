@@ -8,14 +8,12 @@ import { STATUS_FILTERS } from "@/lib/constants";
 import { toggleStatus } from "@/lib/statusFilter";
 import { execTokens, watcherTokens } from "@/lib/taskOwner";
 import { projectSummaries, filterProjectTasks, visibleSubs } from "./mobileData";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { tabCrumbs, detailCrumbs } from "@/lib/breadcrumbs";
 
-function Header({ X, title, sub, onBack }) {
+function Header({ X, title, sub }) {
   return (
-    <div style={{ padding: "12px 14px 8px", display: "flex", alignItems: "center", gap: 6 }}>
-      {onBack && (
-        <button type="button" aria-label="返回專案清單" onClick={onBack}
-          style={{ minWidth: 44, minHeight: 44, marginLeft: -10, border: "none", background: "transparent", color: X.accent, fontSize: 24, cursor: "pointer" }}>‹</button>
-      )}
+    <div style={{ padding: "4px 14px 8px", display: "flex", alignItems: "center", gap: 6 }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 18, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
         <div style={{ fontSize: 12, color: X.textSec }}>{sub}</div>
@@ -97,7 +95,7 @@ function TaskCard({ X, SC, t, subs, canWrite, hideDone, configOwners, openTask, 
   );
 }
 
-function ProjectDetail({ X, SC, project, twp, allS, configOwners, openTask, toggleSub, onBack }) {
+function ProjectDetail({ X, SC, project, twp, allS, configOwners, openTask, toggleSub, onBack, onHome }) {
   const canWrite = useCan("write");
   const [status, setStatus] = useState([]);
   const [hideDone, setHideDone] = useState(false);
@@ -112,7 +110,8 @@ function ProjectDetail({ X, SC, project, twp, allS, configOwners, openTask, togg
   const subTotal = tasks.reduce((n, t) => n + t.sTotal, 0), subDone = tasks.reduce((n, t) => n + t.sDone, 0);
   return (
     <>
-      <Header X={X} title={project.name} sub={`${tasks.length} 任務 · ${subTotal} 子任務 · ${subDone} 完成`} onBack={onBack} />
+      <div style={{ paddingTop: 4 }}><Breadcrumbs size="mobile" items={detailCrumbs("projects", project.name, { mobile: true, onHome, onTab: onBack })} /></div>
+      <Header X={X} title={project.name} sub={`${tasks.length} 任務 · ${subTotal} 子任務 · ${subDone} 完成`} />
       <div style={{ padding: "0 12px 12px" }}>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8 }}>
           {STATUS_FILTERS.map(s => <Chip key={s} X={X} on={s === "全部" ? status.length === 0 : status.includes(s)} onClick={() => setStatus(v => toggleStatus(v, s))}>{s}</Chip>)}
@@ -128,17 +127,18 @@ function ProjectDetail({ X, SC, project, twp, allS, configOwners, openTask, togg
   );
 }
 
-export default function ProjectsScreen({ projects = [], twp = [], allS = [], configOwners = [], pcMap = {}, openTask, toggleSub, selectedProjectId, setSelectedProjectId }) {
+export default function ProjectsScreen({ projects = [], twp = [], allS = [], configOwners = [], pcMap = {}, openTask, toggleSub, selectedProjectId, setSelectedProjectId, onHome }) {
   const { X, SC } = useTheme();
   const summaries = useMemo(() => projectSummaries(projects, twp), [projects, twp]);
   const selected = projects.find(p => p.id === selectedProjectId);
 
   if (selected) {
     return <ProjectDetail X={X} SC={SC} project={selected} twp={twp} allS={allS} configOwners={configOwners}
-      openTask={openTask} toggleSub={toggleSub} onBack={() => setSelectedProjectId(null)} />;
+      openTask={openTask} toggleSub={toggleSub} onBack={() => setSelectedProjectId(null)} onHome={onHome} />;
   }
   return (
     <>
+      <div style={{ paddingTop: 4 }}><Breadcrumbs size="mobile" items={tabCrumbs("projects", { mobile: true, onHome })} /></div>
       <Header X={X} title="專案" sub={`${projects.length} 個專案`} />
       <div style={{ padding: "0 12px 12px" }}>
         {summaries.map(p => (

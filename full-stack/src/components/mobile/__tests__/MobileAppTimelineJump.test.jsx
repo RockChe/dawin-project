@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 const projects = [{ id: 'p1', name: 'Alpha', sortOrder: 1 }];
@@ -20,9 +20,9 @@ describe('時程 → 專案詳情跳轉', () => {
     render(<ThemeProvider><MobileApp initialData={{ session: { name: 'Amy' }, settings: {} }} /></ThemeProvider>);
     fireEvent.click(screen.getByRole('button', { name: '時程' }));
     fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
-    expect(screen.getByRole('button', { name: '專案' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getAllByRole('button', { name: '專案' }).some(b => b.getAttribute('aria-current') === 'page')).toBe(true); // 底部分頁列；詳情的麵包屑「專案」是第二顆
     expect(screen.getByText('task-one')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '返回專案清單' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'breadcrumb' })).getByRole('button', { name: '專案' }));
     expect(screen.queryByText('task-one')).toBeNull();
   });
 });

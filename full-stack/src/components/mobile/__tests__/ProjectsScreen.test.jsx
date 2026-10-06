@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { useState } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { PermissionProvider } from '@/components/PermissionProvider';
 import ProjectsScreen from '../ProjectsScreen';
@@ -12,7 +12,7 @@ const S = (id, taskId, done, o = {}) => ({ id, taskId, name: `sub-${id}`, owner:
 const allS = [S('s1', 't1', true), S('s2', 't1', false, { sortOrder: 2 })];
 
 function setup({ role = 'admin', selected = null } = {}) {
-  const fns = { openTask: vi.fn(), toggleSub: vi.fn() };
+  const fns = { openTask: vi.fn(), toggleSub: vi.fn(), onHome: vi.fn() };
   const Wrap = ({ sel }) => {
     // 受控：用最小 state 模擬 MobileApp 提升的 selectedProjectId
     const [id, setId] = useState(sel);
@@ -39,7 +39,7 @@ describe('ProjectsScreen 清單', () => {
     fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
     expect(screen.getByText('task-t1')).toBeTruthy();
     expect(screen.queryByText('task-t3')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '返回專案清單' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'breadcrumb' })).getByRole('button', { name: '專案' }));
     expect(screen.queryByText('task-t1')).toBeNull();
     expect(screen.getByRole('button', { name: /Beta/ })).toBeTruthy();
   });
@@ -47,6 +47,29 @@ describe('ProjectsScreen 清單', () => {
     setup({ selected: 'p2' });
     expect(screen.getByText('task-t3')).toBeTruthy();
     expect(screen.queryByText('task-t1')).toBeNull();
+  });
+});
+
+const crumbItems = () => [...screen.getByRole('navigation', { name: 'breadcrumb' }).querySelectorAll('li')].map(li => li.textContent.replace('›', ''));
+
+describe('ProjectsScreen 麵包屑', () => {
+  it('清單：首頁 › 專案（只有一列）', () => {
+    setup();
+    expect(screen.getAllByRole('navigation', { name: 'breadcrumb' })).toHaveLength(1);
+    expect(crumbItems()).toEqual(['首頁', '專案']);
+  });
+  it('詳情：首頁 › 專案 › 專案名，取代原本的「‹」返回表頭', () => {
+    setup({ selected: 'p1' });
+    expect(screen.getAllByRole('navigation', { name: 'breadcrumb' })).toHaveLength(1);
+    expect(crumbItems()).toEqual(['首頁', '專案', 'Alpha']);
+    expect(screen.queryByRole('button', { name: '返回專案清單' })).toBeNull();
+  });
+  it('點「首頁」呼叫 onHome；可點項目觸控高度 >= 44', () => {
+    const { onHome } = setup({ selected: 'p1' });
+    const nav = within(screen.getByRole('navigation', { name: 'breadcrumb' }));
+    expect(nav.getByRole('button', { name: '專案' }).style.minHeight).toBe('44px');
+    fireEvent.click(nav.getByRole('button', { name: '首頁' }));
+    expect(onHome).toHaveBeenCalledTimes(1);
   });
 });
 
