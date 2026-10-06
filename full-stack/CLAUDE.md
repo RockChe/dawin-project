@@ -3,6 +3,7 @@
 ## 專案概述
 
 影視 IP 專案管理儀表板，供內部團隊追蹤多個影視專案的任務進度、時程、檔案與人員分工。
+產品顯示名稱為「大雲文創專案管理系統」；程式碼、repo 與專案名稱仍是 Dawin Dash。
 
 本版本使用 **Neon PostgreSQL + Drizzle ORM + Cloudflare R2**，適合企業級部署。
 
@@ -35,7 +36,7 @@ src/
 │   └── dashboard/             # 18 個元件 + tabs/ (6 個子元件)
 ├── hooks/
 │   ├── useTaskManager.js      # 核心狀態管理 hook
-│   ├── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）；管理 zoom / projectsView / hiddenProjects / timelineSort 等 key
+│   ├── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）；初始值由 getInitialData 帶入（`initial`：有給就 ready=true、掛載不再 fetch）；key 清單見下方「個人設定 key」
 │   ├── useForbiddenHandler.js # 收到 { error: 'FORBIDDEN' } 時 toast + router.refresh()（處理被降級成 viewer 但畫面還是舊快照）
 │   └── reorderProjects.js     # Projects 拖曳排序的純函式（無 React 依賴）
 ├── lib/
@@ -51,6 +52,12 @@ src/
 │   │                          #   authzCoverage.test.js 拿它跟原始碼比對，未分類的新 export 會讓測試紅
 │   ├── withCap.js             # 授權 wrapper：withCap(cap, fn) 給 Server Action、withRouteCap(cap, handler) 給 API route
 │   ├── r2.js                  # R2 檔案操作
+│   ├── taskOwner.js           # 任務負責人規則：tasks.owner = 執行人（子任務 owner 聯集）∪ 關注人（tasks.watchers）；規則與邊界見檔頭註解，SQL 版（server/actions/tasks.js）須同規則
+│   ├── personalSettings.js    # 個人設定純函式：resolveTab / resolveTimeDim / resolveGanttWidths / 舊 localStorage 一次性遷移
+│   ├── parseSettingRows.js    # user_settings 列 → { key: value }（getUserSettings 與 getInitialData 共用）
+│   ├── myTasks.js             # My Tasks 分頁的分組／KPI／身分徽章（我執行／我關注）
+│   ├── statusFilter.js        # 跨專案狀態多選篩選（[] = 不篩）
+│   ├── ownerNames.js          # 改姓名同步用：整個 token 完全相等才換
 │   ├── tableColumns.js        # DataTab 鍵盤格的欄位設定（與可編輯欄位/DB 欄位的一致性由測試 assert）
 │   ├── taskUpdates.js         # 表單欄位名 → DB 欄位名映射
 │   ├── theme.js               # 主題常數與工廠函式（THEMES, F, FM, mkSC 等）
@@ -64,7 +71,8 @@ src/
 
 scripts/
 ├── backup.js                  # CLI 手動備份指令
-└── restore.js                 # CLI 恢復指令（transaction + 臨時密碼）
+├── restore.js                 # CLI 恢復指令（transaction + 臨時密碼）
+└── backfill-task-owners.js    # 一次性回填：任務 owner 改由子任務推得、被擠掉的人轉成關注人（預設 dry-run，--apply 才寫入）
 ```
 
 ## 資料庫 Schema
@@ -84,7 +92,7 @@ scripts/
 | users | 使用者帳號 | id, email, passwordHash, role, name, mustChangePassword |
 | sessions | 登入 session | id, userId→users, token, expiresAt |
 | projects | 專案 | id, name, sortOrder, bannerR2Key, createdBy→users |
-| tasks | 任務 | id, projectId→projects, task, status, category, startDate, endDate, duration, owner, priority, notes, sortOrder |
+| tasks | 任務 | id, projectId→projects, task, status, category, startDate, endDate, duration, owner（= 執行人 ∪ 關注人，見「負責人模型」）, watchers（關注人，Migration 0006）, priority, notes, sortOrder（`reorderTasks` 寫入） |
 | subtasks | 子任務 | id, taskId→tasks, name, owner, done, doneDate, notes, sortOrder |
 | links | 連結 | id, taskId→tasks, url, title, createdBy→users |
 | configTable | 系統設定 | id, key(unique), value |
@@ -94,6 +102,24 @@ scripts/
 | user_settings | 個人設定（per-account） | id, userId→users(cascade), key(varchar100), value(JSON text), updatedAt；UNIQUE(userId, key)。Migration 0003 已於 production apply（2026-09-09 唯讀盤點確認：表與 7 個 index 全在） |
 
 定義在 `src/server/db/schema.js`（Drizzle schema）。
+
+### 負責人模型（2026-10-06：執行人／關注人）
+
+- **執行人**：任一子任務有負責人 → 子任務 owner 的聯集（依 `sort_order`→`created_at`、去重）；否則為手動設定的執行人
+- **關注人**（`tasks.watchers`）：掛名關注、不執行子任務的人（例：專案跟進人）；須為既有使用者
+- `tasks.owner` = 執行人 ∪ 關注人（執行人在前），是 API／chatbot 讀的相容欄位；有子任務負責人時，手動傳入的 owner 會被忽略
+- 邊界：沒有子任務負責人時以 `owner − watchers` 復原手動執行人，「既是手動執行人又是關注人」只會顯示為關注人
+- JS 版 `src/lib/taskOwner.js` 與 SQL 版 `src/server/actions/tasks.js`（`DERIVED_OWNER_SQL`）必須維持同規則；子任務變更與父任務重算放同一個 `db.batch`
+- 改姓名（`updateUser`）會同步 `tasks.owner`／`tasks.watchers`／`subtasks.owner`／config `owners`，同一個 `db.batch`
+- My Tasks 分頁顯示登入者名下未完成任務；經子任務執行 →「我執行」徽章，關注人 →「我關注」徽章
+
+### 個人設定 key（`user_settings`，per-account）
+
+`zoom`、`projectsView`、`hiddenProjects`、`timelineSort`、`timelineDefaultCollapsed`（預設 true）、`projectTaskView`（含 `hideDoneSubs`）、
+`activeTab`、`ganttWidths`、`timelineHeight`、`upcomingDays`、`upcomingLimit`、`timeDimOverview`／`timeDimTimeline`／`timeDimProject`。
+首次載入由 `getInitialData` 一併帶回（8 個並行查詢，第 8 個是目前使用者的設定；該查詢失敗降級為空設定）。
+`activeTab`／`timelineHeight`／`upcomingDays`／`upcomingLimit`／`ganttWidths` 有舊 localStorage 一次性遷移（不刪舊 key）。
+仍在 localStorage（per-device）：Timeline 逐專案收折（`dash-timelineCollapsed`）、主題。
 
 ### 授權層（2026-09-08 新增，viewer 角色）
 
@@ -141,7 +167,7 @@ export async function actionName(params) {
 - **樂觀更新**：先更新本地狀態，失敗時 rollback
 - **sessionStorage 快取**：key = `'dash_cache'`
 - **Auth 錯誤處理**：偵測到未授權時自動跳轉 `/login`
-- **Owner 來源**：純粹以 Users 表為唯一來源，UI 使用下拉選單（非自由輸入）。支援逗號分隔多人格式，驗證時 split 後逐一查詢 Users 表（`inArray` 批次查詢）
+- **Owner 來源**：純粹以 Users 表為唯一來源，UI 使用下拉選單（非自由輸入）。支援逗號分隔多人格式，驗證時 split 後逐一查詢 Users 表（`inArray` 批次查詢）。任務層 owner 在有子任務負責人時唯讀（由子任務自動帶出），另有「關注人」欄位，見「負責人模型」
 - **進度計算**（`twp`）：有子任務 → 完成率；無子任務 → 時間進度（`computeTimeProgress`）；`timeBased` 旗標區分顯示模式
 - 預設分類：`['商務合作', '活動', '播出/開始', '行銷', '發行', '市場展']`
 
@@ -174,11 +200,14 @@ export async function actionName(params) {
   照原版跑會在第二句 `ADD COLUMN` 撞 `column already exists`，整支 transaction rollback，連 viewer 都加不進去。
   **教訓**：這個 repo 有 `db:push` 造成的 drift，動 migration 前先用 `docs/migration-audit.sql`
   對正式環境做唯讀盤點，不要相信文件或 journal 單方面的說法
+- **Migration 0006**：`tasks.watchers varchar(500)`（僅 `ADD COLUMN`，可為 NULL），2026-10-06 **已手動在正式庫執行，沒有走 `drizzle migrate`**，所以 `__drizzle_migrations` 沒有 0006 的紀錄。
+  0006 不是冪等寫法：日後對正式庫跑 `db:migrate` 會撞 `column already exists`——跑之前先補 journal 紀錄，或把該句改成 `ADD COLUMN IF NOT EXISTS`（同 0005 的教訓）
+- **上線順序（含 schema 變更時）**：欄位（migration）→ 資料整理（`node scripts/backfill-task-owners.js` 先 dry-run、看過再 `--apply`，需 `DB_WRITE_CONFIRM=backfill-task-owners@<db-host>`）→ 部署程式。新程式的 SELECT 會讀 `watchers`，欄位沒先加會直接報錯。Vercel Function Region 設為 sin1（與 Neon ap-southeast-1 同區；Vercel 專案設定，不在 repo）
 - **新增 server action / API route 必須包 `withCap` / `withRouteCap`**，並登記進 `src/lib/permissionsMatrix.js`——沒登記或漏包，`src/__tests__/authzCoverage.test.js` 會紅（default-deny 護欄）
 - **前端隱藏編輯按鈕只是 UI policy，不是安全邊界**：`getInitialData()` 會把全量任務資料送進任何登入者的瀏覽器（`useTaskManager` 的 `allT` state），DataTab 的 Export CSV 是純前端從 `allT` 產生——藏按鈕擋不住 DevTools。真正的牆是後端的 `withCap` / `withRouteCap`；前端隱藏只是避免使用者對著點不動的按鈕困惑
 - **Migration baseline（技術債，已解決）**：曾用一支臨時 idempotent 腳本把 0000–0004 標記為「已套用」到 `__drizzle_migrations`（讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入，已存在則跳過），已對 prod 執行並驗證、**腳本已刪除，不在 repo 中**；之後 `db:migrate` 只會套 0005+
-- **Wave 2 個人化（工單 0531）**：Projects 卡片/明細（精簡列表）切換（`projectsView`，user_settings）、Timeline 隱藏專案眼睛 toggle（`hiddenProjects`=project.id 陣列，user_settings；**Dashboard 掛 `useUserSettings` 為單一真相**，以 props 同時傳 ProjectsTab 顯示眼睛狀態 + TimelineTab 過濾，W2-2 不自呼叫 hook）、Timeline 排序（`timelineSort`，user_settings）。ephemeral UI state 走 localStorage：active tab（`dash-activeTab`）、Timeline 收折（`dash-timelineCollapsed`）
-- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），viewer 角色（2026-09-08）落地後共 **363 個測試 / 31 個檔**全綠
+- **Wave 2 個人化（工單 0531）**：Projects 卡片/明細（精簡列表）切換（`projectsView`，user_settings）、Timeline 隱藏專案眼睛 toggle（`hiddenProjects`=project.id 陣列，user_settings；**Dashboard 掛 `useUserSettings` 為單一真相**，以 props 同時傳 ProjectsTab 顯示眼睛狀態 + TimelineTab 過濾，W2-2 不自呼叫 hook）、Timeline 排序（`timelineSort`，user_settings）。ephemeral UI state 走 localStorage：Timeline 逐專案收折（`dash-timelineCollapsed`）。（2026-10-06 起 active tab 與欄寬／高度／Upcoming／時間尺度都改存 user_settings，見「個人設定 key」）
+- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），2026-10-06 批次落地後共 **656 個測試 / 63 個檔**全綠
 
 ## 關鍵參考檔案
 
@@ -189,7 +218,10 @@ export async function actionName(params) {
 - `src/components/ThemeProvider.jsx` — 主題 Context（ThemeProvider + useTheme hook）
 - `src/lib/theme.js` — 主題常數與工廠函式
 - `src/components/dashboard/Dashboard.jsx` — 主元件（187 行）
-- `src/components/dashboard/tabs/` — 6 個 tab 子元件
+- `src/components/dashboard/tabs/` — tab 子元件（Overview / MyTasks / Projects / Timeline / Data / Settings + DashboardHeader）
+- `src/lib/taskOwner.js` — 執行人／關注人規則（單一真相源，SQL 版須同步）
+- `src/lib/personalSettings.js` — 個人設定純函式與舊 localStorage 遷移
+- `scripts/backfill-task-owners.js` — owner／watchers 一次性回填（預設 dry-run）
 - `src/lib/backup.js` — 備份核心函式庫（導出/上傳/清理）
 - `src/lib/backupRunner.js` — 備份執行核心（server-only，不含授權）
 - `src/server/actions/backup.js` — 備份 Server Actions（設定/觸發/歷史/審計）

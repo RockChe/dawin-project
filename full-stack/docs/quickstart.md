@@ -68,6 +68,7 @@ npm run dev
 | `npm test` | 執行所有單元測試（vitest） |
 | `node scripts/backup.js [--r2] [--gdrive]` | CLI 手動備份（預設本地，可指定 R2 / Google Drive） |
 | `node scripts/restore.js <file> [--dry-run] [--confirm]` | CLI 恢復備份（支援乾跑模式） |
+| `node scripts/backfill-task-owners.js [--apply]` | 一次性回填任務 owner／關注人。預設 dry-run 只印差異；`--apply` 才寫入，需 `DB_WRITE_CONFIRM=backfill-task-owners@<db-host>`；執行前 `tasks.watchers` 欄位（migration 0006）須已存在 |
 
 ## 部署
 

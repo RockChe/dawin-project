@@ -215,3 +215,13 @@
   - C) 逗號分隔字串 — 維持 text 欄位，用逗號分隔多人
 - **決策**：C — 最小變動原則
 - **理由**：現有 schema 不需 migration、前端 OwnerTags 元件直接 split 渲染彩色標籤、Server Action 驗證配合 split + inArray 批次查詢。缺點是搜尋效率差，但任務量級（<10,000）下可接受
+
+---
+
+### 決策：任務負責人由子任務自動帶出 + 關注人欄位（2026-10-06）
+
+- **背景**：任務層與子任務層各維護一份負責人，容易不一致；另有「專案跟進人」不執行子任務，卻需要掛在任務上
+- **決策**：任務 owner 由子任務 owner 聯集自動帶出（決策頁 `docs/design/decision-task-owner-model.html` 方案 A）；新增 `tasks.watchers`（關注人）；`tasks.owner` = 執行人 ∪ 關注人，保留為 API／chatbot 的相容欄位（設計稿 `dawin-dash-task-lead-mockup.html`）
+- **實作要點**：規則在 `src/lib/taskOwner.js`，SQL 版在 `server/actions/tasks.js`，兩處必須同規則；neon-http 無互動式 transaction，所以重算在 SQL 內算完，與子任務寫入放同一個 `db.batch`
+- **已知邊界**：沒有子任務負責人時，「既是手動執行人又是關注人」只會顯示為關注人（沒有第三個欄位存手動執行人，以 `owner − watchers` 復原）
+- **相關**：個人設定現在隨 `getInitialData` 一併帶回（首屏 3 趟 → 1 趟），範圍決策見 `docs/design/decision-personal-settings.html`

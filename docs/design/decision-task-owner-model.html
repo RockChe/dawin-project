@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>任務與子任務的負責人邏輯</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:#1d2330;font:14px/1.6 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.w{max-width:1040px;margin:0 auto}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;margin:26px 0 8px;border-left:3px solid #2f8fd1;padding-left:8px}
+.q{background:#fff;border:1px solid #d7dce2;border-left:4px solid #2f8fd1;border-radius:8px;padding:10px 14px;color:#1d2330;margin-bottom:6px}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.c{background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:12px;color:#1d2330}
+.c.rec{border:3px solid #2f8fd1;background:#eaf4fc}
+.c h3{margin:0 0 6px;font-size:14px}.tag{background:#2f8fd1;color:#fff;border-radius:99px;padding:0 8px;font-size:11px;margin-left:6px}
+.t{border:1px solid #c9d0d8;border-radius:8px;padding:6px 8px;margin:6px 0;background:#fff;font-size:13px}.s{border:1px dashed #c9d0d8;border-radius:8px;padding:3px 8px;margin:4px 0 4px 18px;background:#fff;font-size:12px}
+.p{display:inline-block;border-radius:99px;padding:0 8px;font-size:12px;margin-left:3px;background:#e8ecf1}.p.me{background:#d9483b;color:#fff}.p.auto{background:#2e9d6a;color:#fff}
+.pro{color:#1f7a4f;font-size:13px}.con{color:#b23a2e;font-size:13px}
+table{width:100%;border-collapse:collapse;background:#fff;color:#1d2330;font-size:13px}th,td{border:1px solid #d7dce2;padding:6px 10px;text-align:left;vertical-align:top}th{background:#eceff3}
+.box{border:1px solid #d7dce2;background:#fff;border-radius:10px;padding:10px 14px;margin:8px 0;color:#1d2330}
+@media(max-width:800px){.cols{grid-template-columns:1fr}}
+</style></head><body><div class="w">
+<h1>任務與子任務：負責人的邏輯</h1>
+
+<h2>1. 你的原話</h2>
+<div class="q">「是否改成 由底下的子任務中的負責人 上方專案自動帶出負責人? 不然邏輯怪怪的 你覺得呢? 還是要先建專案負責人，下面的子任務，只能選有被挑選的 來討論一下」</div>
+
+<h2>2. 現況（查證）</h2>
+<div class="box">任務有自己的負責人欄（手動），每個子任務也有自己的負責人欄（手動），<b>兩邊互不相干</b>。以截圖的「商品合作」為例：任務寫 Karen、Felien、Rae，但某個子任務寫了 Rae＋Rock。於是出現「Rock 在做事，任務層級卻沒有他」，My Tasks、篩選、工作量統計全都以任務那一欄為準，就漏掉了。</div>
+
+<h2>3. 三種做法</h2>
+<div class="cols">
+ <div class="c rec"><h3>A. 任務負責人由子任務自動帶出<span class="tag">我的建議</span></h3>
+  <div class="t">商品合作 <span class="p auto">Karen</span><span class="p auto">Felien</span><span class="p auto">Rae</span><span class="p auto">Rock</span> ← 自動，不可手改
+   <div class="s">子任務 1 <span class="p">Felien</span></div><div class="s">子任務 2 <span class="p">Karen</span></div><div class="s">子任務 3 <span class="p">Rae</span><span class="p me">Rock</span></div></div>
+  <div class="pro">＋ 只有一個資料來源，不會再不一致<br>＋ My Tasks、篩選、統計不用特別處理<br>＋ 加人只要在子任務點一次</div>
+  <div class="con">－ 沒有子任務的任務，仍要手動填<br>－ 「掛名負責人但不做子任務」的人（例如主管）無法單獨掛名<br>－ 要補一次資料整理，把現有任務的負責人換算成子任務的聯集</div></div>
+ <div class="c"><h3>B. 先選任務負責人，子任務只能從中挑</h3>
+  <div class="t">商品合作 <span class="p">Karen</span><span class="p">Felien</span><span class="p">Rae</span> ← 手動先選
+   <div class="s">子任務 3 <span class="p">Rae</span> <span class="p" style="background:#fff;border:1px dashed #b23a2e">Rock ✕ 不在名單</span></div></div>
+  <div class="pro">＋ 權責清楚：先定誰負責，再分工<br>＋ 主管可以掛名</div>
+  <div class="con">－ 要加一個人必須走兩步（先加任務、再加子任務），這次你遇到的就是這個摩擦<br>－ 現有資料有不少子任務負責人不在任務名單內，要逐筆清理或例外放行</div></div>
+ <div class="c"><h3>C. 維持現狀，只讓 My Tasks 也看子任務</h3>
+  <div class="t">商品合作 <span class="p">Karen</span><span class="p">Felien</span><span class="p">Rae</span>
+   <div class="s">子任務 3 <span class="p">Rae</span><span class="p me">Rock</span></div></div>
+  <div class="pro">＋ 改動最小，立刻修好這次的 bug<br>＋ 資料不用動</div>
+  <div class="con">－ 邏輯怪的根源還在<br>－ 篩選、工作量統計仍只看任務那一欄，會繼續漏</div></div>
+</div>
+
+<h2>4. 覆蓋表</h2>
+<table><tr><th>需求</th><th>A 自動帶出</th><th>B 先選再挑</th><th>C 維持現狀</th></tr>
+<tr><td>邏輯一致、不再漏人</td><td>是</td><td>是（要清資料）</td><td>否</td></tr>
+<tr><td>加人要幾步</td><td>1 步</td><td>2 步</td><td>1 步</td></tr>
+<tr><td>主管掛名不做事</td><td>不行（除非沒子任務）</td><td>可以</td><td>可以</td></tr>
+<tr><td>要動資料</td><td>要（一次性換算）</td><td>要（清理不符者）</td><td>不要</td></tr>
+<tr><td>工作量</td><td>中</td><td>中偏大</td><td>小</td></tr></table>
+
+<h2>5. confer 三方意見</h2>
+<div class="box">未經 confer。以上是我的初步判斷，Codex 尚未審。</div>
+
+<h2>6. 我的建議</h2>
+<div class="box"><b>A</b>：任務的負責人，由子任務的負責人自動帶出；沒有子任務的任務才手動填。理由：你的直覺對，現在兩個欄位各自為政才會漏人；先挑任務負責人再限制子任務（B）會讓「加一個人」變兩步，而你這次遇到的正是這種摩擦。</div>
+
+<h2>7. 不做什麼</h2>
+<div class="box">不做「專案層級」負責人（專案本身不設負責人）；不做權限控管（誰能改誰的子任務）；API 與 chatbot 讀到的任務負責人維持原欄位，只是內容會自動同步。</div>
+</div></body></html>

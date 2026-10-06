@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Tasks 專頁 UIUX 草圖</title>
+<style>
+:root{--bg:#f4f5f7;--sf:#fff;--bd:#e3e6ea;--tx:#1d2330;--dim:#6b7585;--ac:#2f8fd1;--red:#d9483b;--amb:#d99a1e;--grn:#2e9d6a;--pur:#8a63c9}
+@media(prefers-color-scheme:dark){:root{--bg:#14171c;--sf:#1d2128;--bd:#2f3541;--tx:#e6e9ee;--dim:#8e98a8;--ac:#4aa6e6;--red:#ef6a5d;--amb:#e8b04a;--grn:#4cc08d;--pur:#a98be0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.wrap{max-width:1000px;margin:0 auto}h1{font-size:18px;margin:0 0 4px}.note{color:var(--dim);font-size:12px;margin:0 0 16px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin-bottom:16px;overflow-x:auto}
+.tabs span{padding:10px 18px;color:var(--dim);white-space:nowrap}.tabs .on{color:var(--ac);font-weight:700;border-bottom:2px solid var(--ac);margin-bottom:-1px}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi div{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font:700 24px ui-monospace,monospace}.kpi small{color:var(--dim)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.chip{border:1px solid var(--bd);background:var(--sf);border-radius:99px;padding:3px 12px;font-size:13px;color:var(--dim)}.chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.grp{background:var(--sf);border:1px solid var(--bd);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.gh{display:flex;align-items:center;gap:8px;padding:10px 14px;font-weight:700;border-bottom:1px solid var(--bd)}
+.gh i{width:3px;height:14px;border-radius:2px;display:inline-block}.gh em{margin-left:auto;font:normal 12px ui-monospace,monospace;color:var(--dim)}
+.row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bd)}.row:last-child{border:0}
+.row .d{width:6px;height:6px;border-radius:50%;flex:none}.row .t{flex:1;min-width:0}.row .t small{display:block;color:var(--dim);font-size:12px}
+.cb{width:16px;height:16px;border:1.5px solid var(--dim);border-radius:4px;flex:none}.cb.ok{background:var(--grn);border-color:var(--grn)}
+.st{font-size:12px;padding:1px 8px;border-radius:6px;background:color-mix(in srgb,var(--amb) 18%,transparent);color:var(--amb)}
+.due{font:700 13px ui-monospace,monospace;text-align:right;min-width:52px}.late{color:var(--red)}.soon{color:var(--amb)}.ok2{color:var(--dim)}
+.pb{width:70px;height:5px;background:var(--bd);border-radius:3px;overflow:hidden}.pb span{display:block;height:100%;background:var(--ac)}
+.sub{padding:6px 14px 6px 46px;color:var(--dim);font-size:13px;border-bottom:1px solid var(--bd);display:flex;gap:8px;align-items:center}
+.cap{margin-top:20px;font-size:13px;color:var(--dim)}.cap b{color:var(--tx)}
+@media(max-width:640px){.kpi{grid-template-columns:repeat(2,1fr)}.pb{display:none}}
+</style></head><body><div class="wrap">
+<h1>My Tasks 專頁（草圖）</h1>
+<p class="note">新增第 6 個分頁，放在 Overview 之後。以登入者 name 比對任務 owner（逗號分隔欄位），不改 DB。</p>
+
+<div class="tabs"><span>Overview</span><span class="on">My Tasks</span><span>Projects</span><span>Timeline</span><span>Data</span><span>Settings</span></div>
+
+<div class="kpi">
+ <div><b style="color:var(--red)">3</b><small>已逾期</small></div>
+ <div><b style="color:var(--amb)">4</b><small>7 天內到期</small></div>
+ <div><b>9</b><small>進行中</small></div>
+ <div><b style="color:var(--grn)">12</b><small>本月已完成</small></div>
+</div>
+
+<div class="bar">
+ <span class="chip on">依到期日</span><span class="chip">依專案</span>
+ <span style="width:1px;height:18px;background:var(--bd)"></span>
+ <span class="chip on">未完成</span><span class="chip">含已完成</span>
+ <span class="chip" style="margin-left:auto">高</span><span class="chip">中</span><span class="chip">低</span>
+</div>
+
+<div class="grp"><div class="gh"><i style="background:var(--red)"></i>逾期<em>3</em></div>
+ <div class="row"><span class="cb"></span><span class="d" style="background:var(--pur)"></span><div class="t">票務展務相關<small>TTXC 虎姑婆 駁二 · 子任務 1/2</small></div><span class="st">進行中</span><div class="pb"><span style="width:50%"></span></div><div class="due late">-12d<br><small style="font-weight:400">09/24</small></div></div>
+ <div class="row"><span class="cb"></span><span class="d" style="background:var(--grn)"></span><div class="t">整理發行資料-片單整理<small>發行事務</small></div><span class="st">進行中</span><div class="pb"><span style="width:20%"></span></div><div class="due late">-37d<br><small style="font-weight:400">08/31</small></div></div>
+</div>
+
+<div class="grp"><div class="gh"><i style="background:var(--amb)"></i>7 天內<em>4</em></div>
+ <div class="row"><span class="cb"></span><span class="d" style="background:var(--pur)"></span><div class="t">相關檔案連結<small>TTXC 虎姑婆 駁二</small></div><span class="st" style="color:var(--ac);background:color-mix(in srgb,var(--ac) 18%,transparent)">待辦</span><div class="pb"><span style="width:30%"></span></div><div class="due soon">3d<br><small style="font-weight:400">10/09</small></div></div>
+ <div class="sub"><span class="cb ok"></span><s>每週營收‧票務確認</s></div>
+ <div class="sub"><span class="cb"></span>簽書‧結帳單回</div>
+ <div class="row"><span class="cb"></span><span class="d" style="background:var(--ac)"></span><div class="t">連連玩境影視展 (MIPCOM 2026)<small>發行事務</small></div><span class="st">進行中</span><div class="pb"><span style="width:60%"></span></div><div class="due soon">9d<br><small style="font-weight:400">10/15</small></div></div>
+</div>
+
+<div class="grp"><div class="gh"><i style="background:var(--dim)"></i>之後<em>2</em></div>
+ <div class="row"><span class="cb"></span><span class="d" style="background:var(--pur)"></span><div class="t">11月前要完成文化部結案<small>科教頻公益頻道</small></div><span class="st">進行中</span><div class="pb"><span style="width:10%"></span></div><div class="due ok2">25d<br><small style="font-weight:400">10/31</small></div></div>
+</div>
+
+<div class="cap"><b>互動：</b>勾選方框＝完成｜點任務列＝開既有 TaskModal｜子任務可展開並可拖移排序（沿用 SortableSubItem）｜「依專案」分組時，組內任務可拖移換序（沿用 reorderSubs）。<br>
+<b>空狀態：</b>「沒有指派給你的任務 🎉」。<b>Viewer：</b>勾選與拖移隱藏，只讀。<b>手機：</b>KPI 2×2，進度條隱藏。</div>
+</div></body></html>

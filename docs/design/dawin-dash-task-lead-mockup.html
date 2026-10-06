@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>任務「關注人」欄位草圖</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:#1d2330;font:14px/1.6 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.w{max-width:1040px;margin:0 auto}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;margin:26px 0 8px;border-left:3px solid #2f8fd1;padding-left:8px}
+.n{color:#5b6676;font-size:12px;margin:0 0 10px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:14px;color:#1d2330}
+.lbl{font-size:12px;color:#5b6676;margin:8px 0 3px}
+.box{border:1px solid #c9d0d8;border-radius:8px;padding:6px 8px;min-height:36px;background:#fff}
+.box.ro{background:#f1f3f6;border-style:dashed}
+.p{display:inline-block;border-radius:99px;padding:0 9px;font-size:13px;margin:1px 3px 1px 0}
+.pu{background:#f0e9fb;color:#6b43b3}.rd{background:#fdeeec;color:#b23a2e}.bl{background:#e6f0fa;color:#2a6aa8}.am{background:#fff3dd;color:#a06a00}
+.hint{font-size:11px;color:#8a94a3;margin-top:3px}
+.tag{font-size:11px;border-radius:6px;padding:0 6px;margin-left:4px}.tag.lead{background:#2f8fd1;color:#fff}.tag.do{background:#e8ecf1;color:#1d2330}
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}
+.node{background:#fff;border:1px solid #d7dce2;border-radius:10px;padding:8px 12px;font-size:13px;color:#1d2330}.node.k{border:2px solid #2f8fd1;background:#eaf4fc}
+.ar{color:#2f8fd1;font-size:20px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e3e6ea;font-size:13px}.row:last-child{border:0}
+.sub{margin:3px 0 3px 22px;font-size:12px;color:#5b6676}
+table{width:100%;border-collapse:collapse;background:#fff;color:#1d2330;font-size:13px}th,td{border:1px solid #d7dce2;padding:6px 10px;text-align:left;vertical-align:top}th{background:#eceff3}
+.warn{background:#fff7e6;border:1px solid #e8c77a;border-radius:10px;padding:10px 14px;color:#1d2330}
+@media(max-width:800px){.g2,.g3{grid-template-columns:1fr}}
+</style></head><body><div class="w">
+<h1>任務多一個「關注人」欄位（草圖）</h1>
+<p class="n">範例：「Yaya's Band 芽芽樂團」。幸真是關注人但不做子任務；Felien 車 做所有子任務。</p>
+
+<h2>1. 資料怎麼流</h2>
+<div class="flow">
+ <div class="node">關注人（手動）<br><span class="p bl">幸真</span></div><span class="ar">＋</span>
+ <div class="node">子任務執行人（各子任務手動）<br><span class="p rd">Felien 車</span></div><span class="ar">→</span>
+ <div class="node k"><b>任務負責人（自動合併）</b><br><span class="p bl">幸真</span><span class="p rd">Felien 車</span><div class="hint">仍存在原本的 owner 欄，API、chatbot 照舊讀得到</div></div>
+</div>
+
+<h2>2. 任務詳情視窗</h2>
+<div class="g2">
+ <div class="card"><b>現在</b>
+  <div class="lbl">負責人</div><div class="box ro"><span class="p bl">幸真</span><span class="p rd">Felien 車</span></div><div class="hint" style="color:#b23a2e">由子任務自動帶出，唯讀 → 幸真被擠掉，也沒地方補</div></div>
+ <div class="card" style="border:3px solid #2f8fd1;background:#eaf4fc"><b>之後</b>
+  <div class="lbl">關注人（掛名關注、不一定做子任務）</div><div class="box"><span class="p bl">幸真 ✕</span> <span style="color:#8a94a3">＋ 新增…</span></div>
+  <div class="lbl">執行人</div><div class="box ro"><span class="p rd">Felien 車</span></div><div class="hint">由子任務自動帶出，唯讀</div></div>
+</div>
+
+<h2>3. Tasks 清單的任務標題</h2>
+<div class="card">
+ <div class="row"><b>Yaya's Band 芽芽樂團</b><span class="p bl">幸真<span class="tag lead">關注</span></span><span class="p rd">Felien 車</span><span style="margin-left:auto;color:#5b6676;font-family:ui-monospace,monospace">2026.07.20 → 2026.10.31</span></div>
+ <div class="sub">· 2026/8/1 小公視首播　→　<span class="p rd">Felien 車</span></div>
+ <div class="sub">· 平台上架第一階段　→　<span class="p rd">Felien 車</span></div>
+ <div class="hint">關注人的標籤旁加一個小「跟進」字樣，一眼分得出關注人和執行人。</div>
+</div>
+
+<h2>4. My Tasks（我的任務）</h2>
+<div class="card">
+ <div class="n">登入者＝幸真　→　關注的任務也會出現，並標明身分</div>
+ <div class="row"><span style="color:#8a94a3">●</span><b>Yaya's Band 芽芽樂團</b><span class="tag lead">我關注</span><span style="margin-left:auto;font-family:ui-monospace,monospace">到期 10/31</span></div>
+ <div class="row"><span style="color:#8a94a3">●</span><b>驗收時間點</b><span class="tag do">我執行 2 項子任務</span><span style="margin-left:auto;font-family:ui-monospace,monospace">到期 9/16</span></div>
+</div>
+
+<h2>5. 現有資料怎麼轉（取代對照表要逐筆決定）</h2>
+<table><tr><th>情況</th><th>做法</th></tr>
+<tr><td>任務負責人裡有人，但沒出現在任何子任務（會被擠掉的人）</td><td>自動轉成該任務的<b>關注人</b>，不丟資料</td></tr>
+<tr><td>任務負責人和子任務完全一致</td><td>關注人留空，不用動</td></tr>
+<tr><td>疑似髒資料（例如子任務負責人寫成「車」）</td><td>仍需你手動改那個子任務，這種我不自動猜</td></tr></table>
+
+<h2>6. 上線順序（資料庫要動，要你點頭）</h2>
+<div class="warn"><b>① 先在正式資料庫新增一個欄位</b>（只新增、可為空，舊程式不受影響）→ <b>② 轉換現有資料</b>（先預覽、你看過再套用）→ <b>③ 才部署新版程式</b>。順序反了新版會讀不到欄位。我只準備好腳本，不會自己對正式庫動手。</div>
+
+<h2>7. 不做什麼</h2>
+<div class="warn" style="background:#fff;border-color:#d7dce2">不做「專案層級」負責人；不做權限控管（誰能改誰的關注人）；不改 API 與 chatbot 讀取的 owner 欄位格式。</div>
+</div></body></html>

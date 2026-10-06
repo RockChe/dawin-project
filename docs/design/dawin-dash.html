@@ -96,6 +96,7 @@
   <a href="#seq">8 時序圖</a>
   <a href="#db">9 資料庫串接圖</a>
   <a href="#docs">10 相關文件</a>
+  <a href="#batch-20261006">11 2026-10-06 優化批次</a>
   <span class="sep">|</span>
   <a class="ext" href="./dawin-dash-task-sortfilter-q-scope.html">記憶範圍</a>
   <a class="ext" href="./dawin-dash-task-sortfilter-q-ui.html">UI 版型</a>
@@ -107,7 +108,8 @@
 <p class="meta">
   <code>docs/design/dawin-dash.html</code> ·
   建立於 2026-09-04 · 單檔模式（十章全在本檔，未拆功能子檔） ·
-  L2 錨點核准：<b style="color:var(--ok)">已核准 2026-09-04</b>（rev ad2aac1）
+  L2 錨點核准：<b style="color:var(--ok)">已核准 2026-09-04</b>（rev ad2aac1） ·
+  2026-10-06 增補第 11 章（<b style="color:var(--warn)">待 user 核准</b>，核准前第 11 章不是 L2 錨點）
 </p>
 <div class="card">
   進度 <b id="pct">0%</b> <span class="hint" id="cnt"></span>
@@ -799,6 +801,10 @@
   <text x="140" y="342" font-size="10.5" fill="#5b3d82">role 決定 can(role, cap)</text>
 </svg></div>
 
+<p class="hint">2026-10-06 增補：<code>tasks</code> 另有 <code>watchers</code>（關注人，migration 0006）、
+   <code>sortOrder</code> 現由 <code>reorderTasks</code> 寫入，<code>user_settings</code> 的 key 也增至 14 個，
+   詳見第 11 章 (c)。上圖為 2026-09 當時的範圍，未重畫。</p>
+
 <!-- ══ 10 相關文件 ══ -->
 <h2 id="docs">10 相關文件（按主題歸檔）</h2>
 <table>
@@ -820,6 +826,10 @@
   <tr><td><a href="./dawin-dash-gantt-q-rowheight.html"><code>dawin-dash-gantt-q-rowheight.html</code></a></td>
       <td>甘特列高浪費（每列寫死 72px）→ 裁決：<b>B 左欄 sticky、左右合併成同一列</b></td></tr>
 
+  <tr><td colspan="2" style="background:#eef2f7;font-weight:700">📐 主題：2026-10-06 優化批次（設計稿與決策頁，共 8 份）</td></tr>
+  <tr><td><a href="#batch-20261006-f">第 11 章 (f) 設計稿索引</a></td>
+      <td>My Tasks／Overview／專案內拖移／狀態篩選／關注人 mockup，個人設定與負責人模型決策頁，回填表</td></tr>
+
   <tr><td colspan="2" style="background:#eef2f7;font-weight:700">📐 主題：專案開發指引（既有，非本次產出）</td></tr>
   <tr><td><code>full-stack/CLAUDE.md</code></td><td>Neon 版技術棧、schema、Server Action 慣例、既有技術債</td></tr>
   <tr><td><code>gws/CLAUDE.md</code></td><td>Google Sheets 版技術棧與 DAL</td></tr>
@@ -829,6 +839,299 @@
    同時加進最上面的目錄列——這就是「wiki」的實作方式。<br>
    註：上面三份問答檔在單檔模式下直接登記於此（沒有功能子檔可放）；
    之後若拆功能子檔，應搬進該子檔的「相關問答歸檔」章。</p>
+
+<!-- ══ 11 2026-10-06 優化批次 ══ 2026-10-06 增補；核准前不是 L2 錨點 ══ -->
+<h2 id="batch-20261006">11 2026-10-06 優化批次</h2>
+<p class="hint">分支 <code>feat/overview-mytasks-drag</code>，相對 master 共 12 個 commit（<code>7987f52</code> → <code>120bd64</code>）。
+  本章<b>不動</b>第 1 章的原話區與既有 T1–T9；第 1 章的 <code>id="req-verbatim"</code> 契約不受影響（本章的原話區用另一個 id）。
+  <b>L2 狀態：待 user 核准</b>——本章是新增內容，核准前只當記錄，不當錨點；與原話衝突時一律以原話為準。</p>
+
+<!-- ── (a) 用戶需求 ── -->
+<h3 id="batch-20261006-a">11 (a) 用戶需求</h3>
+<div class="card">
+  <h3 style="margin:0 0 8px;font-size:13px"><span class="tagl raw">原文</span>逐字，不重述不意譯（2026-10-06 批次，依出現順序）</h3>
+  <blockquote class="verbatim" id="req-verbatim-20261006">overview只保留以下三個板塊
+專案內的時間軸和tasks要可拖移改變位置
+想增設一個 可以看到自己任務的專頁
+名稱 專案管理儀表板 改成 大雲文創專案管理系統
+加一個開關 可以隱藏打勾的 SUBTASK
+加個功能 可以照狀態 FILTER，例如 只顯示 進行中，可以多狀態
+一開始會變超大，然後恢復正常
+這邊預設 設定為 全部收折
+這些所有設定，都要存成個人化，每個人可以自己調整
+想要讀取資料更快
+是否改成 由底下的子任務中的負責人 上方專案自動帶出負責人?
+可能是專案跟進人 但他不執行subtask，例如 Yaya's Band 幸真
+黑暗模式這邊顯示有問題</blockquote>
+
+  <h3 style="margin:16px 0 8px;font-size:13px"><span class="tagl llm">解讀</span>我的解讀，非原話，與上方衝突時以上方為準</h3>
+  <div class="interp">
+    <ol>
+      <li><b>Overview</b>：只留 Timeline／Upcoming／Status 三塊，其餘移除（「以下三個板塊」的三塊由 user 在對話中指定）。</li>
+      <li><b>拖移</b>：「專案內」＝專案詳情頁；時間軸左欄與 Tasks 卡共用同一份順序，落地為 <code>tasks.sort_order</code>。</li>
+      <li><b>自己任務的專頁</b>：新分頁 My Tasks，唯讀清單，登入者名下未完成任務依到期日分三組。</li>
+      <li><b>系統名稱</b>：產品顯示名稱改為「大雲文創專案管理系統」；程式碼與專案名仍是 Dawin Dash。
+          這一項在 master 的 <code>1effa21</code>，<b>不在本批 12 個 commit 內</b>。</li>
+      <li><b>隱藏打勾的 SUBTASK</b>：只影響 Tasks 清單的渲染，進度與計數仍以全部子任務為準。</li>
+      <li><b>狀態 FILTER 多選</b>：指跨專案的全域狀態篩選（Overview 上方／Timeline），空選取＝不篩。</li>
+      <li><b>「一開始會變超大」</b>：首屏先用預設 zoom 150% 畫、載完個人設定才縮回——設定載入前只畫骨架。</li>
+      <li><b>「這邊預設全部收折」</b>：指 Timeline 分頁；沒存過偏好的人預設收折，已存的偏好優先。</li>
+      <li><b>「這些所有設定都要存成個人化」</b>：把原本放 localStorage（per-device）的欄寬、Timeline 高度、Upcoming、目前分頁、時間尺度
+          都搬進 <code>user_settings</code>（per-account，跨裝置），舊值一次性遷移。</li>
+      <li><b>「讀取資料更快」</b>：解讀為首屏往返次數——把個人設定併進 <code>getInitialData</code>（見 (d)）。
+          另有營運面的 Vercel Function Region 調整，見 (e)。</li>
+      <li><b>負責人自動帶出</b>：任務的負責人由子任務負責人聯集自動算出，任務層不再手動維護（有子任務負責人時）。</li>
+      <li><b>「專案跟進人」</b>：落地為任務的第二個人員欄位，<b>名稱後來定為「關注人」</b>（<code>tasks.watchers</code>）——掛名關注、不執行子任務；
+          原話的例子（Yaya's Band／幸真）即此情境。</li>
+      <li><b>黑暗模式</b>：實為 <code>ThemeProvider</code> 的 hydration mismatch，導致頁面一半淺一半深。</li>
+    </ol>
+    <div class="dod"><b>對錨檢查</b>（CLAUDE.md §4，送核准前必做）：
+      <br>· 原話有、本章沒有：<b>無</b>（13 條皆有對應，見 (b)）。
+      <br>· 本章有、原話沒有：<b>owner 回填腳本與 migration 0006</b>（為落地「關注人」所需，來自決策頁
+          <a href="./decision-task-owner-model.html">decision-task-owner-model</a>）；<b>My Tasks 的「我關注／我執行」徽章</b>（關注人設計的一部分）；
+          <b>Vercel region 改 sin1</b>（user 自行操作，非 code 變更）。三者請 user 裁示是否認可。</div>
+  </div>
+</div>
+
+<!-- ── (b) 變更總表 ── -->
+<h3 id="batch-20261006-b">11 (b) 變更總表</h3>
+<table>
+  <tr><th style="width:4%">#</th><th style="width:25%">原話（節錄）</th><th style="width:33%">做了什麼</th><th style="width:9%">commit</th><th>位置（<code>full-stack/src/</code> 下）</th></tr>
+  <tr><td>1</td><td>overview只保留以下三個板塊</td>
+      <td>OverviewTab 精簡成 Timeline／Upcoming／Status 三塊</td>
+      <td><code>7987f52</code></td><td><code>components/dashboard/tabs/OverviewTab.jsx</code></td></tr>
+  <tr><td>2</td><td>專案內的時間軸和tasks要可拖移改變位置</td>
+      <td>專案內任務可拖移排序；時間軸左欄與 Tasks 卡共用順序；新增 <code>reorderTasks</code> server action（cap <code>write</code>），樂觀更新</td>
+      <td><code>3692037</code></td>
+      <td><code>server/actions/tasks.js</code>、<code>hooks/useTaskManager.js</code>、<code>hooks/reorderProjects.js</code>（泛化）、<code>components/dashboard/GanttTimeline.jsx</code>、<code>SortableTask.jsx</code>、<code>tabs/ProjectsTab.jsx</code>、<code>lib/permissionsMatrix.js</code></td></tr>
+  <tr><td>3</td><td>想增設一個 可以看到自己任務的專頁</td>
+      <td>新分頁 My Tasks（逾期／7 天內／之後三組＋四個 KPI）；改姓名時同步任務負責人與名單。<code>120bd64</code> 再補「我關注／我執行」徽章</td>
+      <td><code>5c6fb26</code><br><code>120bd64</code></td>
+      <td><code>tabs/MyTasksTab.jsx</code>、<code>lib/myTasks.js</code>、<code>lib/ownerNames.js</code>、<code>server/actions/users.js</code>、<code>Dashboard.jsx</code></td></tr>
+  <tr><td>4</td><td>名稱 專案管理儀表板 改成 大雲文創專案管理系統</td>
+      <td>系統顯示名稱改為「大雲文創專案管理系統」。<b>在 master，不屬本批 12 個 commit</b></td>
+      <td><code>1effa21</code></td><td><code>app/layout.jsx</code>、<code>app/(auth)/login/page.jsx</code>、<code>tabs/DashboardHeader.jsx</code></td></tr>
+  <tr><td>5</td><td>加一個開關 可以隱藏打勾的 SUBTASK</td>
+      <td>Tasks 清單新增「隱藏已完成子任務」開關，存在 <code>projectTaskView.hideDoneSubs</code>；只影響渲染，進度／計數不變</td>
+      <td><code>c90083f</code></td><td><code>tabs/ProjectsTab.jsx</code>（<code>visibleSubs</code>、<code>PROJECT_TASK_VIEW_DEFAULT</code>）</td></tr>
+  <tr><td>6</td><td>加個功能 可以照狀態 FILTER … 可以多狀態</td>
+      <td>跨專案狀態篩選改成多選（陣列，<code>[]</code>＝不篩）</td>
+      <td><code>bd01327</code></td><td><code>lib/statusFilter.js</code>、<code>Dashboard.jsx</code>、<code>MobileGanttList.jsx</code></td></tr>
+  <tr><td>7</td><td>一開始會變超大，然後恢復正常</td>
+      <td><code>useUserSettings</code> 新增 <code>ready</code>；設定載入前只畫 zoom 1 骨架，不再先用 150% 渲染</td>
+      <td><code>d33cf7c</code></td><td><code>hooks/useUserSettings.js</code>、<code>Dashboard.jsx</code></td></tr>
+  <tr><td>8</td><td>這邊預設 設定為 全部收折</td>
+      <td>Timeline 預設全部收折（已存的 localStorage／個人設定優先）；順修 <code>hiddenProjects</code> 預設 <code>[]</code> 造成的 effect 無限迴圈</td>
+      <td><code>a2ee972</code></td><td><code>tabs/TimelineTab.jsx</code>、<code>Dashboard.jsx</code></td></tr>
+  <tr><td>9</td><td>這些所有設定，都要存成個人化</td>
+      <td>欄寬／Timeline 高度／Upcoming／目前分頁／三個時間尺度存成個人設定；舊 localStorage 一次性遷移；Overview 專案順序改照 Projects 的 sortOrder</td>
+      <td><code>2187420</code></td><td><code>lib/personalSettings.js</code>、<code>hooks/useUserSettings.js</code>、<code>Dashboard.jsx</code>、<code>tabs/OverviewTab.jsx</code>／<code>ProjectsTab.jsx</code>／<code>TimelineTab.jsx</code></td></tr>
+  <tr><td>10</td><td>想要讀取資料更快</td>
+      <td><code>getInitialData</code> 一併回傳個人設定（首屏 3 趟 → 1 趟）。另：Vercel region 改 sin1，見 (e)</td>
+      <td><code>2187420</code></td><td><code>server/actions/dashboard.js</code>、<code>server/actions/userSettings.js</code>、<code>lib/parseSettingRows.js</code></td></tr>
+  <tr><td>11</td><td>是否改成 由底下的子任務中的負責人 上方專案自動帶出負責人?</td>
+      <td>任務 owner 由子任務 owner 聯集自動帶出（SQL 內算完，與子任務寫入同一個 <code>db.batch</code>）；TaskModal／DataTab 該欄改唯讀；backfill 腳本。
+          <code>908acab</code> 修改姓名同步漏掉子任務負責人、被忽略的 owner 不再驗證</td>
+      <td><code>762c3c4</code><br><code>908acab</code></td>
+      <td><code>lib/taskOwner.js</code>、<code>server/actions/tasks.js</code>、<code>server/actions/users.js</code>、<code>hooks/useTaskManager.js</code>、<code>TaskModal.jsx</code>、<code>tabs/DataTab.jsx</code>、<code>scripts/backfill-task-owners.js</code></td></tr>
+  <tr><td>12</td><td>可能是專案跟進人 但他不執行subtask</td>
+      <td>新增 <code>tasks.watchers</code>（關注人）；<code>tasks.owner</code> ＝ 執行人 ∪ 關注人；TaskModal 可編輯、改名同步一併處理、backfill 把被擠掉的人轉成關注人</td>
+      <td><code>120bd64</code></td>
+      <td><code>server/db/schema.js</code>、<code>drizzle/migrations/0006_quick_wither.sql</code>、<code>lib/taskOwner.js</code>、<code>server/actions/tasks.js</code>／<code>users.js</code>／<code>dashboard.js</code>、<code>TaskModal.jsx</code>、<code>scripts/restore.js</code></td></tr>
+  <tr><td>13</td><td>黑暗模式這邊顯示有問題</td>
+      <td>首次 render 固定用 warm 主題，hydrate 後用 layout effect 同步 localStorage 的主題；同步前不寫回，避免蓋掉已存的深色</td>
+      <td><code>3b89c0b</code></td><td><code>components/ThemeProvider.jsx</code></td></tr>
+</table>
+<p class="hint">測試與文件隨各 commit 一起進（共 60 個檔案、+5045／−231 行；API 規格與權限矩陣文件在 <code>3692037</code>、<code>120bd64</code> 已更新）。</p>
+
+<!-- ── (c) 資料模型變更 ── -->
+<h3 id="batch-20261006-c">11 (c) 資料模型變更</h3>
+
+<h3>tasks.watchers（關注人）</h3>
+<table>
+  <tr><th style="width:22%">項目</th><th>內容</th></tr>
+  <tr><td>欄位</td><td><code>tasks.watchers varchar(500) NULL</code>，逗號分隔名字，格式同 <code>owner</code>；寫入時須全為既有使用者、總長 ≤ 500</td></tr>
+  <tr><td>migration</td><td><code>drizzle/migrations/0006_quick_wither.sql</code>：<code>ALTER TABLE "tasks" ADD COLUMN "watchers" varchar(500);</code>（僅 ADD COLUMN，可為 NULL，舊程式不受影響）</td></tr>
+  <tr><td>套用方式</td><td>已<b>手動</b>在正式庫執行，<b>沒有</b>走 <code>drizzle migrate</code>，所以 <code>__drizzle_migrations</code> 沒有 0006 的紀錄。
+      <b>注意</b>：0006 不是冪等寫法，日後若對正式庫跑 <code>db:migrate</code> 會在這句撞 <code>column already exists</code>
+      （與 0005 的 drift 同型，見 <code>full-stack/CLAUDE.md</code>）；跑之前先補 journal 紀錄或把該句改成 <code>ADD COLUMN IF NOT EXISTS</code></td></tr>
+  <tr><td>備份還原</td><td><code>scripts/restore.js</code> 還原 tasks 時帶 <code>watchers</code>，舊備份沒有此欄位 → <code>null</code></td></tr>
+</table>
+
+<h3>tasks.owner ＝ 執行人 ∪ 關注人</h3>
+<div class="card">
+<ul style="margin:0;padding-left:20px">
+  <li><b>執行人</b>：任一子任務有負責人 → 子任務 owner 的聯集（依 <code>sort_order</code> → <code>created_at</code> 收集，去空白、丟掉 <code>''</code>／<code>'—'</code>、同名留第一次）；
+      沒有 → 手動編輯的執行人。</li>
+  <li><b>tasks.owner</b>（API／chatbot 讀的相容欄位）＝ 執行人 ∪ 關注人，執行人在前、去重。</li>
+  <li>有子任務負責人時，呼叫端傳入的手動 owner 會被 SQL 忽略（不報錯、也不再驗證）。</li>
+  <li><b>邊界</b>：沒有第三個欄位存「手動執行人」，所以以 <code>owner − watchers</code> 復原。
+      因此「沒有子任務負責人、且同一個人既是手動執行人又是關注人」時，只會顯示為關注人。</li>
+  <li><b>兩套實作必須同規則</b>：JS 版 <code>lib/taskOwner.js</code>（<code>deriveTaskOwner</code>、<code>execTokens</code>、<code>taskRole</code>、<code>planOwnerBackfill</code>）
+      與 SQL 版 <code>server/actions/tasks.js</code>（<code>DERIVED_OWNER_SQL</code>、<code>unionSql</code>）。規則寫在 <code>taskOwner.js</code> 檔頭註解。</li>
+  <li>My Tasks 的身分徽章：經子任務執行 →「我執行」；關注人但非執行人 →「我關注」；其他（單純任務 owner）→ 無徽章。</li>
+</ul>
+</div>
+
+<h3>user_settings 的 key（per-account，<code>UNIQUE(userId, key)</code>，value 為 JSON 字串）</h3>
+<table>
+  <tr><th style="width:24%">key</th><th style="width:40%">內容／預設</th><th>備註</th></tr>
+  <tr><td><code>zoom</code></td><td>全站放大 %，預設 150</td><td>既有</td></tr>
+  <tr><td><code>projectsView</code></td><td><code>'card'</code>／列表，預設 <code>'card'</code></td><td>既有</td></tr>
+  <tr><td><code>hiddenProjects</code></td><td>Timeline 隱藏的 project.id 陣列，預設 <code>[]</code></td><td>既有</td></tr>
+  <tr><td><code>timelineSort</code></td><td>Timeline 排序，預設 <code>'manual'</code></td><td>既有；本批起由 Dashboard 統一持有，TimelineTab 不再自開 hook</td></tr>
+  <tr><td><code>timelineDefaultCollapsed</code></td><td>Timeline 預設是否收折，預設 <code>true</code></td><td>既有 key，本批把預設翻成 true</td></tr>
+  <tr><td><code>projectTaskView</code></td><td><code>{ sort:{field,dir}, status:[], owner:[], priority:[], hideDoneSubs:false }</code></td><td>既有 key，本批新增 <code>hideDoneSubs</code></td></tr>
+  <tr><td><code>activeTab</code></td><td>目前分頁，限 <code>overview｜mytasks｜projects｜timeline｜table｜settings</code>，預設 <code>overview</code></td><td><b>新</b>，原 localStorage <code>dash-activeTab</code></td></tr>
+  <tr><td><code>ganttWidths</code></td><td><code>{ overview, project, timeline }</code> 各 <code>{ day:20, week:50, month:50, quarter:100 }</code></td><td><b>新</b>，原 <code>dash-ganttWidths</code>；缺的 key 以預設補</td></tr>
+  <tr><td><code>timelineHeight</code></td><td>Timeline 高度，預設 100（儲存時夾在 10–200）</td><td><b>新</b>，原 <code>dash-timelineHeight</code></td></tr>
+  <tr><td><code>upcomingDays</code> ／ <code>upcomingLimit</code></td><td>預設 30 天／5 筆</td><td><b>新</b>，原 <code>dash-upcomingDays</code>／<code>dash-upcomingLimit</code></td></tr>
+  <tr><td><code>timeDimOverview</code> ／ <code>timeDimTimeline</code> ／ <code>timeDimProject</code></td><td><code>日｜週｜月｜季</code>，預設 <code>月</code></td><td><b>新</b>，三個分頁各自記一份</td></tr>
+</table>
+<p class="hint">舊 localStorage 一次性遷移（<code>collectLegacySettings</code>）只涵蓋 <code>activeTab</code>／<code>timelineHeight</code>／<code>upcomingDays</code>／<code>upcomingLimit</code>／<code>ganttWidths</code>：
+  伺服器沒有該 key 且舊值有效才採用並寫入，不刪舊 key。
+  <b>仍留在 localStorage（per-device）</b>：Timeline 的逐專案收折狀態（<code>dash-timelineCollapsed</code>）、主題（ThemeProvider）。
+  驗證來源：<code>lib/personalSettings.js</code>、<code>Dashboard.jsx</code>、<code>tabs/ProjectsTab.jsx</code>。</p>
+
+<h3>tasks.sort_order 與 reorderTasks</h3>
+<div class="card">
+  <code>reorderTasks(projectId, orderedTaskIds)</code>：cap <code>write</code>；驗證 UUID、1–500 筆、不重複、全都屬於該專案；
+  單一 <code>UPDATE … SET sort_order = CASE … END</code> 寫成 1..N（同時更新 <code>updated_at</code>），<b>不動日期</b>；寫 <code>TASK_REORDER</code> 審計。
+  <code>getInitialData</code> 與時間軸左欄、Tasks 卡都以 <code>sort_order</code> 排序，所以兩處自然共用同一份順序。
+</div>
+
+<!-- ── (d) 流程／時序 ── -->
+<h3 id="batch-20261006-d">11 (d) 流程／時序</h3>
+
+<h3>11.1　首次載入：3 趟往返 → 1 趟</h3>
+<div class="fig"><svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="b1a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+
+  <text x="16" y="24" font-size="13" font-weight="700" fill="#1a1a1a">改前：3 趟</text>
+  <rect x="16" y="38" width="110" height="64" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="71" y="76" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">瀏覽器</text>
+
+  <rect x="170" y="38" width="210" height="64" rx="8" fill="#dbe7f4" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="275" y="62" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">1 getInitialData</text>
+  <text x="275" y="82" font-size="11" text-anchor="middle" fill="#5b6472">任務、專案、設定、使用者</text>
+
+  <rect x="430" y="38" width="210" height="64" rx="8" fill="#fbf0ee" stroke="#A62B1F" stroke-width="1.5"/>
+  <text x="535" y="62" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">2 getUserSettings</text>
+  <text x="535" y="82" font-size="11" text-anchor="middle" fill="#5b6472">Dashboard 的 hook，掛載後才打</text>
+
+  <rect x="690" y="38" width="190" height="64" rx="8" fill="#fbf0ee" stroke="#A62B1F" stroke-width="1.5"/>
+  <text x="785" y="62" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">3 getUserSettings</text>
+  <text x="785" y="82" font-size="11" text-anchor="middle" fill="#5b6472">TimelineTab 自開的 hook</text>
+
+  <path d="M126 70 L 166 70" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#b1a)"/>
+  <path d="M380 70 L 426 70" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#b1a)"/>
+  <path d="M640 70 L 686 70" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#b1a)"/>
+  <text x="450" y="124" font-size="11" fill="#A62B1F" text-anchor="middle">首屏用預設值先畫（zoom 150%），設定回來才縮回 → 「先放大再縮小」</text>
+
+  <line x1="16" y1="150" x2="884" y2="150" stroke="#dde3ec" stroke-width="1.5"/>
+
+  <text x="16" y="182" font-size="13" font-weight="700" fill="#1a1a1a">改後：1 趟</text>
+  <rect x="16" y="196" width="110" height="76" rx="8" fill="#eef2f7" stroke="#8a94a6" stroke-width="1.5"/>
+  <text x="71" y="239" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1a1a1a">瀏覽器</text>
+
+  <rect x="170" y="196" width="330" height="76" rx="8" fill="#dbe7f4" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="335" y="220" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">getInitialData（1 次驗證 + 8 個並行查詢）</text>
+  <text x="335" y="240" font-size="11" text-anchor="middle" fill="#5b6472">第 8 個查詢＝目前使用者的 user_settings</text>
+  <text x="335" y="258" font-size="11" text-anchor="middle" fill="#5b6472">回傳 settings（與 getUserSettings 共用 parseSettingRows）</text>
+
+  <rect x="550" y="196" width="330" height="76" rx="8" fill="#e6f3e9" stroke="#0B6E4F" stroke-width="1.5"/>
+  <text x="715" y="220" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">useUserSettings(defaults, toast, initial)</text>
+  <text x="715" y="240" font-size="11" text-anchor="middle" fill="#5b6472">有 initial → ready 一開始即 true、不再 fetch</text>
+  <text x="715" y="258" font-size="11" text-anchor="middle" fill="#5b6472">SSR 與 client 首次 render 同一份 props</text>
+
+  <path d="M126 234 L 166 234" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#b1a)"/>
+  <path d="M500 234 L 546 234" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#b1a)"/>
+
+  <rect x="170" y="290" width="710" height="38" rx="6" fill="none" stroke="#c9d2de" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="182" y="314" font-size="11" fill="#33414f">alt 查詢失敗（例如 user_settings 表還沒 migrate）：該查詢 catch 後降級成空設定 []，不拖垮整個首屏</text>
+</svg></div>
+
+<h3>11.2　子任務變更 → 父任務 owner 重算（同一個 db.batch）</h3>
+<div class="fig"><svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Noto Sans TC',sans-serif">
+  <defs><marker id="b2s" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#3b6ea5"/></marker>
+       <marker id="b2d" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5b6472"/></marker></defs>
+
+  <rect x="20" y="20" width="110" height="34" rx="7" fill="#eef2f7" stroke="#8a94a6"/><text x="75" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">使用者</text>
+  <rect x="200" y="20" width="170" height="34" rx="7" fill="#dbe7f4" stroke="#3b6ea5"/><text x="285" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">useTaskManager</text>
+  <rect x="440" y="20" width="170" height="34" rx="7" fill="#fff9e8" stroke="#9A6410"/><text x="525" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">tasks.js（Server Action）</text>
+  <rect x="740" y="20" width="110" height="34" rx="7" fill="#e6f3e9" stroke="#0B6E4F"/><text x="795" y="42" font-size="12" text-anchor="middle" font-weight="700" fill="#1a1a1a">Neon</text>
+
+  <line x1="75" y1="54" x2="75" y2="360" stroke="#dde3ec" stroke-width="2"/>
+  <line x1="285" y1="54" x2="285" y2="360" stroke="#dde3ec" stroke-width="2"/>
+  <line x1="525" y1="54" x2="525" y2="360" stroke="#dde3ec" stroke-width="2"/>
+  <line x1="795" y1="54" x2="795" y2="360" stroke="#dde3ec" stroke-width="2"/>
+
+  <path d="M75 88 L 279 88" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#b2s)"/>
+  <text x="177" y="80" font-size="11.5" text-anchor="middle" fill="#1a1a1a">改子任務負責人</text>
+
+  <path d="M285 122 C 330 122, 330 138, 291 138" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#b2s)"/>
+  <text x="340" y="132" font-size="11" fill="#33414f">deriveTaskOwner(子任務, owner, watchers) → 立即重畫（樂觀）</text>
+
+  <path d="M285 176 L 519 176" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#b2s)"/>
+  <text x="402" y="168" font-size="11.5" text-anchor="middle" fill="#1a1a1a">updateSubtask(id, { owner })</text>
+
+  <path d="M525 226 L 789 226" fill="none" stroke="#3b6ea5" stroke-width="2" marker-end="url(#b2s)"/>
+  <text x="657" y="196" font-size="11.5" text-anchor="middle" fill="#1a1a1a">db.batch（單次往返、原子）</text>
+  <text x="657" y="212" font-size="11" text-anchor="middle" fill="#33414f">1 UPDATE subtasks</text>
+  <text x="657" y="244" font-size="11" text-anchor="middle" fill="#33414f">2 UPDATE tasks SET owner = 子任務聯集 ∪ watchers</text>
+
+  <path d="M795 282 L 531 282" fill="none" stroke="#5b6472" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#b2d)"/>
+  <text x="663" y="274" font-size="11" text-anchor="middle" fill="#5b6472">ok</text>
+  <path d="M525 308 L 291 308" fill="none" stroke="#5b6472" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#b2d)"/>
+  <text x="408" y="300" font-size="11" text-anchor="middle" fill="#5b6472">success</text>
+
+  <rect x="200" y="322" width="650" height="42" rx="6" fill="none" stroke="#c9d2de" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="212" y="338" font-size="10.5" fill="#5b6472">alt 失敗</text>
+  <text x="212" y="355" font-size="11" fill="#a34a4a">兩句同批，全成功或全不寫；前端 rollback 子任務與父任務 owner。新增／刪除子任務同樣走 db.batch 重算</text>
+</svg></div>
+<p class="hint">neon-http 沒有互動式 transaction，所以重算必須在 SQL 內算完（<code>DERIVED_OWNER_SQL</code>），不能先讀回 JS 再寫——這是兩句能塞進同一個 <code>db.batch</code> 的前提。
+   觸發重算的情況：子任務新增、改 <code>owner</code>／<code>sortOrder</code>、刪除；任務層改 <code>owner</code>／<code>watchers</code> 時也會重算。</p>
+
+<h3>11.3　改名同步（users.name → 存名字字串的欄位）</h3>
+<table>
+  <tr><th style="width:26%">欄位</th><th style="width:16%">長度上限</th><th>說明</th></tr>
+  <tr><td><code>tasks.owner</code></td><td>500</td><td>逗號分隔；只換「整個 token 完全相等」的項目（<code>Amy Lin</code> 不會被 <code>Amy</code> 誤中），保留順序與原分隔空白</td></tr>
+  <tr><td><code>tasks.watchers</code></td><td>500</td><td>格式同 owner，本批新增同步</td></tr>
+  <tr><td><code>subtasks.owner</code></td><td>255</td><td><code>908acab</code> 補上；不補的話下次編輯子任務會用舊名重新推得父任務 owner</td></tr>
+  <tr><td><code>config</code> key <code>owners</code></td><td>—</td><td>JSON 字串陣列，以 <code>replaceNameInList</code> 換名</td></tr>
+</table>
+<p class="hint"><code>updateUser</code> 把 <code>users</code> 本身與以上所有 UPDATE 收進<b>同一個 <code>db.batch</code></b>，每筆都帶「值仍等於剛讀到的舊值」守衛，避免蓋掉讀寫之間別人剛改的內容；
+   新名較長而超過任一欄位上限時，整個改名拒絕（不寫半套）。限制：目前是撈全部有 owner 的列在 JS 比對，團隊規模下可接受，資料量變大再改 SQL 層過濾。</p>
+
+<!-- ── (e) 部署與營運備註 ── -->
+<h3 id="batch-20261006-e">11 (e) 部署與營運備註</h3>
+<table>
+  <tr><th style="width:24%">項目</th><th>內容</th></tr>
+  <tr><td>上線順序</td><td>① 欄位（正式庫新增 <code>tasks.watchers</code>）→ ② 資料整理（<code>scripts/backfill-task-owners.js</code>：先 dry-run 看過，再 <code>--apply</code>）→ ③ 部署新版程式。
+      <b>①②已完成</b>，③ 尚待合併／部署。順序不可倒：新程式的 SELECT 會讀 <code>watchers</code>，欄位沒先加會直接報錯。</td></tr>
+  <tr><td>backfill 腳本</td><td><code>node scripts/backfill-task-owners.js</code> 預設 dry-run；加 <code>--apply</code> 才寫入，且需 <code>DB_WRITE_CONFIRM=backfill-task-owners@&lt;db-host&gt;</code>（<code>scripts/_guard.js</code>）。
+      只處理有子任務 owner 的任務；原 owner 中會被擠掉的人轉成關注人；每筆 UPDATE 帶舊值守衛；可重複執行。</td></tr>
+  <tr><td>Vercel Function Region</td><td>已由 user 改為 <b>sin1</b>（與 Neon ap-southeast-1 同區，縮短 function ↔ DB 往返）。這是 Vercel 專案設定，<b>不在 repo 內</b>（<code>vercel.json</code> 只有 cron）。</td></tr>
+  <tr><td>本機備份檔</td><td><code>C:\Users\Rock\Desktop\dawin-dash-backup-task-owners-2026-10-06.json</code>（專案外，整理資料前的 tasks owner 備份）。</td></tr>
+  <tr><td>已知未做</td><td>
+      · 深色使用者的 <b>pre-hydration 主題腳本</b>：<code>3b89c0b</code> 讓首次 render 固定用 warm 再同步，深色使用者首屏可能短暫先呈淺色，要徹底消除需在 <code>&lt;head&gt;</code> 注入 pre-hydration 腳本。
+      <br>· <code>MobileGanttList</code> 的<b>緊急度篩選收到陣列時會全濾掉</b>（<code>fpr !== "全部" &amp;&amp; d.priority !== fpr</code>）：舊 bug，本批只改了狀態那一段，沒動它；目前 Dashboard 傳的 <code>fpr</code> 是字串，尚未觸發。
+      <br>· migration 0006 不冪等、未登記 <code>__drizzle_migrations</code>（見 (c)）。</td></tr>
+</table>
+
+<!-- ── (f) 設計稿索引 ── -->
+<h3 id="batch-20261006-f">11 (f) 設計稿索引</h3>
+<table>
+  <tr><th style="width:44%">文件</th><th>內容</th></tr>
+  <tr><td><a href="./dawin-dash-overview-mockup.html"><code>dawin-dash-overview-mockup.html</code></a></td><td>Overview 精簡版草圖（三塊：Timeline／Upcoming／Status）</td></tr>
+  <tr><td><a href="./dawin-dash-my-tasks-mockup.html"><code>dawin-dash-my-tasks-mockup.html</code></a></td><td>My Tasks 專頁 UIUX 草圖</td></tr>
+  <tr><td><a href="./dawin-dash-project-drag-mockup.html"><code>dawin-dash-project-drag-mockup.html</code></a></td><td>專案頁拖移草圖（時間軸左欄與 Tasks 卡）</td></tr>
+  <tr><td><a href="./dawin-dash-status-filter-mockup.html"><code>dawin-dash-status-filter-mockup.html</code></a></td><td>狀態多選篩選：兩種做法的比較</td></tr>
+  <tr><td><a href="./dawin-dash-task-lead-mockup.html"><code>dawin-dash-task-lead-mockup.html</code></a></td><td>任務「關注人」欄位草圖（現行設計；backfill 規則見其第 5、6 節）</td></tr>
+  <tr><td><a href="./decision-task-owner-model.html"><code>decision-task-owner-model.html</code></a></td><td>決策頁：任務與子任務的負責人邏輯（採方案 A：任務負責人由子任務自動帶出）</td></tr>
+  <tr><td><a href="./decision-personal-settings.html"><code>decision-personal-settings.html</code></a></td><td>決策頁：個人化設定範圍</td></tr>
+  <tr><td><a href="./owner-backfill-table.html"><code>owner-backfill-table.html</code></a></td><td>負責人整理對照表。<b>已被「關注人」設計取代</b>（被擠掉的人改轉成關注人，不再直接丟棄），僅供歷史對照</td></tr>
+</table>
 
 </main>
 

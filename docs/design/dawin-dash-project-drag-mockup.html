@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>專案頁拖移草圖</title>
+<style>
+:root{--bg:#f4f5f7;--sf:#fff;--bd:#e3e6ea;--tx:#1d2330;--dim:#6b7585;--ac:#2f8fd1;--amb:#d99a1e;--grn:#2e9d6a;--pur:#8a63c9}
+@media(prefers-color-scheme:dark){:root{--bg:#14171c;--sf:#1d2128;--bd:#2f3541;--tx:#e6e9ee;--dim:#8e98a8;--ac:#4aa6e6;--amb:#e8b04a;--grn:#4cc08d;--pur:#a98be0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.wrap{max-width:1000px;margin:0 auto}h1{font-size:18px;margin:0 0 4px}.note{color:var(--dim);font-size:12px;margin:0 0 16px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h3{margin:0 0 12px;font-size:14px}
+.g{display:flex;align-items:center;height:32px;gap:8px;border-bottom:1px solid var(--bd)}
+.h{color:var(--dim);cursor:grab;letter-spacing:-2px;width:14px;flex:none;font-size:15px}
+.n{width:190px;flex:none;display:flex;gap:8px;align-items:center;white-space:nowrap;overflow:hidden}
+.st{font-size:11px;padding:0 7px;border-radius:6px;background:color-mix(in srgb,var(--amb) 18%,transparent);color:var(--amb)}.st.d{background:color-mix(in srgb,var(--grn) 18%,transparent);color:var(--grn)}
+.tk{flex:1;position:relative;height:14px}.tk i{position:absolute;height:100%;border-radius:4px;background:var(--pur);opacity:.85}.tk u{position:absolute;height:100%;border-radius:4px;background:var(--pur);opacity:.25}
+.lift{background:color-mix(in srgb,var(--ac) 14%,var(--sf));box-shadow:0 6px 18px rgba(0,0,0,.25);border:1px solid var(--ac);border-radius:8px;transform:rotate(-.6deg);position:relative;z-index:2}
+.drop{height:3px;background:var(--ac);border-radius:2px;margin:-1px 0}
+.tc{border:1px solid var(--bd);border-radius:10px;margin-bottom:8px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.tc .t{flex:1}.tc small{color:var(--dim);font-family:ui-monospace,monospace;font-size:12px}
+.sub{padding:5px 12px 5px 44px;color:var(--dim);font-size:13px;display:flex;gap:8px;align-items:center}
+.tag{font-size:12px;padding:0 8px;border-radius:6px;background:color-mix(in srgb,var(--pur) 16%,transparent);color:var(--pur)}
+.cap{font-size:13px;color:var(--dim)}.cap b{color:var(--tx)}
+@media(max-width:700px){.n{width:130px}}
+</style></head><body><div class="wrap">
+<h1>專案頁：任務可拖移（草圖）</h1>
+<p class="note">兩處紅框都做：① 時間軸左欄的任務列 ② 下方 Tasks 的任務卡（拖標題區）。兩處共用同一個順序，拖一邊另一邊同步。</p>
+
+<div class="card"><h3>① 時間軸（左欄任務列可拖）</h3>
+ <div class="g"><span class="h">⋮⋮</span><div class="n">MOMO上架 <span class="st">進行中</span></div><div class="tk"><u style="left:46%;width:36%"></u><i style="left:46%;width:18%"></i></div></div>
+ <div class="drop"></div>
+ <div class="g lift"><span class="h">⋮⋮</span><div class="n">行銷合作30 <span class="st">進行中</span></div><div class="tk"><u style="left:38%;width:56%"></u><i style="left:38%;width:28%"></i></div></div>
+ <div class="g"><span class="h">⋮⋮</span><div class="n">印刷品 <span class="st d">已完成</span></div><div class="tk"><u style="left:42%;width:14%"></u><i style="left:42%;width:14%"></i></div></div>
+ <div class="g"><span class="h">⋮⋮</span><div class="n">驗收時間點 <span class="st">進行中</span></div><div class="tk"><u style="left:48%;width:8%"></u><i style="left:48%;width:6%"></i></div></div>
+</div>
+
+<div class="card"><h3>② Tasks（任務卡可拖）</h3>
+ <div class="tc"><span class="h">⋮⋮</span><div class="t"><b>票務展務相關</b><br><span class="tag">Felien</span> <small>2026.09.16 → 2026.12.20</small></div><span class="st">進行中</span><small>1/2</small></div>
+ <div class="sub"><span class="h">⋮⋮</span>☐ 每週營收、票務確認</div>
+ <div class="sub"><span class="h">⋮⋮</span>☑ 驗票、結帳手冊</div>
+ <div class="drop"></div>
+ <div class="tc lift"><span class="h">⋮⋮</span><div class="t"><b>相關檔案連結</b><br><span class="tag">幸真</span> <small>2026.09.04 → 2026.12.20</small></div><span class="st">待辦</span><small>30%</small></div>
+</div>
+
+<p class="cap"><b>怎麼拖：</b>抓左邊 ⋮⋮ 把手；拖起時卡片浮起、目標位置出現藍線。<b>原本就有的</b>：子任務已能拖（SortableSubItem）、專案卡已能拖。<b>要新做的</b>：任務層級的順序。資料表 tasks 已有 sort_order 欄位，但目前沒有「存任務順序」的後端動作，要補一個（類似 reorderProjects）。<br>
+<b>衝突點：</b>Tasks 清單現在有「排序：開始日」下拉。選了自動排序時拖移要停用（或拖了就自動切成「手動排序」）。Viewer 看不到把手。</p>
+</div></body></html>

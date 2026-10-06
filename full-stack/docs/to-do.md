@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-10-06 優化批次
+
+已完成項目見 `milestone.md`「2026-10-06 優化批次」。遺留待辦：
+
+- [ ] 部署新版（欄位與資料整理已在正式庫完成）
+- [ ] Migration 0006 補進 `__drizzle_migrations` journal，或改成 `ADD COLUMN IF NOT EXISTS`（否則日後 `db:migrate` 會撞 `column already exists`）
+- [ ] 深色使用者的 pre-hydration 主題腳本（目前首次 render 固定 warm、hydrate 後才同步，深色使用者首屏可能短暫呈淺色）
+- [ ] `MobileGanttList` 的緊急度篩選收到陣列時會全部濾掉（舊 bug，目前 `fpr` 為字串尚未觸發）
+
 ## Wave 3 工單 0531 ✅（已完成）
 
 - [x] Timeline 收折列顯示整體進度條（avg% 與專案卡片一致）

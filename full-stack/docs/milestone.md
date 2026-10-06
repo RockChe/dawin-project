@@ -54,6 +54,19 @@
 - ✅ 測試：Wave 2 合併後 89 綠（vitest，已排除 `.worktrees`）
 - 🔲 技術債：migration baseline（`scripts/baseline-migrations.mjs` 就緒，待對 prod 執行，gated）
 
+## 2026-10-06 優化批次（分支 `feat/overview-mytasks-drag`，12 commit，656 測試綠）
+
+- ✅ Overview 精簡成 Timeline／Upcoming／Status 三塊
+- ✅ My Tasks 分頁（逾期／7 天內／之後 + KPI）；改姓名同步 `tasks.owner`／`watchers`／`subtasks.owner`／config `owners`
+- ✅ 專案內任務拖移排序（`reorderTasks`，時間軸左欄與 Tasks 卡共用 `sort_order`）
+- ✅ Tasks 清單「隱藏已完成子任務」開關（`projectTaskView.hideDoneSubs`）；跨專案狀態多選篩選
+- ✅ 首次載入不再先放大再縮小；Timeline 預設全部收折；黑暗模式 hydration mismatch 修正
+- ✅ 個人設定擴充（`activeTab`、`ganttWidths`、`timelineHeight`、`upcomingDays`／`upcomingLimit`、`timeDim*`），隨 `getInitialData` 一次帶回（首屏 3 趟 → 1 趟）
+- ✅ 任務負責人由子任務自動帶出 + 「關注人」`tasks.watchers`（Migration 0006，正式庫已手動執行）+ backfill 腳本
+- ✅ 系統顯示名稱改為「大雲文創專案管理系統」（master `1effa21`）
+- 🔲 待部署：上線順序為 欄位 → 資料整理 → 部署，前兩步已完成
+- 設計文件：`docs/design/dawin-dash.html` 第 11 章
+
 ## v0.4.0 — 穩定性
 
 - 加入測試（至少 Server Actions 單元測試）

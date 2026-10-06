@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>個人化設定範圍</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:#1d2330;font:14px/1.6 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.w{max-width:1040px;margin:0 auto}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;margin:26px 0 8px;border-left:3px solid #2f8fd1;padding-left:8px}
+.q{background:#fff;border:1px solid #d7dce2;border-left:4px solid #2f8fd1;border-radius:8px;padding:10px 14px;color:#1d2330}
+.lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.lane{background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:12px;color:#1d2330}
+.lane h3{margin:0 0 2px;font-size:14px}.lane p{margin:0 0 8px;font-size:12px;color:#5b6676}
+.lane.ok{border-color:#2e9d6a;background:#eefaf4}.lane.dev{border-color:#d99a1e;background:#fff7e6}.lane.tmp{border-color:#d9483b;background:#fdeeec}.lane.gl{border-color:#8a63c9;background:#f4effb}
+.it{background:#fff;border:1px solid #d7dce2;border-radius:8px;padding:4px 8px;margin-bottom:6px;font-size:13px;color:#1d2330}
+.it.mv{border:2px solid #2f8fd1}.it.mv::after{content:" → 搬到個人帳號";color:#2f8fd1;font-size:11px;font-weight:700}
+.it.mv2{border:2px dashed #d9483b}.it.mv2::after{content:" ⚠ 不建議";color:#d9483b;font-size:11px;font-weight:700}
+table{width:100%;border-collapse:collapse;background:#fff;color:#1d2330;font-size:13px}th,td{border:1px solid #d7dce2;padding:6px 10px;text-align:left}th{background:#eceff3}
+.rec{border:3px solid #2f8fd1;background:#eaf4fc;border-radius:10px;padding:10px 14px;margin:8px 0;color:#1d2330}.rec b.t{background:#2f8fd1;color:#fff;border-radius:99px;padding:0 8px;font-size:11px;margin-right:6px}
+.opt{border:1px solid #d7dce2;background:#fff;border-radius:10px;padding:10px 14px;margin:8px 0;color:#1d2330}
+.arrow{text-align:center;color:#2f8fd1;font-size:22px;margin:4px 0}
+@media(max-width:800px){.lanes{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="w">
+<h1>哪些設定要變成「每個人自己的」</h1>
+
+<h2>1. 你的原話</h2>
+<div class="q">「另外 這些所有設定，都要存成個人化，每個人可以自己調整」</div>
+
+<h2>2. 查證：設定現在存在哪裡</h2>
+<div class="lanes">
+ <div class="lane ok"><h3>✅ 存在個人帳號</h3><p>換電腦也跟著人（資料庫 user_settings）</p>
+  <div class="it">頁面縮放</div><div class="it">專案卡片／列表檢視</div><div class="it">隱藏的專案</div><div class="it">Timeline 預設收折</div><div class="it">Tasks 排序／篩選／隱藏已完成子任務</div><div class="it">Timeline 排序</div></div>
+ <div class="lane dev"><h3>⚠ 只存這台瀏覽器</h3><p>換電腦、清瀏覽器就沒了（localStorage）</p>
+  <div class="it mv">甘特欄寬</div><div class="it mv">Timeline 高度</div><div class="it mv">Upcoming 天數／筆數</div><div class="it mv">目前所在分頁</div><div class="it">Timeline 各專案收折狀態</div></div>
+ <div class="lane tmp"><h3>❌ 重整就歸零</h3><p>只活在畫面記憶體</p>
+  <div class="it mv">時間尺度（日週月季）</div><div class="it mv2">頂部 狀態／優先度／專案篩選</div></div>
+ <div class="lane gl"><h3>🔒 全隊共用（刻意）</h3><p>改了大家都看到，保持不動</p>
+  <div class="it">任務分類名單</div><div class="it">負責人名單</div><div class="it">專案名稱與資料本身</div></div>
+</div>
+<div class="arrow">↓ 建議把藍框的項目搬進「個人帳號」</div>
+
+<h2>3. 覆蓋表</h2>
+<table><tr><th>項目</th><th>現況</th><th>建議</th><th>工作量</th></tr>
+<tr><td>甘特欄寬、Timeline 高度、Upcoming 設定</td><td>瀏覽器</td><td>搬到個人帳號；第一次登入把本機舊值帶上去</td><td>中</td></tr>
+<tr><td>目前分頁、時間尺度</td><td>瀏覽器／不存</td><td>存個人帳號（回到上次的分頁與尺度）</td><td>小</td></tr>
+<tr><td>Timeline 各專案收折狀態</td><td>瀏覽器</td><td>維持；已有「預設收折」可個人化</td><td>—</td></tr>
+<tr><td>頂部狀態／優先度／專案篩選</td><td>不存</td><td><b>不存</b>：下次進來忘了還開著，會以為任務不見了</td><td>—</td></tr></table>
+
+<h2>4. confer 三方意見</h2>
+<div class="opt">未經 confer。以上是我的初步判斷，Codex 尚未審。</div>
+
+<h2>5. 要裁的題目</h2>
+<div class="rec"><b class="t">我的建議</b><b>搬：欄寬／Timeline 高度／Upcoming 設定／目前分頁／時間尺度</b><br>都是「版面偏好」，換電腦後應該一樣；做法沿用現有的個人設定機制，不改資料庫結構。</div>
+<div class="opt"><b>另一個選擇：連頂部篩選也存</b><br>方便，但篩選是「暫時看一眼」的東西，記住它反而容易讓人誤以為資料少了。</div>
+
+<h2>6. 不做什麼</h2>
+<div class="opt">任務分類名單、負責人名單維持全隊共用；不做「管理員統一鎖定設定」；不改資料庫結構。</div>
+</div></body></html>

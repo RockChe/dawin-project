@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>狀態多選篩選 兩種做法</title>
+<style>
+:root{--bg:#f4f5f7;--sf:#fff;--bd:#e3e6ea;--tx:#1d2330;--dim:#6b7585;--ac:#2f8fd1;--amb:#d99a1e;--grn:#2e9d6a;--blu:#3b8fd0;--red:#d9483b}
+@media(prefers-color-scheme:dark){:root{--bg:#14171c;--sf:#1d2128;--bd:#2f3541;--tx:#e6e9ee;--dim:#8e98a8;--ac:#4aa6e6;--amb:#e8b04a;--grn:#4cc08d;--blu:#5ab0ee;--red:#ef6a5d}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,"Noto Sans TC",sans-serif;padding:24px 16px}
+.wrap{max-width:1000px;margin:0 auto}h1{font-size:18px;margin:0 0 4px}h2{font-size:15px;margin:0 0 4px}.note{color:var(--dim);font-size:12px;margin:0 0 14px}
+.opt{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:18px}
+.opt.rec{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
+.tag{display:inline-block;font-size:11px;padding:0 8px;border-radius:99px;background:var(--ac);color:#fff;margin-left:8px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin:10px 0}.tabs span{padding:6px 14px;color:var(--dim)}.tabs .on{color:var(--ac);font-weight:700;border-bottom:2px solid var(--ac);margin-bottom:-1px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.p{border:1px solid var(--bd);background:var(--sf);border-radius:99px;padding:3px 14px;color:var(--dim);font-size:13px}
+.p.on{border:0;color:#fff}.p.a{background:var(--amb)}.p.g{background:var(--grn)}.p.b{background:var(--blu)}.p.all{background:var(--dim)}
+.sep{width:1px;height:18px;background:var(--bd)}
+.g{display:flex;align-items:center;height:26px;gap:8px;border-bottom:1px solid var(--bd);font-size:13px}.g .n{width:150px}.g .t{flex:1;position:relative;height:10px}.g i{position:absolute;height:100%;border-radius:4px;background:#8a63c9;opacity:.8}
+.st{font-size:11px;padding:0 7px;border-radius:6px;background:color-mix(in srgb,var(--amb) 18%,transparent);color:var(--amb)}
+.hint{font-size:12px;color:var(--dim);margin-top:8px}.hint b{color:var(--tx)}
+.warn{color:var(--red)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}.cards div{border:1px solid var(--bd);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--dim)}.cards .on{border-color:var(--amb);color:var(--tx)}.cards .on2{border-color:var(--grn);color:var(--tx)}
+</style></head><body><div class="wrap">
+<h1>狀態多選篩選：兩種做法</h1>
+<p class="note">需求：「可以照狀態 FILTER，例如 只顯示 進行中，可以多狀態」。以下例子都是「只看 進行中 ＋ 待辦」。</p>
+
+<div class="opt rec"><h2>A. 把現有頂部篩選改成多選<span class="tag">建議</span></h2>
+ <p class="note">現在的按鈕是單選；改成點幾個亮幾個。頁面只有一組狀態篩選，Overview、Timeline 都吃同一組。</p>
+ <div class="tabs"><span>Overview</span><span>My Tasks</span><span>Projects</span><span class="on">Timeline</span><span>Data</span></div>
+ <div class="bar"><span class="p">全部</span><span class="p on b">待辦</span><span class="p on a">進行中</span><span class="p">已完成</span><span class="sep"></span><span class="p">高</span><span class="p">中</span><span class="p">低</span></div>
+ <div class="cards"><div>待辦 <b>8</b></div><div class="on">進行中 <b>58</b></div><div>已完成 <b>27</b></div><div class="on">待辦 8（亮）</div></div>
+ <div class="g"><div class="n">MOMO上架 <span class="st">進行中</span></div><div class="t"><i style="left:46%;width:30%"></i></div></div>
+ <div class="g"><div class="n">10/25 義美活動 <span class="st" style="color:var(--blu);background:color-mix(in srgb,var(--blu) 18%,transparent)">待辦</span></div><div class="t"><i style="left:48%;width:16%"></i></div></div>
+ <p class="hint"><b>操作：</b>再點一次取消；全部取消或點「全部」＝不篩選。上方狀態卡片也同步亮起。<b>代價：</b>改的是共用篩選，Overview 也會跟著變。</p></div>
+
+<div class="opt"><h2>B. 只在 Timeline 工具列另加一組</h2>
+ <p class="note">Overview 不受影響。但 Timeline 頁會同時出現兩組狀態篩選。</p>
+ <div class="tabs"><span>Overview</span><span>My Tasks</span><span>Projects</span><span class="on">Timeline</span><span>Data</span></div>
+ <div class="bar"><span class="p on all">全部</span><span class="p">待辦</span><span class="p">進行中</span><span class="p">已完成</span><span style="color:var(--dim);font-size:12px">← 原本的（單選）</span></div>
+ <div class="bar"><span class="p">手動 ▾</span><span class="p">全部收折</span><span class="sep"></span><span class="p on b">待辦</span><span class="p on a">進行中</span><span class="p">已完成</span><span style="color:var(--dim);font-size:12px">← 新增的（多選）</span></div>
+ <p class="hint warn">兩組同時存在時，結果是「兩個條件都要符合」，使用者很容易搞不清楚為什麼某些任務不見了。</p></div>
+</div></body></html>
