@@ -9,6 +9,7 @@ import useUserSettings from "@/hooks/useUserSettings";
 import MobileTabBar from "./MobileTabBar";
 import MoreScreen from "./MoreScreen";
 import OverviewScreen from "./OverviewScreen";
+import ProjectsScreen from "./ProjectsScreen";
 import TaskSheet from "./TaskSheet";
 import { can } from "@/lib/permissions";
 
@@ -21,7 +22,7 @@ const placeholder = name => function Screen({ X }) { return <ScreenPlaceholder n
 const SCREENS = {
   mytasks: placeholder("我的任務"),
   overview: OverviewScreen,
-  projects: placeholder("專案"),
+  projects: ProjectsScreen,
   timeline: placeholder("時程"),
 };
 
@@ -33,6 +34,8 @@ export default function MobileApp({ initialData }) {
   } = useTaskManager(initialData);
   const { settings: userSettings } = useUserSettings({}, showToast, initialData?.settings);
   const [tab, setTab] = useState("mytasks");
+  const [selectedProjectId, setSelectedProjectId] = useState(null); // 專案分頁的詳情；時程點列時由外部設定
+  const selectProject = useCallback(id => { setSelectedProjectId(id); setTab("projects"); }, []);
   const [sheetTaskId, setSheetTaskId] = useState(null); // TaskSheet 的開關；抽屜本身由 Task 7 渲染
   const openTask = useCallback(id => setSheetTaskId(id), []);
   const closeSheet = useCallback(() => setSheetTaskId(null), []);
@@ -50,7 +53,7 @@ export default function MobileApp({ initialData }) {
   }, [projects, twp, PJC]);
 
   const Screen = SCREENS[tab];
-  const screenProps = { twp, allS, projects, userName, userRole, today, X, openTask, updateTask, toggleSub, addSub, pcMap, configOwners, upcomingDays, upcomingLimit };
+  const screenProps = { twp, allS, projects, userName, userRole, today, X, openTask, updateTask, toggleSub, addSub, pcMap, configOwners, upcomingDays, upcomingLimit, selectedProjectId, setSelectedProjectId, onSelectProject: selectProject };
 
   return (
     <PermissionProvider role={userRole}>
