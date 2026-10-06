@@ -29,11 +29,13 @@ src/
 │   ├── (auth)/set-password/   # 首次登入設定密碼
 │   ├── (dashboard)/dashboard/ # 主儀表板
 │   ├── (dashboard)/project/[id]/ # 專案詳情頁
-│   └── api/                   # API routes (upload, upload-banner, download, backup, fetch-csv, health)
+│   ├── (mobile)/m/            # 手機版（單一路由，layout 做登入檢查 + device-width viewport）
+│   └── api/                   # API routes (upload, upload-banner, download, backup, fetch-csv, health, device)
 ├── components/
 │   ├── ThemeProvider.jsx      # 主題 Context Provider + useTheme hook
 │   ├── PermissionProvider.jsx # role Context + useCan(cap) hook（預設 role=null → 全部 false，fail-closed）
-│   └── dashboard/             # 18 個元件 + tabs/ (6 個子元件)
+│   ├── dashboard/             # 桌機版：18 個元件 + tabs/ (6 個子元件)
+│   └── mobile/                # 手機版畫面（MobileApp、各 Screen、TaskSheet、mobileData.js）
 ├── hooks/
 │   ├── useTaskManager.js      # 核心狀態管理 hook
 │   ├── useUserSettings.js     # 個人設定 hook（per-account，獨立於 useTaskManager）；初始值由 getInitialData 帶入（`initial`：有給就 ready=true、掛載不再 fetch）；key 清單見下方「個人設定 key」
@@ -41,6 +43,7 @@ src/
 │   └── reorderProjects.js     # Projects 拖曳排序的純函式（無 React 依賴）
 ├── lib/
 │   ├── auth.js                # Session 認證（7 天過期）
+│   ├── device.js              # 裝置分流純函式：detectDevice、HOME、ENABLED_DEVICES（見「裝置分流與手機版」）
 │   ├── constants.js           # 全域常數（STATUSES 狀態順序、STATUS_FILTERS 篩選選項）
 │   ├── audit.js               # 審計日誌記錄（logAudit）
 │   ├── backup.js              # 備份導出/上傳/清理（R2 + Google Drive）
@@ -176,7 +179,24 @@ export async function actionName(params) {
 - 字體：`'Noto Sans TC'` (內文)、`'JetBrains Mono'` (等寬)
 - Toast 通知透過 `useTaskManager` 的 `showToast(msg, type)` 顯示
 - 拖曳排序使用 `@dnd-kit`，需設定 sensors 和 sortable context
-- **桌機固定版（2026-10-06）**：已移除 RWD（無 `isMobile`、`globals.css` 無 `@media`）；`(dashboard)`／`(admin)` layout 固定 `viewport` 寬 1280 + `min-width: 1280`，登入頁維持 device-width。平板版／手機版另行設計，不在本版
+- **桌機固定版（2026-10-06）**：已移除 RWD（無 `isMobile`、`globals.css` 無 `@media`）；`(dashboard)`／`(admin)` layout 固定 `viewport` 寬 1280 + `min-width: 1280`，登入頁維持 device-width。手機版已完成（見下方「裝置分流與手機版」），平板版尚未做
+
+### 裝置分流與手機版（2026-10-06）
+
+| 路徑 | 版本 | 備註 |
+|------|------|------|
+| `/dashboard` | 桌機（固定 1280） | 預設入口，唯一會被自動導向的路徑 |
+| `/m` | 手機 | `(mobile)` 路由群組，單一路由，client state 切分頁 |
+| `/t` | 平板（規劃中） | 尚未建立；`HOME` 已預留 |
+| `/api/device?to=desktop\|mobile` | 手動切換 | 寫 `device_pref` cookie 後導向該版首頁；`to` 不在 `ENABLED_DEVICES` → 400；無 `next` 參數 |
+
+- 判斷在 `src/lib/device.js` 的 `detectDevice`：`device_pref`（手動）> `device_auto`（客戶端偵測，平板計畫才會寫）> UA > 桌機；結果不在 `ENABLED_DEVICES` 一律退回桌機
+- `src/middleware.js` 只攔 `GET /dashboard`（且已通過登入 cookie 檢查）；直接開 `/m` 永遠尊重。桌機縮窄視窗不會被導走（只看 UA，不看寬度）
+- Cookie：`device_pref`（1 年、httpOnly、sameSite=lax、production 加 secure）；`device_auto` 目前沒有任何程式寫入
+- 手機版畫面在 `src/components/mobile/`：我的任務、總覽、專案（清單＋詳情）、任務抽屜、簡化時程、更多；**刻意不做**資料表、設定、帳號管理、備份、批次、拖移。viewer 唯讀
+- 三個版本共用 `getInitialData`／`useTaskManager`／`useUserSettings` 與所有 server action；不碰 DB
+- **日後加平板版**：建 `/t` 路由群組與畫面 → 把 `'tablet'` 加進 `ENABLED_DEVICES`（`src/lib/device.js`）→ 補 iPad 客戶端偵測寫 `device_auto` → 桌機側欄與手機「更多」補平板入口
+- 桌機側欄頁尾有「手機版」連結（`/api/device?to=mobile`）；手機「更多」有「切到桌機版」
 
 ### 檔案上傳流程
 1. 前端 → `POST /api/upload`（FormData，含 taskId）
@@ -208,7 +228,7 @@ export async function actionName(params) {
 - **前端隱藏編輯按鈕只是 UI policy，不是安全邊界**：`getInitialData()` 會把全量任務資料送進任何登入者的瀏覽器（`useTaskManager` 的 `allT` state），DataTab 的 Export CSV 是純前端從 `allT` 產生——藏按鈕擋不住 DevTools。真正的牆是後端的 `withCap` / `withRouteCap`；前端隱藏只是避免使用者對著點不動的按鈕困惑
 - **Migration baseline（技術債，已解決）**：曾用一支臨時 idempotent 腳本把 0000–0004 標記為「已套用」到 `__drizzle_migrations`（讀 `drizzle/migrations/meta/_journal.json`，對每個 tag 算 `sha256(<tag>.sql)` 寫入，已存在則跳過），已對 prod 執行並驗證、**腳本已刪除，不在 repo 中**；之後 `db:migrate` 只會套 0005+
 - **Wave 2 個人化（工單 0531）**：Projects 卡片/明細（精簡列表）切換（`projectsView`，user_settings）、Timeline 隱藏專案眼睛 toggle（`hiddenProjects`=project.id 陣列，user_settings；**Dashboard 掛 `useUserSettings` 為單一真相**，以 props 同時傳 ProjectsTab 顯示眼睛狀態 + TimelineTab 過濾，W2-2 不自呼叫 hook）、Timeline 排序（`timelineSort`，user_settings）。ephemeral UI state 走 localStorage：Timeline 逐專案收折（`dash-timelineCollapsed`）。（2026-10-06 起 active tab 與欄寬／高度／Upcoming／時間尺度都改存 user_settings，見「個人設定 key」）
-- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），2026-10-06 批次落地後共 **659 個測試 / 63 個檔**全綠
+- **測試**：`npm test` 執行 vitest（`vitest.config.js`，含 `@/` alias + jsdom，**已排除 `.worktrees`** 避免掃到 fleet 隔離 worktree 內的測試副本），2026-10-06 手機版落地後共 **736 個測試 / 77 個檔**全綠
 
 ## 關鍵參考檔案
 
@@ -220,6 +240,8 @@ export async function actionName(params) {
 - `src/lib/theme.js` — 主題常數與工廠函式
 - `src/components/dashboard/Dashboard.jsx` — 主元件（187 行）
 - `src/components/dashboard/tabs/` — tab 子元件（Overview / MyTasks / Projects / Timeline / Data / Settings + DashboardHeader）
+- `src/lib/device.js` — 裝置分流（`detectDevice`、`ENABLED_DEVICES`）
+- `src/middleware.js` — 路由保護 + `/dashboard` 裝置導向
 - `src/lib/taskOwner.js` — 執行人／關注人規則（單一真相源，SQL 版須同步）
 - `src/lib/personalSettings.js` — 個人設定純函式與舊 localStorage 遷移
 - `scripts/backfill-task-owners.js` — owner／watchers 一次性回填（預設 dry-run）

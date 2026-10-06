@@ -98,6 +98,7 @@
   <a href="#docs">10 相關文件</a>
   <a href="#batch-20261006">11 2026-10-06 優化批次</a>
   <a href="#rwd-removed">12 移除 RWD</a>
+  <a href="#device-routing">13 裝置分流與手機版</a>
   <span class="sep">|</span>
   <a class="ext" href="./dawin-dash-task-sortfilter-q-scope.html">記憶範圍</a>
   <a class="ext" href="./dawin-dash-task-sortfilter-q-ui.html">UI 版型</a>
@@ -110,7 +111,7 @@
   <code>docs/design/dawin-dash.html</code> ·
   建立於 2026-09-04 · 單檔模式（十章全在本檔，未拆功能子檔） ·
   L2 錨點核准：<b style="color:var(--ok)">已核准 2026-09-04</b>（rev ad2aac1） ·
-  2026-10-06 增補第 11 章（<b style="color:var(--warn)">待 user 核准</b>，核准前第 11 章不是 L2 錨點）
+  2026-10-06 增補第 11、13 章（<b style="color:var(--warn)">待 user 核准</b>，核准前第 11、13 章不是 L2 錨點）
 </p>
 <div class="card">
   進度 <b id="pct">0%</b> <span class="hint" id="cnt"></span>
@@ -1139,6 +1140,68 @@
   已移除全部 <code>isMobile</code> 分支與 <code>globals.css</code> 的 <code>@media</code>，刪除 <code>MobileGanttList</code>／<code>MobileProjectTimeline</code>；
   dashboard／admin layout 匯出 <code>viewport = { width: 1280 }</code> 並設 <code>min-width: 1280px</code>（登入頁不動）。平板版／手機版另行設計，不在本次範圍。
   先前的手機稽核（<a href="./dawin-dash-mobile-q-audit.html">dawin-dash-mobile-q-audit.html</a>）僅供之後做手機版時參考。</p>
+
+<h2 id="device-routing">13 2026-10-06 裝置分流與手機版</h2>
+<p class="hint">分支 <code>feat/device-routing-mobile</code>（接在第 12 章固定桌機版之後）。計畫：<code>docs/superpowers/plans/2026-10-06-device-routing-and-mobile.md</code>（本機檔，不入版控）。
+  <b>L2 狀態：待 user 核准</b>——本章是新增內容，核准前只當記錄，不當錨點；與原話衝突時一律以原話為準。</p>
+
+<h3>13.1　用戶需求</h3>
+<div class="split">
+  <div class="col">
+    <h3><span class="tagl raw">原文</span>逐字，不重述不意譯</h3>
+    <blockquote class="verbatim" id="req-verbatim-device">RWD 效果不好，我想拿掉，固定桌機板，另外出一個 平板版 跟 手機版的，請先固定桌機板
+
+能夠自動判斷設備 切去版本嗎</blockquote>
+  </div>
+  <div class="col">
+    <h3><span class="tagl llm">解讀</span>非原話，僅供對照</h3>
+    <div class="interp">解讀：第一句已在第 12 章完成（桌機固定 1280）。本批做第二句「自動判斷設備切去版本」與「手機版」；平板版因需另做 UI 與 iPad 偵測，另開計畫，目前平板裝置一律當桌機。
+      UI 依歸：<a href="./dawin-dash-mobile-ui-mockup.html">dawin-dash-mobile-ui-mockup.html</a>（手機，本批實作）、<a href="./dawin-dash-tablet-ui-mockup.html">dawin-dash-tablet-ui-mockup.html</a>（平板，尚未實作）。</div>
+  </div>
+</div>
+
+<h3>13.2　路由與分流規則</h3>
+<table>
+  <tr><th style="width:18%">路徑</th><th style="width:20%">版本</th><th>說明</th></tr>
+  <tr><td><code>/dashboard</code></td><td>桌機（固定 1280）</td><td>預設入口，也是唯一會被自動導向的路徑</td></tr>
+  <tr><td><code>/m</code></td><td>手機</td><td>路由群組 <code>(mobile)</code>，單一路由，內部用 client state 切分頁</td></tr>
+  <tr><td><code>/t</code></td><td>平板（<b>規劃中</b>）</td><td>尚未建立；<code>HOME</code> 已預留，<code>ENABLED_DEVICES</code> 未含 <code>tablet</code> 前平板一律當桌機</td></tr>
+  <tr><td><code>/api/device?to=</code></td><td>手動切換</td><td>寫 <code>device_pref</code> cookie 後導向該版首頁</td></tr>
+</table>
+<ul>
+  <li><b>判斷優先序</b>：<code>device_pref</code>（手動）&gt; <code>device_auto</code>（客戶端偵測，平板計畫才會寫入）&gt; User-Agent &gt; 桌機。純函式 <code>detectDevice</code> 在 <code>src/lib/device.js</code>；結果不在 <code>ENABLED_DEVICES</code>（現為 <code>['desktop','mobile']</code>）內一律退回桌機。</li>
+  <li><b>只攔 <code>GET /dashboard</code></b>（<code>src/middleware.js</code>，且已通過登入 cookie 檢查）。直接開 <code>/m</code>、<code>/t</code> 是明確選擇，永遠尊重，不會被導走。</li>
+  <li><b><code>/api/device</code></b>：<code>device_pref</code> cookie，1 年、<code>httpOnly</code>、<code>sameSite=lax</code>（production 加 <code>secure</code>）；目的地只能是 <code>HOME</code> 表內固定路徑，且 <code>to</code> 必須在白名單 <code>ENABLED_DEVICES</code>，否則 400；不接受 <code>next</code> 參數（無 open redirect）。</li>
+  <li><b>桌機縮窄視窗不會被導向手機版</b>：只看 UA，不看寬度。</li>
+  <li><b>入口</b>：手機「更多 → 切到桌機版」；桌機側欄頁尾「手機版」。</li>
+</ul>
+
+<h3>13.3　手機版範圍</h3>
+<table>
+  <tr><th style="width:26%">項目</th><th>內容</th></tr>
+  <tr><td>有的畫面</td><td>我的任務（首頁）、總覽（Upcoming、Status）、專案（清單＋專案詳情）、任務底部抽屜（檢視／編輯）、時程（簡化橫條）、更多（切換版本、登出）；底部分頁列共五格</td></tr>
+  <tr><td>刻意<b>不</b>放手機</td><td>資料表（Data）、設定、帳號管理、備份、批次操作、拖移排序；「更多」頁提示這些請用桌機版。時程的日週月季切換本版僅顯示</td></tr>
+  <tr><td>共用資料層</td><td>三個版本共用 <code>getInitialData</code>、<code>useTaskManager</code>、<code>useUserSettings</code>、server actions、登入與權限；不改 DB schema、不新增 server action。只有畫面外殼不同</td></tr>
+  <tr><td>權限</td><td>viewer（<code>useCan('write')</code> 為 false）在手機版唯讀，不顯示勾選框、儲存、新增子任務</td></tr>
+  <tr><td>日期</td><td>「今天」一律 <code>toBusinessDateString()</code>（Asia/Taipei），避免 hydration mismatch</td></tr>
+</table>
+
+<h3>13.4　Commit 對照（<code>git log --oneline master..HEAD</code>）</h3>
+<table>
+  <tr><th style="width:14%">SHA</th><th style="width:16%">計畫 Task</th><th>內容</th></tr>
+  <tr><td><code>9cf0dd3</code></td><td>Task 1</td><td>feat: 裝置判斷純函式 detectDevice</td></tr>
+  <tr><td><code>81ce311</code></td><td>Task 2</td><td>feat: middleware 裝置導向與 /api/device 手動切換</td></tr>
+  <tr><td><code>ef279d6</code></td><td>Task 3</td><td>feat(mobile): 手機版外殼 /m（底部分頁列、更多、切換版本）</td></tr>
+  <tr><td><code>7576050</code></td><td>Task 4</td><td>feat(mobile): 我的任務首頁</td></tr>
+  <tr><td><code>97e257d</code></td><td>Task 5</td><td>feat(mobile): 總覽（Upcoming、Status）</td></tr>
+  <tr><td><code>394e814</code></td><td>Task 7</td><td>feat(mobile): 任務底部抽屜（檢視與編輯）</td></tr>
+  <tr><td><code>326def0</code></td><td>Task 6</td><td>feat(mobile): 專案清單與專案詳情</td></tr>
+  <tr><td><code>17aa431</code></td><td>Task 8</td><td>feat(mobile): 簡化時程</td></tr>
+  <tr><td><code>e07287b</code></td><td>Task 4 接線</td><td>feat(mobile): 把「我的任務」畫面接進 MobileApp</td></tr>
+  <tr><td><code>ed7136c</code></td><td>Task 9</td><td>feat: 桌機入口加手機版連結</td></tr>
+  <tr><td>（本批最後一筆）</td><td>Task 9</td><td>docs: 裝置分流與手機版文件同步</td></tr>
+</table>
+<p class="hint">平板版另開計畫：<code>/t</code> 路由群組、窄導覽列、專案主從雙欄、完整甘特；<code>ENABLED_DEVICES</code> 加 <code>'tablet'</code>；iPad 以客戶端元件寫 <code>device_auto</code> cookie。真機驗收清單見計畫 Task 9（由 user 操作）。</p>
 
 </main>
 
