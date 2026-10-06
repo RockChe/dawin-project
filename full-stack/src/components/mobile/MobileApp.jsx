@@ -11,6 +11,7 @@ import MoreScreen from "./MoreScreen";
 import OverviewScreen from "./OverviewScreen";
 import ProjectsScreen from "./ProjectsScreen";
 import TimelineScreen from "./TimelineScreen";
+import MyTasksScreen from "./MyTasksScreen";
 import TaskSheet from "./TaskSheet";
 import { can } from "@/lib/permissions";
 
@@ -21,7 +22,7 @@ function ScreenPlaceholder({ name, X }) {
 const placeholder = name => function Screen({ X }) { return <ScreenPlaceholder name={name} X={X} />; };
 
 const SCREENS = {
-  mytasks: placeholder("我的任務"),
+  mytasks: MyTasksScreen,
   overview: OverviewScreen,
   projects: ProjectsScreen,
   timeline: TimelineScreen,
