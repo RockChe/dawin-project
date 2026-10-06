@@ -15,6 +15,10 @@ export function isMine(task, name) {
  */
 export const myRole = (task, name) => taskRole(task, [{ owner: task.subOwner }], name);
 
+const ROLE_BADGE = { watcher: "我關注", executor: "我執行" };
+/** 身分徽章文字（桌機 MyTasksTab 與手機 MyTasksScreen 共用）：「我關注」／「我執行」／null。 */
+export const roleBadge = (task, name) => ROLE_BADGE[myRole(task, name)] ?? null;
+
 /** end 距 today（皆為 YYYY-MM-DD / YYYY/MM/DD 日期字串）幾個日曆天；無 end → null。 */
 export function daysLeft(end, today) {
   if (!end) return null;

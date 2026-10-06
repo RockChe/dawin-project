@@ -3,9 +3,7 @@ import { useMemo, memo } from "react";
 import { FM } from "@/lib/theme";
 import { useTheme } from "@/components/ThemeProvider";
 import { fD, toBusinessDateString } from "@/lib/utils";
-import { groupMyTasks, myTaskKpis, daysLeft, myRole } from "@/lib/myTasks";
-
-const ROLE_BADGE = { watcher: "我關注", executor: "我執行" };
+import { groupMyTasks, myTaskKpis, daysLeft, roleBadge } from "@/lib/myTasks";
 
 // 唯讀清單：登入者（userName）名下、尚未完成的任務，依到期日分三組。
 // 「今天」一律取 Asia/Taipei 日界（toBusinessDateString），不直接 new Date()——理由見 OverviewTab 的 computeTodayPct。
@@ -53,7 +51,7 @@ function MyTasksTab({ twp, userName, pcMap, setModalTask, today: todayProp }) {
         {groups[s.k].map(t => {
           const d = daysLeft(t.end, today);
           const sc = SC[t.status]?.color || X.textDim;
-          const role = ROLE_BADGE[myRole(t, userName)];
+          const role = roleBadge(t, userName);
           return (
             <div key={t.id} onClick={() => setModalTask(t)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: `1px solid ${X.border}22`, cursor: "pointer" }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: pcMap[t.project] || X.accent, flexShrink: 0 }} />

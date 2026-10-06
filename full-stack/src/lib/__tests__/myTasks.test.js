@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isMine, daysLeft, groupMyTasks, myTaskKpis, myRole } from '@/lib/myTasks';
+import { isMine, daysLeft, groupMyTasks, myTaskKpis, myRole, roleBadge } from '@/lib/myTasks';
 
 const T = '2026-10-06';
 const mk = (id, owner, end, status = '進行中') => ({ id, owner, end, status });
@@ -79,5 +79,15 @@ describe('關注人：isMine 看聯集（owner 已含關注人），myRole 標�
   });
   it('既是關注人又是子任務執行人 → executor', () => {
     expect(myRole({ owner: 'Amy', watchers: 'Amy', subOwner: 'Amy' }, 'Amy')).toBe('executor');
+  });
+});
+
+describe('roleBadge：身分徽章文字', () => {
+  it('watcher → 我關注；executor → 我執行；其他 → null', () => {
+    const t = { owner: 'Felien,幸真', watchers: '幸真', subOwner: 'Felien' };
+    expect(roleBadge(t, '幸真')).toBe('我關注');
+    expect(roleBadge(t, 'Felien')).toBe('我執行');
+    expect(roleBadge({ owner: 'Amy' }, 'Amy')).toBeNull();
+    expect(roleBadge(t, '')).toBeNull();
   });
 });

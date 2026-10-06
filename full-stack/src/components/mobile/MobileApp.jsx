@@ -8,6 +8,7 @@ import useTaskManager from "@/hooks/useTaskManager";
 import useUserSettings from "@/hooks/useUserSettings";
 import MobileTabBar from "./MobileTabBar";
 import MoreScreen from "./MoreScreen";
+import OverviewScreen from "./OverviewScreen";
 
 // 暫位畫面：後續 task 4–8 把真正的畫面換進 SCREENS（唯一替換點）。
 function ScreenPlaceholder({ name, X }) {
@@ -17,7 +18,7 @@ const placeholder = name => function Screen({ X }) { return <ScreenPlaceholder n
 
 const SCREENS = {
   mytasks: placeholder("我的任務"),
-  overview: placeholder("總覽"),
+  overview: OverviewScreen,
   projects: placeholder("專案"),
   timeline: placeholder("時程"),
 };
