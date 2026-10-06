@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/server/db';
-import { users, tasks, configTable as config } from '@/server/db/schema';
+import { users, tasks, subtasks, configTable as config } from '@/server/db/schema';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { replaceOwnerToken, replaceNameInList } from '@/lib/ownerNames';
 import bcrypt from 'bcryptjs';
@@ -148,11 +148,15 @@ export async function updateUser(userId, data) {
       const stmts = [db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId))];
       if (prev.name !== name) {
         // ponytail: 撈全部有 owner 的任務在 JS 比對（資料量為單一團隊規模）；變大再改 SQL 層過濾。
-        const owned = await db.select({ id: tasks.id, owner: tasks.owner }).from(tasks).where(isNotNull(tasks.owner));
-        for (const t of owned) {
-          const next = replaceOwnerToken(t.owner, prev.name, name);
-          if (next !== t.owner) {
-            stmts.push(db.update(tasks).set({ owner: next }).where(and(eq(tasks.id, t.id), eq(tasks.owner, t.owner))));
+        // subtasks.owner（varchar 255）同樣要換，否則下次編輯子任務會用舊名重新推得父任務 owner。
+        // 新名比舊名長時可能超過欄位上限 → 先檢查，超過就整個改名拒絕（不寫半套）。
+        for (const [table, limit] of [[tasks, 500], [subtasks, 255]]) {
+          const owned = await db.select({ id: table.id, owner: table.owner }).from(table).where(isNotNull(table.owner));
+          for (const t of owned) {
+            const next = replaceOwnerToken(t.owner, prev.name, name);
+            if (next === t.owner) continue;
+            if (next.length > limit) return { error: `改名後負責人欄位超過 ${limit} 字元上限，請先縮短該筆資料` };
+            stmts.push(db.update(table).set({ owner: next }).where(and(eq(table.id, t.id), eq(table.owner, t.owner))));
           }
         }
         const [cfg] = await db.select({ value: config.value }).from(config).where(eq(config.key, 'owners')).limit(1);

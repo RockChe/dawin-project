@@ -19,8 +19,8 @@ sql.raw = () => ({});
 vi.mock('drizzle-orm', () => ({ eq, and, isNotNull, sql }));
 
 const T = (name) => ({ __t: name, id: 'id', name: 'name', owner: 'owner', key: 'key', value: 'value', updatedAt: 'updatedAt' });
-const usersT = T('users'), tasksT = T('tasks'), configT = T('config');
-vi.mock('@/server/db/schema', () => ({ users: usersT, tasks: tasksT, configTable: configT }));
+const usersT = T('users'), tasksT = T('tasks'), subtasksT = T('subtasks'), configT = T('config');
+vi.mock('@/server/db/schema', () => ({ users: usersT, tasks: tasksT, subtasks: subtasksT, configTable: configT }));
 
 const rowsOf = (t) => tables[t.__t];
 const mockDb = {
@@ -70,6 +70,13 @@ beforeEach(() => {
       { id: 't4', owner: null },
       { id: 't5', owner: 'Bob' },
     ],
+    subtasks: [
+      { id: 's1', owner: 'Amy' },
+      { id: 's2', owner: 'Bob,Amy,Cat' },
+      { id: 's3', owner: 'Amy Lin' },
+      { id: 's4', owner: null },
+      { id: 's5', owner: 'Amy2, Amy ,Bob' },
+    ],
     config: [{ key: 'owners', value: JSON.stringify(['Bob', 'Amy', 'Amy Lin']) }],
   };
 });
@@ -102,5 +109,36 @@ describe('updateUser 改名同步', () => {
     const res = await updateUser(UID, { name: 'Amanda' });
     expect(res.error).toBeTruthy();
     expect(mockDb.batch).not.toHaveBeenCalled();
+  });
+
+  it('subtasks.owner 也同步（整個 token 才換、保留順序與分隔，相似前綴不誤中），且在同一個 batch', async () => {
+    await updateUser(UID, { name: 'Amanda' });
+    expect(batchCalls).toHaveLength(1);
+    expect(tables.subtasks.map((s) => s.owner)).toEqual(['Amanda', 'Bob,Amanda,Cat', 'Amy Lin', null, 'Amy2, Amanda ,Bob']);
+  });
+
+  it('subtasks.owner 守衛：讀寫之間被別人改過的列不被蓋掉', async () => {
+    mockDb.batch.mockImplementationOnce(async (list) => {
+      tables.subtasks[0].owner = 'Amy,Zed'; // 讀完之後別人改了
+      batchCalls.push(list.length);
+      list.forEach((b) => b.__apply());
+      return [];
+    });
+    await updateUser(UID, { name: 'Amanda' });
+    expect(tables.subtasks[0].owner).toBe('Amy,Zed');
+    expect(tables.subtasks[1].owner).toBe('Bob,Amanda,Cat');
+  });
+
+  it('改名後 subtasks.owner 會超過 varchar(255) → 回錯誤、整個 batch 不執行（不留下半套）', async () => {
+    tables.subtasks[1].owner = 'Amy,' + 'x'.repeat(250);
+    const res = await updateUser(UID, { name: 'A'.repeat(20) });
+    expect(res.error).toBeTruthy();
+    expect(mockDb.batch).not.toHaveBeenCalled();
+    expect(tables.users[0].name).toBe('Amy');
+  });
+
+  it('名字沒變 → 不動 subtasks', async () => {
+    await updateUser(UID, { name: 'Amy' });
+    expect(tables.subtasks[0].owner).toBe('Amy');
   });
 });

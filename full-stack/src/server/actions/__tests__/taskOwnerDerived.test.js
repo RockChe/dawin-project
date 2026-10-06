@@ -31,7 +31,7 @@ vi.mock('drizzle-orm', () => ({
 }));
 vi.mock('@/server/db/schema', () => ({
   tasks: { id: 'tasks.id', owner: 'tasks.owner', projectId: 'tasks.projectId' },
-  subtasks: { id: 'subtasks.id', taskId: 'subtasks.taskId' },
+  subtasks: { id: 'subtasks.id', taskId: 'subtasks.taskId', owner: 'subtasks.owner' },
   links: {}, files: {}, projects: { id: 'projects.id', name: 'projects.name' }, users: { name: 'users.name' },
 }));
 
@@ -184,6 +184,39 @@ describe('updateTask：推得值為準，傳進來的 owner 不報錯、交給 S
     await T.updateTask(TASK, { owner: null });
     const upd = direct.find(d => d.__op === 'update');
     expect(upd.__set.owner.values).toEqual([null]);
+  });
+});
+
+describe('被忽略的 owner 不做驗證（有推得值時傳入的 owner 根本不會寫入）', () => {
+  const TASK2 = '44444444-4444-4444-8444-444444444444';
+
+  it('updateTask：任務有子任務 owner → 傳入未知使用者也成功，且不查 users', async () => {
+    selectRows = [{ taskId: TASK, owner: 'Amy' }];
+    const res = await T.updateTask(TASK, { owner: 'Ghost', status: '進行中' });
+    expect(res).toEqual({ success: true });
+    expect(db.select).toHaveBeenCalledTimes(1); // 只查了 subtasks
+    expect(direct.find(d => d.__op === 'update').__set.status).toBe('進行中');
+  });
+
+  it('updateTask：沒有子任務 owner（含 "—"）→ owner 會被寫入，照常驗證', async () => {
+    selectRows = [{ taskId: TASK, owner: '—' }]; // users 查詢也回這份 → 查無 Ghost
+    const res = await T.updateTask(TASK, { owner: 'Ghost' });
+    expect(res.error).toMatch(/Ghost/);
+    expect(direct.some(d => d.__op === 'update')).toBe(false);
+  });
+
+  it('updateManyTasks：全部任務都有子任務 owner → 不驗證', async () => {
+    selectRows = [{ taskId: TASK, owner: 'Amy' }, { taskId: TASK2, owner: 'Bob' }];
+    const res = await T.updateManyTasks([TASK, TASK2], { owner: 'Ghost' });
+    expect(res).toEqual({ success: true, updated: 2 });
+    expect(db.select).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateManyTasks：只要有一個任務會被寫入 owner → 照常驗證', async () => {
+    selectRows = [{ taskId: TASK, owner: 'Amy' }]; // TASK2 沒有子任務 owner
+    const res = await T.updateManyTasks([TASK, TASK2], { owner: 'Ghost' });
+    expect(res.error).toMatch(/Ghost/);
+    expect(direct.some(d => d.__op === 'update')).toBe(false);
   });
 });
 

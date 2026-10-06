@@ -7,6 +7,7 @@ import { deleteFromR2 } from '@/lib/r2';
 import { isValidUUID, toBusinessDateString } from '@/lib/utils';
 import { withCap } from '@/lib/withCap';
 import { logAudit } from '@/lib/audit';
+import { ownerTokens } from '@/lib/taskOwner';
 
 // ── tasks.owner 由子任務 owner 自動帶出 ──
 // 規則與 lib/taskOwner.js 的 deriveTaskOwner 相同：依 sort_order → created_at 取子任務 owner 的 token，
@@ -25,6 +26,12 @@ const DERIVED_OWNER_SQL = `(SELECT string_agg(d.tok, ',' ORDER BY d.pos) FROM (
 
 // 手動輸入的 owner 只在「沒有任何子任務 owner」時才生效；有的話以推得值為準（不報錯、直接忽略）。
 const ownerUnlessDerived = (manual) => sql`COALESCE(${sql.raw(DERIVED_OWNER_SQL)}, ${manual})`;
+
+// 這些任務裡「有子任務 owner」的 id 集合。傳入的 owner 對它們會被 SQL 忽略，呼叫端據此跳過驗證。
+const tasksWithDerivedOwner = async (ids) => {
+  const rows = await db.select({ taskId: subtasks.taskId, owner: subtasks.owner }).from(subtasks).where(inArray(subtasks.taskId, ids));
+  return new Set(rows.filter(r => ownerTokens(r.owner).length > 0).map(r => r.taskId));
+};
 
 // 重算單一任務的 owner；taskIdSql 是 SQL 片段（參數或子查詢）。回傳 db.batch 可收的 statement。
 const syncTaskOwner = (taskIdSql) =>
@@ -99,7 +106,8 @@ export async function updateTask(id, data) {
     }
 
     // Validate owner(s) exist in users table (supports comma-separated multi-owner)
-    if (updateData.owner) {
+    // 任務有子任務 owner 時傳入的 owner 會被忽略、不會寫入 → 不驗證
+    if (updateData.owner && !(await tasksWithDerivedOwner([id])).has(id)) {
       const ownerNames = updateData.owner.split(',').map(s => s.trim()).filter(Boolean);
       if (ownerNames.length > 0) {
         const found = await db.select({ name: users.name }).from(users).where(inArray(users.name, ownerNames));
@@ -499,7 +507,8 @@ export async function updateManyTasks(ids, data) {
     if (Object.keys(updateData).length <= 1) return { error: 'No valid fields to update' };
 
     // Validate owner(s) exist in users table (supports comma-separated multi-owner)
-    if (updateData.owner) {
+    // 全部任務都有子任務 owner → owner 一個都不會寫入 → 不驗證；只要有一個會被寫入就照常驗證
+    if (updateData.owner && (await tasksWithDerivedOwner(ids)).size < new Set(ids).size) {
       const ownerNames = updateData.owner.split(',').map(s => s.trim()).filter(Boolean);
       if (ownerNames.length > 0) {
         const found = await db.select({ name: users.name }).from(users).where(inArray(users.name, ownerNames));
