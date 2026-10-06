@@ -17,8 +17,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: '專案管理儀表板',
-  description: '全端版專案管理儀表板',
+  title: '大雲文創專案管理系統',
+  description: '大雲文創專案管理系統',
 };
 
 export default function RootLayout({ children }) {

@@ -36,7 +36,7 @@ export default function DashboardHeader({ themeKey, cycleTheme, isMobile, scroll
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: X.accent, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 17, color: "#fff" }}>P</div>
-              <span className="dash-title" style={{ ...FD_STYLE }}>專案管理儀表板</span>
+              <span className="dash-title" style={{ ...FD_STYLE }}>大雲文創專案管理系統</span>
             </div>
             <div className="dash-hdr-right">
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>

@@ -19,7 +19,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center" style={{ background: `linear-gradient(160deg, ${X.bg}, ${X.isDark ? '#141820' : '#EDE9E0'})`, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F }}>
       <div className="w-full max-w-md p-8 rounded-2xl shadow-lg" style={{ background: X.surface, width: '100%', maxWidth: 448, padding: 32, borderRadius: 16, boxShadow: X.modalShadow, border: `1px solid ${X.border}` }}>
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold" style={{ color: X.text }}>專案管理儀表板</h1>
+          <h1 className="text-2xl font-bold" style={{ color: X.text }}>大雲文創專案管理系統</h1>
           <p className="mt-2 text-sm" style={{ color: X.textSec }}>請登入以繼續</p>
         </div>
 
