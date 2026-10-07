@@ -8,7 +8,17 @@ window.Clouds = {
       const s = el.getAttribute("data-size") || 40;
       el.style.width = s + "px"; el.style.height = s + "px";
       el.style.display = el.style.display || "inline-block"; el.style.lineHeight = "0"; el.style.flex = "none";
-      el.innerHTML = window.Clouds.svg(el.getAttribute("data-cloud"));
+      // 同頁多朵同種雲時，svg 內部的 id（漸層等）會重複 → 掛載時加唯一尾碼，避免漸層失效
+      let raw = window.Clouds.svg(el.getAttribute("data-cloud"));
+      const uid = (window.Clouds._n = (window.Clouds._n || 0) + 1);
+      const ids = [...raw.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
+      ids.forEach(id => {
+        const nid = id + "-u" + uid;
+        raw = raw.split('id="' + id + '"').join('id="' + nid + '"')
+                 .split("url(#" + id + ")").join("url(#" + nid + ")")
+                 .split('href="#' + id + '"').join('href="#' + nid + '"');
+      });
+      el.innerHTML = raw;
       const sv = el.querySelector("svg"); if (sv) { sv.setAttribute("width", "100%"); sv.setAttribute("height", "100%"); sv.setAttribute("aria-hidden", "true"); }
     });
   }
