@@ -562,7 +562,7 @@ function renderApp() {
    <i class="vd"></i><span class="me"><b>${esc(meName())}</b><span class="badge" style="margin:0">${ROLE_LABEL[S.role]}</span></span></div></header>
   <div class="wrap"><nav class="tabs" aria-label="主要分頁">${['Overview', 'My Tasks', 'Projects', 'Timeline', 'Data', 'Settings'].map(t => `<button type="button" class="t${t === 'Settings' ? ' on' : ''}" data-act="other"${t === 'Settings' ? ' aria-current="page"' : ''}>${t}</button>`).join('')}</nav>
    <nav class="crumbs" aria-label="麵包屑"><button type="button" class="lnk" data-act="other">首頁</button> › <button type="button" class="lnk" data-act="other">Settings</button> › <b aria-current="page">遠端 MCP</b></nav>
-   <div class="setlay"><nav class="snav" aria-label="設定分頁">${['一般', '雲寶寶', '遠端 MCP'].map(l => `<button type="button" data-act="${l === '遠端 MCP' ? 'noop' : 'other'}"${l === '遠端 MCP' ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav>
+   <div class="setlay"><nav class="snav" aria-label="設定分頁">${['一般', '雲朵', '遠端 MCP'].map(l => `<button type="button" data-act="${l === '遠端 MCP' ? 'noop' : 'other'}"${l === '遠端 MCP' ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav>
    <div class="page"><div class="pagehd"><h2>遠端 MCP</h2><p>讓你自己的 Claude（Claude Code、個人 claude.ai／桌面版）查詢並編輯這個儀表板。每個人用自己的金鑰，權限跟著你的帳號與角色。</p></div>
    <div class="note amber draft" id="draft" role="note">${ic('info')}<div><b>設計稿：功能尚未實作；第 0 期要先用真實帳號測試個人 claude.ai 能否填自訂金鑰。</b>此頁所有資料都是示範（金鑰一律是 dd_live_DEMO…），按鈕只改變畫面。</div></div>
    ${connCard()}${keysCard()}${guideCard()}${actCard()}${safeCard()}
@@ -663,7 +663,7 @@ function renderOuter() {
   $('#resp').innerHTML = `<h2 id="resp-h">回應式預覽</h2><p class="lead">平板橫向沿用桌面內容，改成兩欄；手機只留「我的金鑰」與建立流程（輸入框 16px，避免 iOS 放大），管理員表格收合成「請用桌機或平板管理」。手機上通常不會跑 Claude 客戶端，這頁在手機的優先度較低。</p>
   <div class="rgrid"><div><h3 style="font-size:14px;margin:0 0 8px">平板橫向（縮圖）</h3><div class="tabfr" role="img" aria-label="平板橫向縮圖：左側設定選單，右側兩欄卡片，管理員區塊在下方">
     <div class="tt"><span>Overview</span><span>My Tasks</span><span>Projects</span><span>Timeline</span><span>Data</span><span class="on">Settings</span></div>
-    <div class="mid"><div class="sn"><span>一般</span><span>雲寶寶</span><b>遠端 MCP</b></div>
+    <div class="mid"><div class="sn"><span>一般</span><span>雲朵</span><b>遠端 MCP</b></div>
      <div class="col"><div class="tb2">連線資訊<i></i><i></i><i></i></div><div class="tb2">我的金鑰 3/5<i></i><i></i><i></i></div><div class="tb2">安全提醒<i></i><i></i></div></div>
      <div class="col"><div class="tb2">連線教學（分頁）<i></i><i></i><i></i></div><div class="tb2">我的最近活動<i></i><i></i><i></i><i></i></div></div></div>
     <div class="adm">管理員（分頁籤）：全部金鑰 ・ 緊急開關 ・ 允許清單 ・ 限速 ・ 稽核</div></div>
