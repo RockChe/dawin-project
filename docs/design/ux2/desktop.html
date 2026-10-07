@@ -845,7 +845,7 @@ function header() {
   const avg = Math.round(TASKS.reduce((s, t) => s + prog(t), 0) / TASKS.length);
   return `<header class="hdr"><div class="brand">${cl('white', 34, { fb: 'none' })}<span class="fb logo" aria-hidden="true">P</span><span>大雲文創專案管理系統</span></div>
   <div class="hr"><label class="search"><span class="sr">搜尋任務</span>${ic('search')}<input type="search" placeholder="Search tasks..."></label>
-  <button type="button" class="icbtn" data-act="theme" aria-label="切換主題（目前${S.theme === 'dark' ? '深色' : '淺色'}）">${ic(S.theme === 'dark' ? 'sun' : 'moon')}</button>
+  <button type="button" class="tgl" data-act="theme" aria-pressed="${S.theme === 'dark'}" aria-label="切換主題（目前${S.theme === 'dark' ? '深色' : '淺色'}）"><i>${S.theme === 'dark' ? '🌙' : '☀️'}</i></button>
   <i class="vd"></i><div class="ov"><span>Overall</span><b>${avg}%</b></div><i class="vd"></i>
   <span class="mono sec">${TODAY} · ${TASKS.length} tasks</span></div></header>`;
 }

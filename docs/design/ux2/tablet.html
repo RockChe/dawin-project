@@ -1586,7 +1586,7 @@ function renderTop(){
   $('#top').innerHTML=`<div class="tl"><nav class="crumbs" aria-label="路徑">${cr.map((c,i)=>i<cr.length-1?`<button class="cr" data-act="nav" data-to="${c.to}">${c.t}</button><span class="s" aria-hidden="true">›</span>`:`<b aria-current="page">${esc(c.t)}</b>`).join('')}</nav>
     <div class="tt lok">${hc?cl('white',36):''}<h1>${esc(TITLE())}</h1></div></div>
    <div class="tr"><div class="search">${ic('search')}<input id="q" type="search" data-bind="q" placeholder="搜尋任務…" value="${esc(S.q)}" aria-label="搜尋任務">${S.q?`<button class="clr" data-act="qclr" aria-label="清除搜尋">${ic('x',18)}</button>`:''}</div>
-    <button class="iconbtn" data-act="theme" aria-label="切換主題" aria-pressed="${S.theme==='dark'}">${ic(S.theme==='dark'?'moon':'sun')}</button>
+    <button class="tgl" data-act="theme" aria-label="切換主題" aria-pressed="${S.theme==='dark'}"><i>${S.theme==='dark'?'🌙':'☀️'}</i></button>
     <div class="ovr"><small>Overall</small><b>${overall()}%</b></div></div>`;
   Clouds.mount($('#top'));
 }

@@ -558,7 +558,7 @@ function renderApp() {
   const adm = S.role === 'admin';
   $('#canvas').innerHTML = `<header class="hdr"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>大雲文創專案管理系統</span></div>
    <div class="hr"><label class="search"><span class="sr">搜尋任務</span>${ic('search')}<input type="search" placeholder="Search tasks..."></label>
-   <button type="button" class="icbtn" data-act="theme" data-a="${S.theme === 'dark' ? 'light' : 'dark'}" aria-label="切換主題（目前${S.theme === 'dark' ? '深色' : '淺色'}）">${ic(S.theme === 'dark' ? 'sun' : 'moon')}</button>
+   <button type="button" class="tgl" data-act="theme" data-a="${S.theme === 'dark' ? 'light' : 'dark'}" aria-pressed="${S.theme === 'dark'}" aria-label="切換主題（目前${S.theme === 'dark' ? '深色' : '淺色'}）"><i>${S.theme === 'dark' ? '🌙' : '☀️'}</i></button>
    <i class="vd"></i><span class="me"><b>${esc(meName())}</b><span class="badge" style="margin:0">${ROLE_LABEL[S.role]}</span></span></div></header>
   <div class="wrap"><nav class="tabs" aria-label="主要分頁">${['Overview', 'My Tasks', 'Projects', 'Timeline', 'Data', 'Settings'].map(t => `<button type="button" class="t${t === 'Settings' ? ' on' : ''}" data-act="other"${t === 'Settings' ? ' aria-current="page"' : ''}>${t}</button>`).join('')}</nav>
    <nav class="crumbs" aria-label="麵包屑"><button type="button" class="lnk" data-act="other">首頁</button> › <button type="button" class="lnk" data-act="other">Settings</button> › <b aria-current="page">遠端 MCP</b></nav>
