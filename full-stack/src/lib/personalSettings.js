@@ -7,6 +7,15 @@ export const TIME_DIMS = ["日", "週", "月", "季"];
 export const resolveTab = (raw) => (TAB_KEYS.includes(raw) ? raw : "overview");
 export const resolveTimeDim = (raw) => (TIME_DIMS.includes(raw) ? raw : "月");
 
+export const CLOUD_LEVELS = ["full", "lite", "off"];
+export const TIMELINE_VIEWS = ["gantt", "card"];
+export const resolveCloudLevel = (raw) => (CLOUD_LEVELS.includes(raw) ? raw : "full");
+export const resolveTimelineView = (raw) => (TIMELINE_VIEWS.includes(raw) ? raw : "gantt");
+
+// 雲朵動態（bob／fly）：個人設定 cloudMotion，只有明確 false 才關；與系統「減少動態」取交集（系統要求減少時一律停止）。
+export const resolveCloudMotion = (raw) => raw !== false;
+export const effectiveCloudMotion = (raw, reducedMotion) => resolveCloudMotion(raw) && !reducedMotion;
+
 const GW = { day: 20, week: 50, month: 50, quarter: 100 };
 export const DEFAULT_GANTT_WIDTHS = { overview: { ...GW }, project: { ...GW }, timeline: { ...GW } };
 

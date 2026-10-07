@@ -11,6 +11,12 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
+  // /v2：登入頁（精確比對）與開發預覽公開——預覽在 production 由 page 自己回 404，不靠這裡擋
+  const isV2 = pathname === '/v2' || pathname.startsWith('/v2/');
+  if (isV2 && (pathname.replace(/\/+$/, '') === '/v2/login' || pathname.startsWith('/v2/preview/'))) {
+    return NextResponse.next();
+  }
+
   // Allow POST to /api/backup (cron uses CRON_SECRET, not session)
   if (pathname.startsWith('/api/backup') && request.method === 'POST') {
     return NextResponse.next();
@@ -24,7 +30,7 @@ export function middleware(request) {
   // Check for session cookie
   const sessionToken = request.cookies.get('session_token')?.value;
   if (!sessionToken) {
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL(isV2 ? '/v2/login' : '/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
 
