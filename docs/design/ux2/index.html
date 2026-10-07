@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大雲專案管理 UIUX V2（桌面・平板・手機・週報）</title>
+<link rel="stylesheet" href="ux.css"><script src="clouds.js"></script>
+<style>
+.w{max-width:1040px;margin:0 auto;padding:28px 16px 80px}
+h1{font-size:24px}h2{font-size:17px;margin:30px 0 10px;padding-left:10px;border-left:4px solid var(--accent-fill)}
+.sub{color:var(--text-sec);margin:6px 0 18px}
+.devs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.dev{display:block;text-decoration:none;color:var(--text);padding:16px}
+.dev:hover{border-color:var(--accent)}.dev h3{font-size:17px;margin:8px 0 4px}.dev p{margin:0 0 8px;color:var(--text-sec);font-size:13px}
+.dev ul{margin:0;padding-left:18px;font-size:13px;color:var(--text-sec)}
+.dev .go{margin-top:10px;display:inline-block;color:var(--ink-accent);font-weight:700}
+.wide{display:flex;gap:14px;align-items:center;margin-top:14px;padding:16px;text-decoration:none;color:var(--text)}
+.wide:hover{border-color:var(--accent)}.wide h3{font-size:17px;margin:0 0 4px}.wide p{margin:0;color:var(--text-sec);font-size:13px}
+table{width:100%;border-collapse:collapse;background:var(--surface);font-size:13px}th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}th{background:var(--surface-light)}
+.note{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin:10px 0;font-size:13px}
+.links{display:flex;gap:10px;flex-wrap:wrap}.links a{color:var(--ink-accent);font-weight:600}
+@media(max-width:820px){.devs{grid-template-columns:1fr}}
+</style></head><body><div class="w">
+<div class="theme-toggle"><button class="on" onclick="setT('light',this)">淺色</button><button onclick="setT('dark',this)">深色</button></div>
+<div style="display:flex;align-items:center;gap:12px"><span class="cl" data-cloud="white" data-size="56"></span><div><h1>大雲專案管理 UIUX <span style="color:var(--ink-accent)">V2</span></h1><div class="sub" style="margin:0">整合所有定案決策的完整設計（2026-10-07）。舊版（V1）仍保留在 <a href="../ux/index.html">ux/</a> 方便對照。</div></div></div>
+
+<h2>三套原型（都可以點擊操作）</h2>
+<div class="devs">
+ <a class="card dev" href="desktop.html"><span class="cl" data-cloud="dark" data-size="44"></span><h3>桌面版 V2</h3><p>固定 1280 寬</p><ul><li>時程＝A＋B 合併條，可切「卡片」視圖</li><li>總覽專案時程同一套條</li></ul><span class="go">開啟桌面版 →</span></a>
+ <a class="card dev" href="tablet.html"><span class="cl" data-cloud="pink" data-size="44"></span><h3>平板版 V2</h3><p>橫向 1180／直向 820</p><ul><li>橫 4 欄、直 2 欄的卡片視圖</li><li>直向右欄收成「54% · 落後約 N 天」</li></ul><span class="go">開啟平板版 →</span></a>
+ <a class="card dev" href="mobile.html"><span class="cl" data-cloud="nimbus" data-size="44"></span><h3>手機版 V2</h3><p>390×844，互動＋24 畫面圖庫</p><ul><li>時程列表＋卡片切換</li><li>全寬 10 格分段條</li></ul><span class="go">開啟手機版 →</span></a>
+</div>
+<a class="card wide" href="weekly.html"><span class="cl" data-cloud="white" data-size="64"></span><div><h3>週報區（開會用）第一版 <span class="st todo">新</span></h3><p>準備模式（自動草稿＋人工補充＋複製文字）、會議模式（全螢幕大字、風險優先、鍵盤翻頁、決議與待辦）、手機唯讀。無列印與 PDF。</p></div></a>
+<a class="card wide" href="timeline-hybrid.html"><span class="cl" data-cloud="nimbus" data-size="64"></span><div><h3>時程定案設計說明（A＋B 合併）</h3><p>單列拆解 14 個標註、六種狀態並排、取捨與假設。</p></div></a>
+
+<h2>V2 比 V1 改了什麼</h2>
+<table><tr><th>#</th><th>項目</th><th>說明</th></tr>
+<tr><td>1</td><td>時程條</td><td>外框＝起訖日（兩端印日期）；10 格分段＝進度；細線＝今天應有進度；斜線＝落後；筋斗雲徽章＝領先。條色表示狀態（綠順利／琥珀落後／紅逾期／灰暫緩／粉提案），專案色只留左側 4px 色塊。</td></tr>
+<tr><td>2</td><td>「落後」講白話</td><td>主標「落後約 14 天」，副標「（18 點）」；圖例說明點＝百分點。</td></tr>
+<tr><td>3</td><td>總覽與時程一致</td><td>總覽的專案時程用同一種縮小版分段條。</td></tr>
+<tr><td>4</td><td>卡片視圖</td><td>依到期分「這週／本月／下月／之後」，逾期獨立收合欄；每張卡有進度環、天氣雲、時間 vs 進度小條。</td></tr>
+<tr><td>5</td><td>雲的位置</td><td>逾期烏雲只放在右側狀態欄；筋斗雲不再壓在條上，改成領先徽章（手機版移除舊的跑者與雨滴）。</td></tr>
+<tr><td>6</td><td>延續 V1 定案</td><td>每畫面最多 5 種雲、麵包屑、我的任務狀態篩選、關注人／執行人、封存、隱藏已完成子任務、勾完最後子任務只提示。</td></tr></table>
+
+<h2>需要你決定或知道的</h2>
+<table><tr><th>#</th><th>議題</th><th>現況</th></tr>
+<tr><td>1</td><td>逾期專案左欄頭像也是烏雲</td><td>桌面 V2 依天氣顯示頭像，所以左欄與右欄都有烏雲；若要「烏雲只在右欄」要改左欄。</td></tr>
+<tr><td>2</td><td>手機版時程沒有共同時間軸</td><td>每列各自 0–100% 工期，看不出專案之間的先後重疊；要看請切桌面或平板。</td></tr>
+<tr><td>3</td><td>10 格是各專案自己工期的 10%</td><td>跨專案不能用格數比大小；很短的專案格子很細，靠右欄數字。</td></tr>
+<tr><td>4</td><td>落後門檻</td><td>正負 5 點內顯示「進度同步」；N 天＝點數 × 專案總天數，至少 1 天。</td></tr>
+<tr><td>5</td><td>色彩對比</td><td>設計稿已調到 AA；產品現有主題也有同樣問題，實作時要一併調整。</td></tr></table>
+
+<h2>其他相關頁面</h2>
+<div class="links"><a href="../mascot-preview.html">雲寶寶五款預覽</a><a href="../dawin-dash-clouds-ux-mockup.html">雲寶寶放進系統的規則與分期</a><a href="../ux/timeline-proposals.html">時程三提案（A／B／C）</a><a href="../dawin-dash-mcp-design.html">MCP 規劃</a><a href="../ops-checklist.html">要你操作的事（含複製按鈕）</a></div>
+<div class="note">⚠ 這些原型是設計提案：<b>尚未經 confer 與 Codex 審查</b>；雲寶寶是向量草稿（正式上線前建議請插畫師精修）；沒有在真實 iPhone／iPad 上測過觸控與鍵盤。</div>
+</div>
+<script>
+function setT(t,b){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.theme-toggle button').forEach(x=>x.classList.remove('on'));b.classList.add('on')}
+</script></body></html>
