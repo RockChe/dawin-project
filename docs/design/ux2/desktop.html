@@ -266,7 +266,9 @@ textarea.fld{resize:vertical;min-height:64px;width:100%}
 .prow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;box-shadow:var(--shadow)}
 .prow:hover{border-color:var(--c)}
 .prow .nm{flex:1.2;min-width:0}.prow .nm button{background:none;border:0;padding:0;font-weight:600;text-align:left;color:var(--text)}
-.prow .pb{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.prow .pb{display:flex;align-items:center;gap:8px;flex:1.3;min-width:150px}
+.prow .pb .bar{flex:1;height:10px;min-width:70px}
+.prow .sts{display:flex;gap:6px;flex-wrap:wrap;flex:1.7;justify-content:flex-end}
 .phase{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;border-radius:6px;padding:0 6px;background:color-mix(in srgb,var(--purple) var(--tint),transparent);color:var(--t-purple)}
 .archh{display:flex;align-items:center;gap:8px;font-weight:700;margin:32px 0 8px}
 .archh .hint{font-weight:400}
@@ -994,7 +996,7 @@ function avatarEl(p, size = '') {
 function pcard(p) {
   const pt = projTasks(p.id), avg = projAvg(p.id), c = cnt(pt), drag = S.pj.sort === 'manual';
   const eye = `<button type="button" class="iconx" data-act="eye" data-a="${p.id}" aria-pressed="${!p.hide}" aria-label="在 Timeline 顯示「${esc(p.name)}」" title="${p.hide ? '在 Timeline 顯示' : '不在 Timeline 顯示'}" style="color:${p.hide ? 'var(--t-amber)' : 'var(--text-sec)'}">${ic(p.hide ? 'eye-off' : 'eye')}</button>`;
-  if (S.pj.view === 'list') return `<div class="prow" style="--c:var(--${p.c})" data-act="open" data-a="${p.id}">${drag ? `<span class="grip" aria-hidden="true">${ic('grip')}</span>` : ''}${avatarEl(p, 'sm')}<div class="nm"><button type="button" data-act="open" data-a="${p.id}">${esc(p.name)}</button><div class="hint mono">${pt.length} tasks · ${projSubs(p.id)} subtasks</div></div><div class="pb">${bar(avg, p.c)}<b class="mono" style="width:40px;text-align:right">${avg}%</b></div><div style="display:flex;gap:4px">${STATUSES.filter(s => c[s]).map(s => `<span class="st ${SCLS[s]}" title="${s}">${c[s]}</span>`).join('')}</div>${eye}<span class="sec" aria-hidden="true">${ic('chev-r')}</span></div>`;
+  if (S.pj.view === 'list') return `<div class="prow" style="--c:var(--${p.c})" data-act="open" data-a="${p.id}">${drag ? `<span class="grip" aria-hidden="true">${ic('grip')}</span>` : ''}${avatarEl(p, 'sm')}<div class="nm"><button type="button" data-act="open" data-a="${p.id}">${esc(p.name)}</button><div class="hint mono">${pt.length} tasks · ${projSubs(p.id)} subtasks</div></div><div class="pb">${bar(avg, p.c)}<b class="mono" style="width:48px;text-align:right">${avg}%</b></div><div class="sts">${STATUSES.filter(s => c[s]).map(s => `<span class="st ${SCLS[s]}">${s} ${c[s]}</span>`).join('') || '<span class="hint">尚無任務</span>'}</div>${eye}<span class="sec" aria-hidden="true">${ic('chev-r')}</span></div>`;
   return `<article class="pcard" style="--c:var(--${p.c})" data-act="open" data-a="${p.id}"><div class="strip">${eye}${drag ? `<span class="grip" title="拖移排序" aria-hidden="true">${ic('grip')}</span>` : '<span></span>'}</div>
   <div class="body"><div class="top">${avatarEl(p)}<div style="flex:1;min-width:0"><button type="button" class="pname" data-act="open" data-a="${p.id}">${esc(p.name)}</button><div class="meta mono">${pt.length} tasks · ${projSubs(p.id)} subtasks</div></div><span class="sec" aria-hidden="true">${ic('chev-r', 20)}</span></div>
   <div class="runbar">${cl('nimbus', 30, { cls: 'runner', style: `left:clamp(6%,${avg}%,96%)`, fb: 'none' })}${bar(avg, p.c, 'xl')}</div>
