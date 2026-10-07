@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大雲專案管理 UIUX 設計（桌面・平板・手機）</title>
+<link rel="stylesheet" href="ux.css"><script src="clouds.js"></script>
+<style>
+.w{max-width:1040px;margin:0 auto;padding:28px 16px 80px}
+h1{font-size:24px}h2{font-size:17px;margin:30px 0 10px;padding-left:10px;border-left:4px solid var(--accent-fill)}
+.sub{color:var(--text-sec);margin:6px 0 18px}
+.devs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.dev{display:block;text-decoration:none;color:var(--text);padding:16px;position:relative}
+.dev:hover{border-color:var(--accent)}.dev h3{font-size:17px;margin:8px 0 4px}.dev p{margin:0 0 8px;color:var(--text-sec);font-size:13px}
+.dev ul{margin:0;padding-left:18px;font-size:13px;color:var(--text-sec)}
+.dev .go{margin-top:10px;display:inline-block;color:var(--ink-accent);font-weight:700}
+table{width:100%;border-collapse:collapse;background:var(--surface);font-size:13px}th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:middle}th{background:var(--surface-light)}
+td .cl{vertical-align:middle;margin-right:8px}
+.note{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin:10px 0;font-size:13px}
+.links{display:flex;gap:8px;flex-wrap:wrap}.links a{color:var(--ink-accent);font-weight:600}
+@media(max-width:820px){.devs{grid-template-columns:1fr}}
+</style></head><body><div class="w">
+<div class="theme-toggle"><button class="on" onclick="setT('light',this)">淺色</button><button onclick="setT('dark',this)">深色</button></div>
+<div style="display:flex;align-items:center;gap:12px"><span class="cl" data-cloud="white" data-size="56"></span><div><h1>大雲專案管理 UIUX 設計</h1><div class="sub" style="margin:0">桌面・平板・手機三套互動原型，共用同一組設計資料與雲寶寶（2026-10-07）</div></div></div>
+
+<h2>三套原型（都可以點擊操作）</h2>
+<div class="devs">
+ <a class="card dev" href="desktop.html"><span class="cl" data-cloud="dark" data-size="44"></span><h3>桌面版</h3><p>固定 1280 寬，資訊密度最高</p><ul><li>總覽（含「專案天氣」）、我的任務、專案與詳情、時程</li><li>任務視窗、資料表、設定、狀態圖庫</li></ul><span class="go">開啟桌面版 →</span></a>
+ <a class="card dev" href="tablet.html"><span class="cl" data-cloud="pink" data-size="44"></span><h3>平板版</h3><p>橫向 1180×820／直向 820×1180</p><ul><li>左側導覽列、專案主從雙欄</li><li>右側任務面板、完整甘特（觸控把手）</li></ul><span class="go">開啟平板版 →</span></a>
+ <a class="card dev" href="mobile.html"><span class="cl" data-cloud="nimbus" data-size="44"></span><h3>手機版</h3><p>390×844，互動模式＋19 畫面圖庫</p><ul><li>首頁＝我的任務、底部分頁列</li><li>任務抽屜、簡化時程、麵包屑返回</li></ul><span class="go">開啟手機版 →</span></a>
+</div>
+<div class="note">每份原型上方都有：<b>淺色／深色</b>、<b>顯示雲寶寶</b>（關掉可比較沒有雲的樣子）。網址可加參數，例如 <code>desktop.html?theme=dark&amp;clouds=off#mytasks</code>、<code>mobile.html#gallery,dark</code>、<code>tablet.html#s=mine&amp;o=port</code>。</div>
+
+<h2>五朵雲各自的職責</h2>
+<table><tr><th>雲</th><th>代表</th><th>出現在</th></tr><tbody id="roles"></tbody></table>
+<div class="note"><b>規則：</b>雲只做輔助，旁邊一定有文字；資料表、設定、帳號管理不放雲（除了「顯示雲寶寶」開關）；只有兩種動態（載入上下飄、完成時筋斗雲飛過），尊重「減少動態」；個人設定可關閉雲寶寶。</div>
+
+<h2>需要你決定的設計取捨</h2>
+<table><tr><th>#</th><th>議題</th><th>設計師的做法</th></tr>
+<tr><td>1</td><td>「每畫面最多 3 種雲」與「KPI 四朵雲＋分組雲＋天氣預報五朵雲」衝突</td><td>手機版守規則（我的任務只用 3 種）；桌面／平板依你指定的對應做到 4～5 種。建議規則改成「最多 5 種、同一區塊內不重複」。</td></tr>
+<tr><td>2</td><td>頁首白雲 Logo 在資料表與設定頁是否保留</td><td>保留（品牌識別，不算內容雲）</td></tr>
+<tr><td>3</td><td>勾完最後一個子任務是否自動把任務標成已完成</td><td>桌面示意為「自動」，平板只提示「可以改成已完成了」；<b>現行產品不會自動改</b>，要做的話需另外決定</td></tr>
+<tr><td>4</td><td>專案詳情的子任務預設全展開或可收合</td><td>設計為可收合（預設只展開前兩個任務）</td></tr>
+<tr><td>5</td><td>色彩對比</td><td>共用樣式已把文字色調到 AA（4.5:1）；<b>產品現有主題也有同樣問題</b>，實作時要一併調整</td></tr></table>
+
+<h2>其他相關頁面</h2>
+<div class="links"><a href="../mascot-preview.html">雲寶寶五款預覽</a><a href="../dawin-dash-clouds-ux-mockup.html">雲寶寶放進系統的規則與分期</a><a href="../dawin-dash-mcp-design.html">MCP 規劃</a><a href="../ops-checklist.html">要你操作的事（含複製按鈕）</a></div>
+<div class="note">⚠ 雲寶寶是 Codex 的向量草稿；正式上線前建議請插畫師依選定款式精修。這三份原型<b>尚未經 Codex 審查</b>，也沒有在真實的 iPhone／iPad 上測過觸控與鍵盤。</div>
+</div>
+<script>
+function setT(t,b){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.theme-toggle button').forEach(x=>x.classList.remove('on'));b.classList.add('on')}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('roles').innerHTML=window.CLOUDS.map(c=>`<tr><td><span class="cl" data-cloud="${c.id}" data-size="44"></span><b>${c.name}</b></td><td>${c.role}</td><td>${c.where}</td></tr>`).join('');
+  window.Clouds.mount();
+});
+</script></body></html>

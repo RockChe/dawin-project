@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>要你操作的事（含複製按鈕）</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:#1d2330;font:15px/1.6 system-ui,"Noto Sans TC",sans-serif;padding:20px 14px 80px}
+.w{max-width:860px;margin:0 auto}h1{font-size:20px;margin:0 0 4px}.sub{color:#5b6676;font-size:13px;margin:0 0 14px}
+h2{font-size:16px;margin:26px 0 8px;padding:6px 10px;border-radius:8px;color:#fff}
+.a{background:#d9483b}.b{background:#d99a1e}.c{background:#2f8fd1}.d{background:#6b7585}.e{background:#8a63c9}
+.card{background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:12px 14px;margin:10px 0;color:#1d2330}
+.card.done{opacity:.55}.card h3{margin:0 0 4px;font-size:15px;display:flex;gap:8px;align-items:flex-start}
+.card h3 input{margin-top:5px;width:18px;height:18px;flex:none}
+.why{font-size:13px;color:#5b6676;margin:0 0 8px 26px}
+.cmd{margin:6px 0 6px 26px;display:flex;gap:8px;align-items:stretch}
+.cmd pre{flex:1;margin:0;background:#1d2330;color:#e8ecf1;border-radius:8px;padding:8px 10px;font:13px/1.5 ui-monospace,Consolas,monospace;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.cmd .lab{font-size:11px;color:#8a94a3;display:block;margin:0 0 2px}
+button.cp{flex:none;min-width:72px;border:1px solid #2f8fd1;background:#2f8fd1;color:#fff;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;padding:6px 10px}
+button.cp.ok{background:#2e9d6a;border-color:#2e9d6a}
+ol,ul{margin:4px 0 4px 44px;padding:0;font-size:14px}li{margin:2px 0}
+.fill{background:#fff;border:1px solid #d7dce2;border-radius:12px;padding:10px 14px;margin:10px 0;display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.fill label{font-size:12px;color:#5b6676;display:block}.fill input{width:100%;font:14px ui-monospace,Consolas,monospace;padding:6px 8px;border:1px solid #c9d0d8;border-radius:8px}
+.note{background:#fff7e6;border:1px solid #e8c77a;border-radius:10px;padding:8px 12px;font-size:13px;margin:8px 0 8px 26px;color:#1d2330}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #d7dce2;padding:8px 14px;font-size:13px;color:#5b6676;text-align:center}
+@media(max-width:600px){.fill{grid-template-columns:1fr}.cmd{margin-left:0}.why,ol,ul,.note{margin-left:14px}}
+</style></head><body><div class="w">
+<h1>要你操作的事</h1>
+<p class="sub">2026-10-07。每個指令旁邊都有「複製」。完成後勾選（只記在這台瀏覽器）。在 Claude Code 對話框執行指令時，開頭要先輸入 <code>!</code> 加空格。</p>
+
+<div class="fill"><div><label>Vercel 預覽網址（第 C 區用，例如 https://xxx.vercel.app）</label><input id="url" placeholder="https://…" oninput="render()"></div>
+<div><label>測試金鑰 MCP_SPIKE_TOKEN（用 C-2 產生後貼這裡）</label><input id="tok" placeholder="貼上產生的金鑰" oninput="render()"></div></div>
+
+<h2 class="a">A．現在就做（必做）</h2>
+<div id="A"></div>
+<h2 class="b">B．推上去之後驗收</h2>
+<div id="B"></div>
+<h2 class="c">C．MCP 第 0 期實測（決定「每人一把金鑰」或「改做 OAuth」）</h2>
+<div id="C"></div>
+<h2 class="d">D．清理與重開（可選）</h2>
+<div id="D"></div>
+<h2 class="e">E．等你決定（不是操作）</h2>
+<div id="E"></div>
+</div>
+<div class="bar">指令請在專案資料夾 <b>C:\Users\Rock\Desktop\dawin-dash</b> 執行（PowerShell 或 Git Bash 皆可）</div>
+
+<script>
+const ITEMS = {
+A:[
+ {id:'a1',t:'推上去（觸發自動部署）',why:'本機 master 領先遠端 8 個 commit：封存功能、MCP 設計稿。正式庫的 archived_at 欄位已先加好，所以推上去不會壞。',cmds:[{l:'終端機 / Claude Code（前面加 !）',c:'git push origin master'}]},
+ {id:'a2',t:'刪掉調查崩潰留下的探測檔',why:'拋棄式測試資料夾，沒有 commit，只是讓版本狀態不乾淨。',cmds:[{l:'Git Bash',c:'rm -r full-stack/src/__probe'},{l:'PowerShell',c:'Remove-Item -Recurse -Force full-stack\\src\\__probe'}]}
+],
+B:[
+ {id:'b1',t:'確認部署成功、頁面正常',why:'Vercel 後台 Deployments 看到最新一筆是 Ready；正式站能登入、沒有白畫面。',steps:['開正式站登入','到 Projects，點一個專案卡片的 Archive','切到別的分頁再切回、再重新整理：該專案要仍在「Archived」區','在 Archived 區按 Unarchive：專案回到主清單']},
+ {id:'b2',t:'手機版驗收（iPhone）',why:'自動分流、輸入框放大修正、返回行為。',steps:['iPhone Safari 開正式站 /dashboard：應自動到 /m（手機版）','點任務開抽屜，點「關注人」「執行人」欄位：頁面不可放大','時程 → 點專案 → 按上一層：應回到時程','更多 → 切到桌機版 → 再開 /dashboard 不會被導走']},
+ {id:'b3',t:'量讀取速度（伺服器已改新加坡）',why:'比對先前美東 iad1 的感受。',steps:['電腦 Chrome 開正式站，F12 → Network','重新整理第二次以後，看第一個文件請求的 Waiting（TTFB）','響應標頭 x-vercel-id 的第二段應為 sin1']}
+],
+C:[
+ {id:'c1',t:'C-1 把 spike 分支推上去（會產生預覽部署）',why:'分支 spike/mcp-phase0 含一個拋棄式 /api/mcp-spike 路由與測試，沒有碰資料庫。',cmds:[{l:'終端機 / Claude Code（前面加 !）',c:'git push origin spike/mcp-phase0'}]},
+ {id:'c2',t:'C-2 產生測試金鑰',why:'隨機 48 字元；產生後貼到上面「測試金鑰」欄，再到 Vercel 設定。',cmds:[{l:'終端機',c:'node -e "console.log(require(\'crypto\').randomBytes(24).toString(\'hex\'))"'}]},
+ {id:'c3',t:'C-3 Vercel 設定（網頁操作）',why:'預覽環境預設有「Vercel 驗證」會擋掉外部呼叫，且需要金鑰環境變數。',steps:['Vercel → 專案 yuhui-dash-fullstack → Settings → Environment Variables','新增 MCP_SPIKE_TOKEN，值貼 C-2 的金鑰，環境只勾 Preview','Settings → Deployment Protection：測試期間把 Preview 的 Vercel Authentication 關掉（測完再開）','到 Deployments 找 spike/mcp-phase0 那筆預覽，按 Redeploy 讓環境變數生效，複製它的網址貼到上面「預覽網址」欄']},
+ {id:'c4',t:'C-4 用 curl 驗證（先確認伺服器端 OK）',why:'沒帶金鑰要 401；帶金鑰才看得到工具清單。',cmds:[{l:'沒帶金鑰（預期 401）',c:'curl -i -X POST {{URL}}/api/mcp-spike -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d "{\\"jsonrpc\\":\\"2.0\\",\\"id\\":1,\\"method\\":\\"tools/list\\"}"'},{l:'帶金鑰（預期 200，列出 ping 與 echo_write）',c:'curl -i -X POST {{URL}}/api/mcp-spike -H "Authorization: Bearer {{TOKEN}}" -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d "{\\"jsonrpc\\":\\"2.0\\",\\"id\\":1,\\"method\\":\\"tools/list\\"}"'}]},
+ {id:'c5',t:'C-5 Claude Code 連線測試',why:'確認客戶端能帶自訂金鑰標頭。連上後請 Claude 呼叫 ping，再呼叫兩次 echo_write（同一個 operation_id）。',cmds:[{l:'終端機',c:'claude mcp add --transport http dd-spike {{URL}}/api/mcp-spike --header "Authorization: Bearer {{TOKEN}}"'}]},
+ {id:'c6',t:'C-6 個人 claude.ai 連線測試（關鍵）',why:'這一步決定設計：能填自訂金鑰 → 每人一把金鑰；只能 OAuth → 要改做登入授權。',steps:['claude.ai → Settings → Connectors → Add custom connector','貼上 {{URL}}/api/mcp-spike','看有沒有地方可以填 Authorization 標頭或 token','能填：填入金鑰，新對話請 Claude 呼叫 ping','不能填、只彈出授權或連線失敗：截圖貼給我（這就是「改做 OAuth」的證據）']},
+ {id:'c7',t:'C-7 測完清除',why:'避免測試金鑰與預覽留在線上。',steps:['Vercel 刪掉 MCP_SPIKE_TOKEN，並把 Preview 的 Vercel Authentication 開回去'],cmds:[{l:'移除 Claude Code 的測試連線',c:'claude mcp remove dd-spike'},{l:'刪遠端 spike 分支（要重做時再推）',c:'git push origin --delete spike/mcp-phase0'}]}
+],
+D:[
+ {id:'d1',t:'重開本機儀表板（手機也要看時）',why:'目前關閉（它吃約 2 GB 記憶體）。開了之後 iPhone 用 Tailscale 連。',cmds:[{l:'終端機（在專案資料夾）',c:'cd full-stack && npm run dev'}],steps:['電腦：http://localhost:3000','iPhone（開 Tailscale）：http://100.121.248.10:3000/m','注意：本機連的是正式資料庫，操作是真的']},
+ {id:'d2',t:'停掉設計稿網頁伺服器（8080）',why:'目前還開著，只綁在 Tailscale 網路。',cmds:[{l:'PowerShell',c:'Stop-Process -Id 121040 -Force'},{l:'Git Bash',c:'taskkill //PID 121040 //F'}]},
+ {id:'d3',t:'刪 MCP spike 的隔離副本（確定不用時）',why:'裡面有一份完整的 node_modules，佔磁碟；分支本身保留。MCP 正式開工前先不要刪。',cmds:[{l:'終端機',c:'git worktree remove .claude/worktrees/agent-a854bc9326c6d93d1 --force'}]},
+ {id:'d4',t:'吉祥物（雲寶寶）三款',why:'Codex 畫好後我會做成預覽頁給你，不用操作。'}
+],
+E:[
+ {id:'e1',t:'Vercel Hobby 方案屬「非商業個人使用」，公司業務可能不符',why:'官方文件原文限非商業、個人使用。要不要升級 Pro（開發者座位約 $20／月，檢視者免費）請你評估；這與 MCP 無關，現有部署就在 Hobby。'},
+ {id:'e2',t:'MCP 的驗證方式',why:'等 C-6 實測結果：能填自訂金鑰 → 每人一把金鑰（現行設計）；不能 → 改做 OAuth 登入，工作量較大。'},
+ {id:'e3',t:'之後要不要做（你說了算）',why:'平板版；深色使用者載入前淺色閃一下（加預設主題腳本）；總覽／我的任務是否也排除已封存專案；手機版子任務可改執行人；「已完成子任務改不了執行者」需要你提供哪個畫面與哪個子任務名稱。'}
+]};
+const KEY='ops-checklist-2026-10-07';
+let done={};try{done=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sub=s=>s.replace(/\{\{URL\}\}/g,(document.getElementById('url').value.trim()||'<預覽網址>').replace(/\/$/,'')).replace(/\{\{TOKEN\}\}/g,document.getElementById('tok').value.trim()||'<金鑰>');
+function copyText(t,btn){
+  const ok=()=>{btn.textContent='已複製 ✓';btn.classList.add('ok');setTimeout(()=>{btn.textContent='複製';btn.classList.remove('ok')},1500)};
+  const fb=()=>{const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.focus();a.select();try{document.execCommand('copy');ok()}catch(e){btn.textContent='請手動複製'}document.body.removeChild(a)};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(ok,fb)}else fb();
+}
+function render(){
+  for(const g of Object.keys(ITEMS)){
+    const el=document.getElementById(g);el.innerHTML='';
+    ITEMS[g].forEach(it=>{
+      const c=document.createElement('div');c.className='card'+(done[it.id]?' done':'');
+      let h=`<h3><input type="checkbox" ${done[it.id]?'checked':''} data-id="${it.id}"><span>${esc(it.t)}</span></h3><p class="why">${esc(it.why||'')}</p>`;
+      if(it.steps){h+='<ol>'+it.steps.map(s=>'<li>'+esc(sub(s))+'</li>').join('')+'</ol>'}
+      (it.cmds||[]).forEach((m,i)=>{h+=`<div class="cmd"><div style="flex:1;min-width:0"><span class="lab">${esc(m.l)}</span><pre>${esc(sub(m.c))}</pre></div><button class="cp" data-g="${g}" data-i="${ITEMS[g].indexOf(it)}" data-k="${i}">複製</button></div>`});
+      c.innerHTML=h;el.appendChild(c);
+    });
+  }
+  document.querySelectorAll('.card input[type=checkbox]').forEach(cb=>cb.onchange=e=>{done[cb.dataset.id]=cb.checked;try{localStorage.setItem(KEY,JSON.stringify(done))}catch(x){}cb.closest('.card').classList.toggle('done',cb.checked)});
+  document.querySelectorAll('button.cp').forEach(b=>b.onclick=()=>{const m=ITEMS[b.dataset.g][+b.dataset.i].cmds[+b.dataset.k];copyText(sub(m.c),b)});
+}
+render();
+</script></body></html>
