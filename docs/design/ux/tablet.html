@@ -130,7 +130,7 @@ body{min-height:100vh}
 .empty b{font-size:17px}.empty p{margin:0;color:var(--text-sec);font-size:14px}
 .empty.plain{border:1px dashed var(--bd2);border-radius:12px}
 
-/* 雲寶寶 + 關閉時的替代 */
+/* 雲朵 + 關閉時的替代 */
 .fb{display:none}
 .k-white{--kc:var(--accent);--kt:var(--tx-accent)}.k-pink{--kc:var(--pink);--kt:var(--tx-pink)}.k-purple{--kc:var(--purple);--kt:var(--tx-purple)}.k-dark{--kc:var(--red);--kt:var(--tx-red)}.k-nimbus{--kc:var(--green);--kt:var(--tx-green)}
 [data-clouds="off"] [data-cloud]{display:none!important}
@@ -388,7 +388,7 @@ body{min-height:100vh}
 .toast.t-done .fb-t{border-color:#F6B84A;color:#F6B84A}.toast.t-hint .fb-t{border-color:#E86CA8;color:#E86CA8}
 .toast .tact{min-height:44px;padding:0 16px;font-size:14px;flex:none}
 
-/* ===== 雲寶寶增量（2026-10-07 修訂）：總覽「雲寶寶播報」、專案天氣、時程天氣列／天空帶 ===== */
+/* ===== 雲朵增量（2026-10-07 修訂）：總覽「雲朵播報」、專案天氣、時程天氣列／天空帶 ===== */
 .cl.lite{opacity:.6}
 .gl .cl,.gl .fb{margin-right:8px}
 .pbar{width:4px;height:28px;border-radius:2px;background:var(--c);flex:none;margin-right:8px}
@@ -431,7 +431,7 @@ body{min-height:100vh}
 .wleg>div{display:flex;align-items:center;gap:8px;min-width:0}
 .wleg span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wleg b{color:var(--text);font-weight:700}
-/* 總覽：雲寶寶播報 */
+/* 總覽：雲朵播報 */
 .bcast{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .bcast .bub{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:8px 10px 8px 18px;box-shadow:var(--shadow)}
 .bcast .bub::before{content:"";position:absolute;left:-7px;top:50%;width:12px;height:12px;background:var(--surface);border-left:1px solid var(--border);border-bottom:1px solid var(--border);transform:translateY(-50%) rotate(45deg)}
@@ -463,7 +463,7 @@ body{min-height:100vh}
     <button class="tbtn" data-th="light" aria-pressed="true">淺色</button>
     <button class="tbtn" data-th="dark" aria-pressed="false">深色</button>
   </div>
-  <div class="grp"><span class="lbl">顯示雲寶寶</span>
+  <div class="grp"><span class="lbl">顯示雲朵</span>
     <button class="tbtn" id="cloudSw" role="switch" aria-checked="true" aria-pressed="true">開</button>
   </div>
   <div class="grp"><button class="tbtn" id="fitBtn" aria-pressed="true">縮放至視窗</button></div>
@@ -528,7 +528,7 @@ const ICON={
 };
 const ic=(n,s)=>`<svg class="ic${n==='grip'?' g':''}" viewBox="0 0 24 24" aria-hidden="true"${s?` style="width:${s}px;height:${s}px"`:''}>${ICON[n]}</svg>`;
 
-/* 雲寶寶：每朵雲都附「關閉時的替代」（小=色點；大=色環＋文字符號） */
+/* 雲朵：每朵雲都附「關閉時的替代」（小=色點；大=色環＋文字符號） */
 const BIG={white:'…',pink:'i',purple:'–',dark:'!',nimbus:'✓'};
 const cl=(k,s,o={})=>{
   if(o.nofb)return `<span class="cl${o.cls?' '+o.cls:''}" data-cloud="${k}" data-size="${s}" aria-hidden="true"></span>`; /* 純裝飾且旁邊已有文字：關閉時整朵隱藏 */
@@ -723,7 +723,7 @@ function gantt(key,rows,o){
   if(o.groups)body=o.groups.map(g=>`<div class="ggrp${g.wx?' k-'+g.wx:''}${S.tlWx&&S.tlWx!==g.wx?' dim':''}${S.tlWx&&S.tlWx===g.wx?' hl':''}" data-id="${g.id}"${g.wx?` data-wx="${g.wx}"`:''} data-item>${g.rows.map(row).join('')}</div>`).join('');
   else body=`<div class="grows" data-kind="${o.kind||''}" data-p="${o.p||''}">${rows.map(row).join('')}</div>`;
   const style=o.fill?'flex:1;min-height:0':`max-height:${o.h||340}px`;
-  /* 天空帶：月份軸上方一條極淡的帶，2–3 朵裝飾雲（opacity .08、aria-hidden；雲寶寶關閉時整條隱藏） */
+  /* 天空帶：月份軸上方一條極淡的帶，2–3 朵裝飾雲（opacity .08、aria-hidden；雲朵關閉時整條隱藏） */
   const sky=sk?`<div class="gsky" aria-hidden="true">${[[-130,'white'],[110,'nimbus'],[340,'white']].map(([dx,k])=>`<span class="cl" data-cloud="${k}" data-size="44" style="left:${tx+dx}px"></span>`).join('')}</div>`:'';
   return `<div class="gscroll${sk?' sky':''}" data-gk="${key}" data-tx="${tx}"${sk?' data-sky="1"':''} style="${style}"><div class="ginner" style="width:calc(var(--lw) + ${W}px)">
     <div class="ghead"><div class="gl">${o.hl||'任務'}</div><div class="gt gh2" style="width:${W}px">${sky}<div class="gtag" style="left:${tx}px"><span>今天</span>${sk?`<em class="gflag" aria-hidden="true">${cl('white',22,{nofb:true})}</em>`:''}</div><div class="gm">${h.m}</div><div class="gd">${h.d}</div></div></div>
@@ -824,7 +824,7 @@ SCREENS.overview=()=>{
   const rows=visibleProjects().filter(p=>!S.hidden.has(p.id)).map(p=>{const r=projRange(p.id),w=weather(p);return r&&{id:p.id,type:'proj',label:p.name,start:r.start,end:r.end,prog:pavg(p.id),color:p.c,od:odEnd(p.id),
     left:`<i class="pbar" style="--c:${p.c}"></i>${cl(w.k,30)}<span class="gtx"><b>${esc(p.name)}</b><small class="${w.cls}">${w.lab}</small></span>`}}).filter(Boolean);
   const k=mineK(),wxn={};visibleProjects().forEach(p=>{const x=weather(p).k;wxn[x]=(wxn[x]||0)+1});
-  const bcast=`<div class="bcast">${cl('white',64,{cls:'bob'})}<div class="bub"><div class="tx"><small>雲寶寶播報 · 10/07（三）</small>你有 <b class="tred">${k.od} 件逾期</b>要先處理、${k.soon} 件 7 天內到期；${wxn.dark||0} 個專案有雷雨，${wxn.nimbus||0} 個順風飛行。</div>
+  const bcast=`<div class="bcast">${cl('white',64,{cls:'bob'})}<div class="bub"><div class="tx"><small>雲朵播報 · 10/07（三）</small>你有 <b class="tred">${k.od} 件逾期</b>要先處理、${k.soon} 件 7 天內到期；${wxn.dark||0} 個專案有雷雨，${wxn.nimbus||0} 個順風飛行。</div>
      <div class="bcs"><button class="bc k-dark" data-act="bcjump" data-v="overdue">${cl('dark',28)}<span class="n">${k.od}</span><span class="l">逾期</span></button><button class="bc k-pink" data-act="bcjump" data-v="soon">${cl('pink',28)}<span class="n">${k.soon}</span><span class="l">7 天內</span></button><button class="bc k-nimbus" data-act="bcjump" data-v="done">${cl('nimbus',28)}<span class="n">${k.dm}</span><span class="l">本月完成</span></button></div></div></div>`;
   const up=T.filter(t=>t.status!=='已完成'&&t.end&&dl(t)>=0&&dl(t)<=S.set.upDays&&matchQ(t)).sort((a,b)=>dl(a)-dl(b)).slice(0,S.set.upLimit);
   const counts={};T.forEach(t=>{counts[t.status]=(counts[t.status]||0)+1});const total=T.length;
@@ -940,7 +940,7 @@ SCREENS.timeline=()=>{
   const wxc=k=>groups.filter(g=>g.wx===k).length;
   const wxRow=`<div class="wxrow" role="group" aria-label="專案天氣（點一下標出該類專案）"><span class="lb">專案天氣</span>${WXORDER.map(k=>`<button class="chip wxc k-${k}${S.tlWx===k?' on':''}" data-act="tlwx" data-v="${k}" aria-pressed="${S.tlWx===k}"${wxc(k)?'':' aria-disabled="true"'}>${cl(k,28)}<span>${WX[k].short}</span><b>${wxc(k)}</b></button>`).join('')}</div>`;
   const LEG={dark:['雷雨／逾期','有任務逾期，條尾下雨'],nimbus:['順風飛行／完成','進度領先，跑者標進度'],white:['晴時多雲／進行中','沒有逾期'],purple:['起霧休息／暫緩','先放一邊'],pink:['醞釀中／提案中','含待確認']};
-  const legend=`<div class="wleg" aria-label="雲寶寶圖例">${WXORDER.map(k=>`<div>${cl(k,24)}<span><b>${LEG[k][0]}</b>　${LEG[k][1]}</span></div>`).join('')}</div>`;
+  const legend=`<div class="wleg" aria-label="雲朵圖例">${WXORDER.map(k=>`<div>${cl(k,24)}<span><b>${LEG[k][0]}</b>　${LEG[k][1]}</span></div>`).join('')}</div>`;
   return V('timeline',`${S.tlTip?`<div class="tipbox pk">${cl('pink',36)}<div class="tx"><b>預設收折所有專案</b>點專案名稱旁的箭頭，或按「全部展開」查看任務。</div><button class="x" data-act="tlTipX" aria-label="關閉提示">${ic('x',18)}</button></div>`:''}
    <div class="gtools"><div class="grp"><select data-bind="tlsort" aria-label="排序方式">${[['manual','手動'],['name','名稱'],['progress','進度']].map(([k,l])=>`<option value="${k}"${S.tlSort===k?' selected':''}>排序：${l}</option>`).join('')}</select>
      <button class="btn plain" data-act="tlall">${allC?'全部展開':'全部收折'}</button><button class="btn plain" data-act="gtoday">回到今天</button></div>${scaleSeg(S.tlScale,'tl')}</div>
@@ -966,13 +966,13 @@ SCREENS.data=()=>{
    :`<div class="empty plain"><b>沒有符合條件的任務</b><p>修改上方搜尋字詞後再試一次</p></div>`}`);
 };
 
-/* 9 設定（不放雲，僅「顯示雲寶寶」開關） */
+/* 9 設定（不放雲，僅「顯示雲朵」開關） */
 SCREENS.settings=()=>{
   const s=S.set,sw=(on,act)=>`<button class="sw" role="switch" aria-checked="${on}" data-act="${act}"><i></i></button>`;
   const gw=['ov','detail','tl'].map((v,i)=>`<div style="margin-bottom:12px"><div class="fl" style="font-weight:600;margin-bottom:6px">${['Overview','Project Detail','Timeline'][i]}</div><div class="gw">${['日','週','月','季'].map(k=>`<div><label for="gw-${v}-${k}">${k}</label><input id="gw-${v}-${k}" type="number" min="1" max="400" value="${s.gw[v][k]}" data-bind="gw" data-v="${v}" data-k="${k}"></div>`).join('')}</div></div>`).join('');
   return V('settings',`<div class="sgrid">
    <div class="card pad"><div class="chead" style="padding:0 0 12px;margin-bottom:8px"><h3>顯示</h3></div>
-    <div class="setrow"><div class="tx"><b>顯示雲寶寶</b><small>關閉後，所有雲換回色點與文字；預設開啟。偏好「減少動態」時雲寶寶不會動。</small></div>${sw(S.clouds,'swclouds')}</div>
+    <div class="setrow"><div class="tx"><b>顯示雲朵</b><small>關閉後，所有雲換回色點與文字；預設開啟。偏好「減少動態」時雲朵不會動。</small></div>${sw(S.clouds,'swclouds')}</div>
     <div class="setrow"><div class="tx"><b>深色主題</b><small>Nightshift（深）／Daylight（淺）</small></div>${sw(S.theme==='dark','swtheme')}</div>
     <div class="setrow"><div class="tx"><b>時程預設全部收折</b><small>進入「時程」時，專案先收折</small></div>${sw(s.collapsedDef,'swcollapse')}</div>
     <div class="fld" style="padding-top:12px"><label for="zoom">全站放大 ${s.zoom}%</label><div style="display:flex;gap:12px;align-items:center"><span class="sec" style="font-size:12px">50%</span><input id="zoom" type="range" min="50" max="200" step="10" value="${s.zoom}" data-bind="zoom" style="flex:1;accent-color:var(--fill)"><span class="sec" style="font-size:12px">200%</span></div></div></div>
@@ -992,8 +992,8 @@ SCREENS.settings=()=>{
 
 /* 10 狀態圖庫（圖鑑頁：五朵雲都會出現） */
 SCREENS.gallery=()=>{
-  const kinds=[['white','白雲寶寶','日常、進行中、品牌'],['pink','粉紅雲書僮','提醒、提示、提案'],['purple','淡紫說故事雲','暫緩、之後、空空的'],['dark','烏雲雷寶寶','逾期、警示、錯誤'],['nimbus','齊天筋斗雲','完成、衝刺、進度']];
-  return V('gallery',`<p class="sec" style="margin:0 0 12px">各種畫面狀態；雲寶寶永遠只是輔助，旁邊一定有文字。</p><div class="gal">
+  const kinds=[['white','白雲','日常、進行中、品牌'],['pink','粉紅雲','提醒、提示、提案'],['purple','淡紫雲','暫緩、之後、空空的'],['dark','烏雲','逾期、警示、錯誤'],['nimbus','筋斗雲','完成、衝刺、進度']];
+  return V('gallery',`<p class="sec" style="margin:0 0 12px">各種畫面狀態；雲朵永遠只是輔助，旁邊一定有文字。</p><div class="gal">
    <div class="card"><div class="chead"><h3>載入中</h3></div><div class="demo">${cl('white',96,{cls:'bob'})}<b>載入中…</b><div style="width:100%;display:flex;flex-direction:column;gap:8px"><div class="skel"></div><div class="skel" style="width:80%"></div><div class="skel" style="width:60%"></div></div></div></div>
    <div class="card"><div class="chead" style="--hc:var(--red)"><h3>載入失敗</h3></div><div class="demo">${cl('dark',96)}<b>載入失敗</b><p class="sec" style="margin:0">無法連線到伺服器，請稍後再試。</p><button class="btn" data-act="gtoast" data-v="info">重新整理</button></div></div>
    <div class="card"><div class="chead" style="--hc:var(--green)"><h3>空狀態：沒有待辦</h3></div><div class="demo">${cl('nimbus',96)}<b>沒有待辦！</b><p class="sec" style="margin:0">今天可以喘口氣了</p></div></div>
@@ -1006,7 +1006,7 @@ SCREENS.gallery=()=>{
      ${toastHTML('err','儲存失敗','你的權限已變更為唯讀，畫面已重新整理',false).replace('class="toast','class="toast sample')}
      ${toastHTML('done','完成了！','「票務展務相關」已標示完成，本月第 3 個',false).replace('class="toast','class="toast sample')}
      <div class="chips"><span class="sec" style="font-size:13px">在畫布下方即時觸發：</span>${[['ok','成功'],['warn','警告'],['err','錯誤'],['info','資訊'],['done','完成慶祝']].map(([k,l])=>`<button class="btn plain" data-act="gtoast" data-v="${k}">${l}</button>`).join('')}</div></div></div>
-   <div class="card" style="grid-column:1/-1"><div class="chead"><h3>關閉「顯示雲寶寶」時的替代</h3></div><div class="demo left"><div class="fbtab">
+   <div class="card" style="grid-column:1/-1"><div class="chead"><h3>關閉「顯示雲朵」時的替代</h3></div><div class="demo left"><div class="fbtab">
      ${kinds.map(([k,n,r])=>`<span class="cl-h">${cl(k,44)}</span><span><b>${n}</b><br><span class="sec" style="font-size:13px">${r}</span></span><span class="fb fb-dot k-${k} force"></span><span class="fb fb-t k-${k} force" style="width:36px;height:36px">${BIG[k]}</span>`).join('')}</div>
      <p class="sec" style="margin:0;font-size:13px">小尺寸換成色點、大尺寸換成色環加符號；文字本來就在旁邊，所以資訊不會少。</p></div></div>
   </div>`);

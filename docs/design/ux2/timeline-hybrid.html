@@ -33,7 +33,7 @@ section.sx{margin-top:32px;scroll-margin-top:64px}
 .sh .cap{color:var(--text-sec);font-size:13px}
 .lead{margin:0 0 12px;max-width:1100px}
 
-/* ---------- 雲寶寶開關 ---------- */
+/* ---------- 雲朵開關 ---------- */
 .fb{display:none}
 [data-clouds="off"] [data-cloud]{display:none!important}
 [data-clouds="off"] .fb{display:inline-block}
@@ -288,7 +288,7 @@ section.sx{margin-top:32px;scroll-margin-top:64px}
 .pdet .tl .pbt .bar{height:8px}
 .pdet .tl .pbt{height:8px}
 
-/* ---------- 雲寶寶對照／取捨 ---------- */
+/* ---------- 雲朵對照／取捨 ---------- */
 .fbt2{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .fbt2 th,.fbt2 td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
 .fbt2 thead th{background:var(--surface-light)}
@@ -315,14 +315,14 @@ section.sx{margin-top:32px;scroll-margin-top:64px}
 
 <nav class="tb" aria-label="頁面導覽與顯示選項">
   <nav aria-label="章節">
-    <a href="#sec-desk">桌面</a><a href="#sec-anat">列剖面</a><a href="#sec-states">六種狀態</a><a href="#sec-tab">平板</a><a href="#sec-ph">手機</a><a href="#sec-off">雲寶寶關閉</a><a href="#sec-trade">取捨與假設</a>
+    <a href="#sec-desk">桌面</a><a href="#sec-anat">列剖面</a><a href="#sec-states">六種狀態</a><a href="#sec-tab">平板</a><a href="#sec-ph">手機</a><a href="#sec-off">雲朵關閉</a><a href="#sec-trade">取捨與假設</a>
   </nav>
   <span class="sp"></span>
   <div class="grp" role="group" aria-label="主題"><span class="lab">主題</span>
     <button type="button" class="t" data-act="theme" data-v="light" aria-pressed="true">淺色</button>
     <button type="button" class="t" data-act="theme" data-v="dark" aria-pressed="false">深色</button>
   </div>
-  <div class="grp"><span class="lab" id="lab-cl">顯示雲寶寶</span>
+  <div class="grp"><span class="lab" id="lab-cl">顯示雲朵</span>
     <button type="button" class="sw" role="switch" aria-checked="true" aria-labelledby="lab-cl" data-act="clouds"></button>
   </div>
 </nav>
@@ -359,10 +359,10 @@ section.sx{margin-top:32px;scroll-margin-top:64px}
 </section>
 
 <section class="sx" id="sec-off" aria-labelledby="h-off">
-  <div class="sh"><span class="no" aria-hidden="true">6</span><h2 id="h-off">雲寶寶關閉時的退路</h2><span class="cap">上方「顯示雲寶寶」可全站關閉；下方並排對照（不受開關影響）</span></div>
+  <div class="sh"><span class="no" aria-hidden="true">6</span><h2 id="h-off">雲朵關閉時的退路</h2><span class="cap">上方「顯示雲朵」可全站關閉；下方並排對照（不受開關影響）</span></div>
   <div class="blk">
-    <div class="cmpcap">雲寶寶開</div><div class="cmp-on" id="cmp-on"></div>
-    <div class="cmpcap">雲寶寶關（退路）</div><div class="cmp-off" id="cmp-off"></div>
+    <div class="cmpcap">雲朵開</div><div class="cmp-on" id="cmp-on"></div>
+    <div class="cmpcap">雲朵關（退路）</div><div class="cmp-off" id="cmp-off"></div>
     <table class="fbt2" style="margin-top:16px"><thead><tr><th scope="col">元素</th><th scope="col">開</th><th scope="col">關（退路）</th></tr></thead><tbody>
       <tr><th scope="row">左欄天氣頭像</th><td>雲 28px（烏／筋斗／白／粉／淡紫）</td><td>8px 色點（同健康度色）；名稱後仍有讀屏文字（雷雨…）與「逾期」膠囊</td></tr>
       <tr><th scope="row">領先徽章</th><td>筋斗小雲 14px＋「領先 N 點」</td><td>「▲ 領先 N 點」</td></tr>
@@ -710,7 +710,7 @@ const SCARD = [
   ['ahead', '領先', '進度領先 27 點', '綠色條、填色超過刻度；筋斗雲徽章「領先 27 點」（≥ 25 點天氣轉筋斗雲）。'],
   ['over', '逾期', '有 1 項任務逾期 5 天', '紅＝有任務逾期（與進度快慢無關）；烏雲只出現在右欄。這裡進度同步，所以沒有斜線。'],
   ['hold', '暫緩', '暫時不動', '灰＝暫緩：不畫刻度、不算落後，淡紫雲（起霧休息）。'],
-  ['prop', '提案中', '還沒開始', '粉紅＝提案中／待確認：進度 0，不畫刻度；粉紅雲書僮。']
+  ['prop', '提案中', '還沒開始', '粉紅＝提案中／待確認：進度 0，不畫刻度；粉紅雲。']
 ];
 function statesHTML() {
   return SCARD.map(([k, t, sub, note]) => {

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant" data-theme="light" data-clouds="on">
+<html lang="zh-Hant" data-theme="light" data-clouds="on" data-lvl="full" data-motion="on">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1280">
@@ -50,7 +50,7 @@ input,select,textarea{font:inherit;color:var(--text)}
 .tb .sw:hover{background:#3C4A5E}.tb .sw[aria-checked="true"]:hover{background:#7CCBE6}
 
 .tbar{display:inline-block;width:3px;height:14px;border-radius:2px;background:var(--c,var(--accent));flex:none}
-/* --- 雲寶寶開關：關閉時雲全藏、改顯示 fallback（.fb）；.force-on/.force-off 供對照用 --- */
+/* --- 雲朵開關：關閉時雲全藏、改顯示 fallback（.fb）；.force-on/.force-off 供對照用 --- */
 .fb{display:none}
 [data-clouds="off"] [data-cloud]{display:none!important}
 [data-clouds="off"] .fb{display:inline-block}
@@ -173,7 +173,7 @@ textarea.fld{resize:vertical;min-height:64px;width:100%}
 .tgl .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pri{width:6px;height:6px;border-radius:50%;flex:none}
 
-/* --- 雲寶寶擴充（Overview／Timeline）：.fx＝純裝飾，雲關閉時整組不顯示；.fb＝關閉時的替代物 --- */
+/* --- 雲朵擴充（Overview／Timeline）：.fx＝純裝飾，雲關閉時整組不顯示；.fb＝關閉時的替代物 --- */
 [data-clouds="off"] .fx,.force-off .fx{display:none!important}
 .ci{display:inline-flex;align-items:center;justify-content:center;flex:none}
 .lt2{opacity:.62}
@@ -189,7 +189,17 @@ textarea.fld{resize:vertical;min-height:64px;width:100%}
 .sky{position:relative;height:40px;margin:0 0 8px;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 10%,var(--surface)),var(--surface))}
 .sky [data-cloud]{position:absolute;opacity:.08}
 .wxrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
-.wxc{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:2px 14px 2px 6px;border-radius:99px;border:1px solid var(--border);background:var(--surface);font-size:13px;color:var(--text)}
+.sqc{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+.lgl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;flex:1}
+.lgl li{display:flex;align-items:center;gap:8px}.lgl .ln{min-width:52px}.lgl.wide .ln{min-width:104px}
+.wlist{max-height:268px;overflow:auto;margin:0 -8px;padding:0 8px}
+.wrow{width:100%;background:none;border:0;border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);text-align:left;color:var(--text);padding:4px 0}
+.wrow .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.wrow .wl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;white-space:nowrap;width:104px;flex:none}
+.msg{display:inline-grid;grid-template-columns:repeat(10,1fr);gap:1px;width:80px;height:8px;flex:none}
+.msg i{display:block;position:relative;overflow:hidden;border-radius:2px;background:color-mix(in srgb,var(--c) 14%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cf) 40%,transparent)}
+.msg i b{position:absolute;left:0;top:0;bottom:0;background:var(--cf)}
+.wxc{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:2px 14px 2px 10px;border-radius:99px;border:1px solid var(--border);background:var(--surface);font-size:13px;color:var(--text)}
 .wxc:hover{background:var(--surface-hover)}
 .wxc[aria-pressed="true"]{background:color-mix(in srgb,var(--c) 16%,var(--surface));border-color:var(--c);font-weight:700}
 .wxc b{font:700 14px "JetBrains Mono",ui-monospace,monospace}
@@ -345,6 +355,51 @@ table.dt td .cut{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-sp
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
 .g4 label,.sgrid label.l{font-size:11px;color:var(--text-sec);display:block;margin-bottom:2px}
 .sgrid h4{font-size:13px;font-weight:600;color:var(--text-sec);margin:12px 0 6px}
+/* --- Settings 左側子選單＋雲朵專區（唯一允許放雲的設定頁；圖鑑／預覽一律包在 .force-on，不受顯示程度影響）--- */
+.setlay{display:grid;grid-template-columns:168px 1fr;gap:24px;align-items:start}
+.snav{display:flex;flex-direction:column;gap:2px}
+.snav button{text-align:left;background:none;border:0;border-left:3px solid transparent;border-radius:0 8px 8px 0;padding:8px 12px;color:var(--text-sec)}
+.snav button:hover{background:var(--surface-hover);color:var(--text)}
+.snav button[aria-current="page"]{border-left-color:var(--acc-solid);background:color-mix(in srgb,var(--accent) var(--tint),transparent);color:var(--t-accent);font-weight:700}
+.cpage{display:flex;flex-direction:column;gap:16px}
+.chd{display:flex;align-items:center;gap:24px}
+.chd h2{font-size:24px;font-weight:700}
+.chd p{margin:4px 0 0;color:var(--text-sec);max-width:640px}
+.cpage .setrow small{max-width:520px}
+.cpage .setrow b .badge{margin-left:8px}
+.ctl{display:flex;align-items:center;gap:16px}
+.mprev{display:flex;align-items:flex-end;gap:20px;padding:12px 16px 6px;border:1px solid var(--border);border-radius:12px;background:var(--surface-light)}
+.mprev span.m{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--text-sec);padding-top:8px}
+.sw[disabled]{opacity:.5;cursor:not-allowed}
+table.ctab{width:100%;border-collapse:collapse}
+.ctab th{text-align:left;font-size:12px;font-weight:600;color:var(--text-sec);padding:8px 12px;border-bottom:1px solid var(--border)}
+.ctab td{padding:8px 12px;border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);vertical-align:middle}
+.ctab tr.cr{cursor:pointer}
+.ctab tr.cr:hover td{background:var(--surface-hover)}
+.ctab tr.cr.on td{background:color-mix(in srgb,var(--accent) 8%,transparent);border-bottom-color:transparent}
+.ctab .rb{display:flex;align-items:center;gap:12px;background:none;border:0;padding:0;font-weight:700;font-size:15px;text-align:left;color:var(--text)}
+.ctab .pr{color:var(--text-sec)}
+.ctab td.pv{padding:4px 12px 16px;background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.cprev{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cex{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.cex figcaption{font-size:11px;font-weight:700;color:var(--text-sec)}
+.cex .box{display:flex;align-items:flex-start;gap:8px;flex:1}
+.cex .box>*{min-width:0}
+.cex .card.kpi,.cex .mgrp,.cex .emp,.cex .toast,.cex .tip{flex:1;margin:0;width:auto}
+.cex .emp{min-height:0;padding:10px}
+.cex .tlx .lb{position:static;transform:none;height:22px}
+.cpick{display:flex;gap:8px}
+.cpick button{width:48px;height:48px;border-radius:12px;border:1px dashed var(--border);background:var(--surface-light);padding:0;display:inline-flex;align-items:center;justify-content:center;cursor:not-allowed}
+.cdis b{color:var(--text-sec)}
+.cdis .cpick{opacity:.45;filter:grayscale(1)}
+.crules{margin:8px 0 0;padding:0;list-style:none;columns:2;column-gap:32px}
+.crules li{break-inside:avoid;display:flex;gap:8px;align-items:baseline;padding:4px 0}
+.crules li::before{content:"✓";color:var(--t-green);font-weight:700}
+[data-motion="off"] .bob,[data-motion="off"] .fly{animation:none!important}
+/* 精簡：mountAll 把「不在 Logo／空狀態／載入／登入／雲朵專區」的雲與 .fx 標成 data-lite=hide，並把相鄰的 fallback 標成 show */
+[data-lvl="lite"] [data-lite="hide"]{display:none!important}
+[data-lvl="lite"] .fb[data-lite="show"]{display:inline-block}
+[data-lvl="lite"] .fbt[data-lite="show"]{display:inline}
 
 /* --- 狀態集／toast／登入 --- */
 .sgal{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -435,7 +490,9 @@ table.dt td .cut{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-sp
 .tlx .row{position:relative;z-index:1;height:48px;border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent);cursor:pointer}
 .tlx .row.tk{height:40px}
 .tlx .row:hover{outline:1px solid var(--border);outline-offset:-1px}
-.tlx .row[aria-current="true"]::after{content:"";position:absolute;inset:0;border:2px solid var(--focus);z-index:6;pointer-events:none;border-radius:2px}
+.tlx .row[aria-current="true"]{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.tlx .row[aria-current="true"]::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acc-solid);z-index:6;pointer-events:none}
+.tlx .row[aria-current="true"] .swl{left:6px}
 .tlx .row.dim,.tlx .cd.dim{opacity:.32}
 .tlx .swl{position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:0 2px 2px 0;z-index:4}
 .tlx .lc{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 0 0 12px}
@@ -493,6 +550,7 @@ table.dt td .cut{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-sp
 .tlx .tdet{margin-top:8px;padding:8px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);display:flex;gap:24px;flex-wrap:wrap;align-items:center;min-height:56px}
 .tlx .tdet .k{display:block;font-size:11px;color:var(--text-sec)}
 .tlx .tdet b{font-weight:600}
+.tlx .tdet[hidden]{display:none}
 .tlx .tdet small{font-weight:400;color:var(--text-sec)}
 .tlx .lgd{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start;margin-top:16px}
 .tlx .lgd ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:13px}
@@ -526,7 +584,9 @@ table.dt td .cut{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-sp
 .tlx .cd{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 12px 12px 16px;display:grid;gap:8px;box-shadow:var(--shadow);cursor:pointer}
 .tlx .cd .swl{top:12px;bottom:12px}
 .tlx .cd:hover{border-color:var(--text-sec)}
-.tlx .cd[aria-current="true"]{box-shadow:0 0 0 2px var(--focus)}
+.tlx .cd[aria-current="true"]{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.tlx .cd[aria-current="true"]::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acc-solid);border-radius:12px 0 0 12px;pointer-events:none}
+.tlx .cd[aria-current="true"] .swl{left:7px}
 .tlx .cd .t1{display:flex;align-items:center;gap:8px;min-width:0}
 .tlx .cd .t1 .nm{min-width:0}
 .tlx .cd .t1 .nm b{display:block;line-height:1.3;font-weight:700}
@@ -590,7 +650,7 @@ table.dt td .cut{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-sp
     <div class="grp" id="switcher" role="group" aria-label="切換畫面"></div>
     <span class="sp"></span>
     <div class="grp" role="group" aria-label="主題"><button type="button" data-tool="theme" data-v="light" aria-pressed="true">淺色</button><button type="button" data-tool="theme" data-v="dark" aria-pressed="false">深色</button></div>
-    <div class="swl"><span class="lab" id="cloudLab">顯示雲寶寶</span><button type="button" class="sw" role="switch" aria-checked="true" aria-labelledby="cloudLab" id="cloudSw" data-tool="clouds"></button></div>
+    <div class="swl"><span class="lab" id="cloudLab">顯示雲朵</span><button type="button" class="sw" role="switch" aria-checked="true" aria-labelledby="cloudLab" id="cloudSw" data-tool="clouds"></button></div>
   </div>
   <div class="r2"><span id="note"></span><span class="sp"></span><span id="demo" class="grp"></span></div>
 </div>
@@ -599,12 +659,16 @@ table.dt td .cut{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-sp
   <button type="button" class="x" data-tool="v2" aria-label="關閉 V2 說明">關閉</button>
   <h2>V2 改了什麼（相對 V1）</h2><div style="color:#9FB0C4">使用者最終決策已併入；本檔只是設計稿，未動產品程式碼。</div>
   <ol>
-   <li><b>Timeline 換成定案的混合版</b>：外框條＝專案起訖，兩端印起／迄日；條內 10 格分段進度（最後一格依比例）；細黑刻度＝今天應有進度；落後處畫斜線；條色＝狀態、專案色只剩左邊 4px 色塊；天氣雲頭像 28px；右欄固定「進度・到期・對時間・狀態」；逾期烏雲只放右欄狀態欄。</li>
-   <li><b>工具列最多 2 排</b>：視圖（甘特／卡片）、篩選·n（收進 popover）、排序、日週月季、全部展開；第二排＝專案天氣 chip＋圖例。月份標籤對齊格線，2027 有年分隔，表頭有「今天」標籤。</li>
-   <li><b>「卡片」視圖真的可切</b>：依到期分成 這週／本月／下月／之後，另有收折的「已逾期」分組；卡片含進度環、天氣雲、起訖日、時間 vs 進度小條（提案 C）。</li>
-   <li><b>落後／領先改白話天數</b>：主標「落後約 N 天」「領先約 N 天」（N＝點數÷100×專案總天數，四捨五入），百分點「（N 點）」退為次要小字／tooltip／圖例。Timeline 列與標籤、專案詳情表頭、Overview 天氣與即將到期都已套用。圖例新增：落後約 14 天＝進度比今天應有的少約 14 天的工作量（18 點＝百分點）。</li>
-   <li><b>Overview 的 Project Timeline 縮成同一套條</b>：同樣 10 格＋刻度＋兩端日期，確保兩頁是同一個系統；雲寶寶播報、急迫度雲、甜甜圈、專案天氣檢視都保留。</li>
-   <li><b>其餘照舊</b>：My Tasks 狀態篩選與已完成分組、麵包屑、Projects／封存、專案詳情（關注人／執行人／子任務／隱藏已完成子任務、勾完最後一個子任務只提示並附「改成已完成」）、任務視窗、Data／Settings 無雲、狀態集、淺深色、顯示雲寶寶開關與關閉時的退路。</li>
+   <li><b>Timeline 換成定案的混合版</b>：外框條＝專案起訖，兩端印起／迄日；條內 10 格分段進度（最後一格依比例）；細黑刻度＝今天應有進度；落後處畫斜線；條色＝狀態、專案色只剩左邊 4px 色塊；專案狀況雲頭像 28px；右欄固定「進度・到期・對時間・狀態」；逾期烏雲只放右欄狀態欄。</li>
+   <li><b>工具列最多 2 排</b>：視圖（甘特／卡片）、篩選·n（收進 popover）、排序、日週月季、全部展開；第二排＝專案狀況 chip＋圖例。月份標籤對齊格線，2027 有年分隔，表頭有「今天」標籤。</li>
+   <li><b>「卡片」視圖真的可切</b>：依到期分成 這週／本月／下月／之後，另有收折的「已逾期」分組；卡片含進度環、專案狀況雲、起訖日、時間 vs 進度小條（提案 C）。</li>
+   <li><b>落後／領先改白話天數</b>：主標「落後約 N 天」「領先約 N 天」（N＝點數÷100×專案總天數，四捨五入），百分點「（N 點）」退為次要小字／tooltip／圖例。Timeline 列與標籤、專案詳情表頭、Overview 專案狀況與即將到期都已套用。圖例新增：落後約 14 天＝進度比今天應有的少約 14 天的工作量（18 點＝百分點）。</li>
+   <li><b>Overview 的 Project Timeline 縮成同一套條</b>：同樣 10 格＋刻度＋兩端日期，確保兩頁是同一個系統；雲朵播報、急迫度雲、甜甜圈、專案狀況檢視都保留。</li>
+   <li><b>專案狀況白話化</b>：原本看不懂的氣象比喻全部改成直接講狀況——有逾期（烏雲）、進度領先（筋斗雲）、進行順利（白雲）、暫緩中（淡紫雲）、提案／待確認（粉紅雲）。Overview 切換鈕、Timeline chip、圖例、詳情列一致，色塊顏色固定（紅／綠／藍／灰／粉）。</li>
+   <li><b>狀態圖例樣式</b>：Status Distribution 的「色塊＋雲＋名稱＋粗體數量＋（百分比）」（使用者說比較直覺）同款套到專案狀況：Overview 先是垂直圖例（數量＋百分比），下方列出每個專案（專案色、雲、名稱、狀況、10 格進度小條）；Timeline 摘要列同款橫向 chip，仍可點選標出。</li>
+   <li><b>取消預設選取</b>：Timeline 一開始不選任何列、詳情列隱藏（底部提示「點選專案列查看詳情」）；點列後該列淡色底＋左側 3px 主色條並顯示詳情；藍色外框只留給鍵盤 Tab 聚焦（:focus-visible），滑鼠點擊不再出現。</li>
+   <li><b>設定新增「雲朵」專區</b>：Settings 左側子選單（一般／雲朵）；雲朵頁有 96px 白雲標題、個人設定（顯示雲朵總開關與工具列同步、顯示程度 完整／精簡／關閉、動態效果與即時預覽、預覽鈕，改動會跳「已儲存」）、五朵雲的圖鑑（點一列展開它出現在哪的 3 個縮圖）、使用規則、第 5 期才開放的「專案頭像」（灰掉）與向量草稿聲明。這頁是 Settings 唯一放雲的地方。</li>
+   <li><b>其餘照舊</b>：My Tasks 狀態篩選與已完成分組、麵包屑、Projects／封存、專案詳情（關注人／執行人／子任務／隱藏已完成子任務、勾完最後一個子任務只提示並附「改成已完成」）、任務視窗、Data／一般設定無雲、狀態集、淺深色、顯示雲朵開關與關閉時的退路。</li>
   </ol></div>
 <main id="canvas">
   <section class="screen" id="scr-login" hidden></section>
@@ -700,7 +764,8 @@ const projSubs = id => projTasks(id).reduce((s, t) => s + t.subs.length, 0);
 const cnt = a => a.reduce((m, t) => (m[t.st] = (m[t.st] || 0) + 1, m), {});
 const overdue = t => t.st !== '已完成' && dayDiff(t.e, TODAY) < 0;
 const fmt = s => s;
-const WX = { storm: ['雷雨', 'dark', 't-red'], sunny: ['晴時多雲', 'white', 't-accent'], fly: ['順風飛行', 'nimbus', 't-green'], mist: ['起霧休息', 'purple', 't-purple'], brew: ['醞釀中', 'pink', 't-pink'] };
+/* 專案狀況（白話標籤）：[標籤, 雲, 文字色, 色塊變數]；內部 key 沿用舊名，畫面上不再出現 */
+const WX = { storm: ['有逾期', 'dark', 't-red', 'red'], fly: ['進度領先', 'nimbus', 't-green', 'green'], sunny: ['進行順利', 'white', 't-accent', 'accent'], mist: ['暫緩中', 'purple', 't-purple', 'text-dim'], brew: ['提案／待確認', 'pink', 't-pink', 'pink'] };
 function weather(pid) {
   const a = projTasks(pid), od = a.filter(overdue);
   const r0 = projRange(pid), tot0 = dayDiff(r0.e, r0.s), v0 = projAvg(pid), gp0 = v0 - elapsed(pid), n0 = gdays(gp0, tot0);
@@ -728,23 +793,24 @@ const S = {
   sel: 'p1',
   d: { sort: 'manual', dir: 'asc', status: [], owner: [], pri: [], hideDone: false, exp: { t1: 1, t2: 1 }, open: null, demo: 'normal', avPop: false },
   order: {},
-  tl: { collapsed: PROJECTS.map(p => p.id), sort: 'manual', hl: null, view: 'gantt', fo: false, fst: [], frisk: [], sel: 'p3', lane: false },
+  tl: { collapsed: PROJECTS.map(p => p.id), sort: 'manual', hl: null, view: 'gantt', fo: false, fst: [], frisk: [], sel: null, lane: false },
   v2: false,
   m: null, addSub: false,
   dt: { sort: 'project', dir: 1, page: 1, sel: [], exp: {} },
-  set: { zoom: 100, days: 30, limit: 5, th: 100 }
+  set: { zoom: 100, days: 30, limit: 5, th: 100 },
+  lvl: 'full', motion: true, setTab: 'general', csel: null
 };
 const SCREENS = [['login', '1 登入'], ['overview', '2 Overview'], ['mytasks', '3 My Tasks'], ['projects', '4 Projects'], ['detail', '5 專案詳情'], ['timeline', '6 Timeline'], ['modal', '7 任務視窗'], ['data', '8 Data'], ['settings', '9 Settings'], ['states', '10 狀態集']];
 const NOTES = {
   login: '登入：唯一五朵雲同框的畫面（歡迎）。雲關閉時退回產品原本的「P」圓形 Logo。',
-  overview: 'Overview：頂端「雲寶寶播報」（計數可點，跳到 My Tasks 分組）＋時程（V2：與 Timeline 同一套分段條的縮小版）／即將到期／狀態三塊，各自帶天氣雲、急迫度雲、狀態雲。雲關閉時全退回色點／色條／文字。',
+  overview: 'Overview：頂端「雲朵播報」（計數可點，跳到 My Tasks 分組）＋時程（V2：與 Timeline 同一套分段條的縮小版）／即將到期／狀態三塊，各自帶專案狀況雲、急迫度雲、狀態雲。雲關閉時全退回色點／色條／文字。',
   mytasks: 'My Tasks：KPI 4 雲（烏／粉／白／筋斗）、分組標題帶雲。可用右側「示範」切換空狀態。雲關閉時 KPI 退回純數字、分組標題退回色條。',
   projects: 'Projects：筋斗雲在進度條上「跑」到進度位置；封存區用淡紫雲。右側可預覽「專案頭像（第 5 期）」。',
   detail: '專案詳情：甘特名稱欄與任務列都有拖移把手（把手聚焦後 ↑↓ 可改順序）。勾完最後一個子任務「不會」自動改狀態，只提示「可以改成已完成了」並附「改成已完成」按鈕（toast＋列內提示）；按下去、或手動把狀態改成「已完成」才會放筋斗雲 toast。',
-  timeline: 'Timeline（V2 定案混合版）：10 格分段進度條＋今天應有進度刻度＋斜線差距，右欄「進度・到期・對時間・狀態」；「落後約 N 天」白話標示、點數為次要小字。可切「卡片」視圖；預設全部收折。天氣 chip 可點（標出該天氣的專案）。逾期烏雲只放右欄狀態欄。',
+  timeline: 'Timeline（V2 定案混合版）：10 格分段進度條＋今天應有進度刻度＋斜線差距，右欄「進度・到期・對時間・狀態」；「落後約 N 天」白話標示、點數為次要小字。可切「卡片」視圖；預設全部收折。專案狀況 chip（色塊＋雲＋名稱＋數量）可點，標出該狀況的專案；預設不選任何專案，點列才選取並顯示詳情。逾期烏雲只放右欄狀態欄。',
   modal: '任務視窗：關注人可編輯；有子任務負責人時，執行人唯讀並提示「由子任務自動帶出」（粉雲小提示）。Esc 關閉。',
   data: 'Data：高密度資料表，不放雲。toast 在此畫面一律退化成純色條。',
-  settings: 'Settings：不放雲（只有「顯示雲寶寶」開關本身）。縮放滑桿可實測 150%（正式環境預設值）下的版面。',
+  settings: 'Settings：左側子選單「一般／雲朵」。一般頁不放雲；「雲朵」專區（?set=cloud）是唯一放雲的設定頁，含個人設定、圖鑑與使用規則。縮放滑桿可實測 150%（正式環境預設值）下的版面。',
   states: '狀態集：每個狀態左右並排「有雲／無雲（fallback）」，與上方開關無關，方便對照。'
 };
 
@@ -760,7 +826,6 @@ const cl = (id, size, o = {}) => `<span class="cl${o.cls ? ' ' + o.cls : ''}" da
 const slot = (h, w, c = '') => `<span class="ci${c}" style="width:${w}px;height:${w}px">${h}</span>`;
 const stCl = (s, size, od, fb) => { const lite = s === '待辦' && !od; return slot(cl(od ? 'dark' : ST_CL[s], lite ? Math.round(size * .75) : size, { cls: lite ? 'lt2' : '', fc: SVAR[s][0], fb, t: od ? '逾期' : s }), size, fb === 'none' ? ' fx' : ''); };
 const urg = (t, size) => { const c = cl(urgId(t), size, { fc: PBY(t.p).c }); return t.st === '已完成' ? `<span class="ck-w">${c}<b class="ck fx" aria-hidden="true">✓</b></span>` : c; };
-const wxCl = (p, size, fb) => { const k = weather(p.id)[0]; return slot(cl(p.arch ? 'purple' : WX[k][1], size, { fc: p.c, t: p.arch ? '已封存' : WX[k][0], fb }), size + 2); };
 const pp = (n, tag) => `<span class="pp ${PCLS[n] || 'c'}">${esc(n)}${tag ? '<span class="w">關注</span>' : ''}</span>`;
 const stp = s => `<span class="st ${SCLS[s]}">${s}</span>`;
 const stv = s => `--c:var(--${SVAR[s][0]});--tc:var(--${SVAR[s][1]})`;
@@ -828,7 +893,7 @@ function gantt(rows, o) {
       const Wc = Math.min(W, 100 - L), inside = L + Wc > 90;
       bar = `<span class="gb" style="left:${L}%;width:${Wc}%;--c:var(--${r.bar.c});--bh:${r.bar.h || 14}px" title="${esc(r.bar.tip || '')}"><span class="gp" style="width:${r.bar.p}%"></span></span>` +
         (r.bar.p > 0 && r.bar.p < 100 ? `<span class="gpct" style="${inside ? `right:calc(${100 - L}% + 6px)` : `left:calc(${L + Wc}% + 6px)`}">${r.bar.p}%</span>` : r.bar.p === 100 ? `<span class="gpct c-green" style="${inside ? `right:calc(${100 - L}% + 6px)` : `left:calc(${L + Wc}% + 6px)`}">100%</span>` : '');
-      /* 雲寶寶：筋斗雲「跑」在進度前端；逾期的尾端有烏雲＋雨滴（關閉時退回紅色尾端記號） */
+      /* 雲朵：筋斗雲「跑」在進度前端；逾期的尾端有烏雲＋雨滴（關閉時退回紅色尾端記號） */
       if (r.bar.run) bar += `<span class="fx gfx run" style="left:${L + Wc * r.bar.p / 100}%">${cl('nimbus', r.bar.run, { fb: 'none' })}</span>`;
       if (r.bar.rain) bar += `<span class="fx gfx rain" style="left:${L + Wc}%">${cl('dark', r.bar.rain, { fb: 'none' })}<span class="drops" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="fb cap" style="left:${L + Wc}%;--bh:${r.bar.h || 14}px"></span>`;
     }
@@ -867,21 +932,24 @@ function donut() {
   });
   return `<div style="display:flex;align-items:center;gap:24px;padding:8px 0"><div style="position:relative;width:204px;height:204px;flex:none"><svg viewBox="0 0 200 200" role="img" aria-label="狀態分布：${arcs.map(a => a.s + ' ' + a.n).join('、')}" style="width:100%;height:100%">${arcs.map(a => `<path d="${a.d}" style="fill:var(--${SVAR[a.s][0]})" opacity=".9"/>`).join('')}</svg>
   <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">${cl('white', 56, { fb: 'none' })}<span><b class="mono" style="font-size:26px;line-height:1">${total}</b> <span class="sec" style="font-size:13px">Total</span></span></div></div>
-  <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;flex:1">${arcs.map(a => `<li style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:var(--${SVAR[a.s][0]});flex:none"></span>${stCl(a.s, 24, false, 'none')}<span style="min-width:52px">${a.s}</span><b class="mono">${a.n}</b><span class="mono sec" style="font-size:12px">(${a.pct}%)</span></li>`).join('')}</ul></div>`;
+  <ul class="lgl" aria-label="狀態圖例">${arcs.map(a => legRow(SVAR[a.s][0], stCl(a.s, 24, false, 'none'), a.s, a.n, a.pct)).join('')}</ul></div>`;
 }
+/* 圖例列（狀態／專案狀況共用）：色塊＋雲＋名稱＋粗體數量＋(百分比) */
+const legRow = (sq, ico, label, n, pct) => `<li><span class="sqc" style="background:var(--${sq})"></span>${ico}<span class="ln">${label}</span><b class="mono">${n}</b><span class="mono sec" style="font-size:12px">(${pct}%)</span></li>`;
+const msg = (m) => `<span class="msg s-${m.state}" role="img" aria-label="進度 ${m.prog}%">${Array.from({ length: 10 }, (_, i) => { const p = Math.max(0, Math.min(10, m.prog - i * 10)); return `<i>${p ? `<b style="width:${p * 10}%"></b>` : ''}</i>`; }).join('')}</span>`;
 function weatherView() {
-  const ps = PROJECTS.filter(p => !p.arch).map(p => ({ p, w: weather(p.id) }));
-  const sum = Object.keys(WX).map(k => ({ k, n: ps.filter(x => x.w[0] === k).length }));
-  return `<ul style="list-style:none;margin:0 0 8px;padding:0;display:flex;gap:12px;flex-wrap:wrap" aria-label="天氣統計">${sum.map(x => `<li class="hint" style="display:flex;align-items:center;gap:4px">${cl(WX[x.k][1], 24)}<span style="color:var(--${WX[x.k][2]})">${WX[x.k][0]}</span> <b class="mono">${x.n}</b></li>`).join('')}</ul>
-  <div style="max-height:332px;overflow:auto;margin:0 -8px;padding:0 8px">${ps.map(({ p, w }) => `<button type="button" class="lrow" style="width:100%;background:none;border:0;border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);text-align:left;color:var(--text);padding:4px 0" data-act="open" data-a="${p.id}">${slot(cl(WX[w[0]][1], 40, { fc: p.c }), 44)}<div class="m"><div class="n">${esc(p.name)}</div><div class="s">${w[1]}</div></div><b style="color:var(--${WX[w[0]][2]});font-size:13px;white-space:nowrap">${WX[w[0]][0]}</b></button>`).join('')}</div>`;
+  const ps = PROJECTS.filter(p => !p.arch).map(pm).filter(Boolean).map(m => ({ m, w: weather(m.id) })), tot = ps.length;
+  const legend = WX_ORDER.map(k => { const n = ps.filter(x => x.w[0] === k).length; return legRow(WX[k][3], slot(cl(WX[k][1], 28, { fb: 'none' }), 28, ' fx'), WX[k][0], n, tot ? Math.round(n / tot * 100) : 0); }).join('');
+  return `<ul class="lgl wide" style="margin:0 0 8px" aria-label="專案狀況圖例">${legend}</ul>
+  <div class="wlist">${ps.map(({ m, w }) => `<button type="button" class="lrow wrow" data-act="open" data-a="${m.id}"><span class="tbar" style="--c:var(--${m.c})" title="專案色"></span>${slot(cl(WX[w[0]][1], 32, { fb: 'none', t: WX[w[0]][0] }), 34, ' fx')}<div class="m"><div class="n">${esc(m.name)}</div><div class="s" title="${esc(w[1])}">${w[1]}</div></div><span class="wl"><i class="sqc" style="background:var(--${WX[w[0]][3]})"></i>${WX[w[0]][0]}</span>${msg(m)}<span class="mono sec" style="font-size:12px;width:34px;text-align:right">${m.prog}%</span></button>`).join('')}</div>`;
 }
 V.overview = () => {
   const rows = PROJECTS.map(pm).filter(Boolean);
   const up = upcomingList(), shown = up.slice(0, S.set.limit), soon = up.filter(t => dayDiff(t.e, TODAY) <= 7).length;
   const k = myData(true).kpi;
   const cnt3 = [['overdue', '逾期', 'dark', 'c-red', k.overdue], ['soon', '7 天內到期', 'pink', 'c-pink', k.soon], ['done', '本月完成', 'nimbus', 'c-green', k.done]];
-  const strip = `<section class="blk bcast" aria-label="雲寶寶播報">${cl('white', 80, { fb: 'none' })}<span class="fb tbar" style="--c:var(--accent);height:40px"></span>
-   <div class="bubble"><small>雲寶寶播報 · 今天 ${TODAY} · 你名下的任務</small><p>今天有 ${k.overdue} 件逾期、${k.soon} 件 7 天內到期，本月已完成 ${k.done} 件</p></div>
+  const strip = `<section class="blk bcast" aria-label="雲朵播報">${cl('white', 80, { fb: 'none' })}<span class="fb tbar" style="--c:var(--accent);height:40px"></span>
+   <div class="bubble"><small>雲朵播報 · 今天 ${TODAY} · 你名下的任務</small><p>今天有 ${k.overdue} 件逾期、${k.soon} 件 7 天內到期，本月已完成 ${k.done} 件</p></div>
    <div style="display:flex;gap:8px;flex:none">${cnt3.map(([g, l, c, tc, n]) => `<button type="button" class="cnt3" data-act="myjump" data-a="${g}" aria-label="${l} ${n} 件，前往 My Tasks 對應分組">${cl(c, 36, { fc: { dark: 'red', pink: 'pink', nimbus: 'green' }[c] })}<span><b class="${tc}">${n}</b><span class="l">${l}</span></span></button>`).join('')}</div></section>`;
   return shell('overview', `
   <section class="blk tlx" aria-labelledby="h-tl"><div class="hd2"><h3 class="ttl" id="h-tl"><span class="tbar"></span>Project Timeline</h3>${scaleSeg()}</div>${tChart(rows, 'c')}<p class="ovh">每格＝該專案工期的 10%；黑色細線＝今天應有進度；斜線＝落後差距。「落後約 N 天」＝進度比今天應有的少約 N 天的工作量（括號內為百分點）。</p></section>
@@ -889,7 +957,7 @@ V.overview = () => {
    <section class="blk" aria-labelledby="h-up"><div class="hd2" style="margin-bottom:8px"><h3 class="ttl" id="h-up"><span class="tbar" style="--c:var(--pink)"></span>Upcoming Deadlines</h3>${soon ? `<span class="hint c-pink" style="font-weight:600">${soon} 件在 7 天內</span>` : ''}</div>
    ${shown.length ? shown.map(t => { const d = dayDiff(t.e, TODAY); return `<button type="button" class="lrow" style="width:100%;background:none;border:0;border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);text-align:left;color:var(--text)" data-act="modal" data-a="${t.id}">${slot(urg(t, 30), 34)}<div class="m"><div class="n">${esc(t.name)}</div><div class="s">${esc(PBY(t.p).name)} · ${ownerAll(t).map(n => pp(n)).join('')}${upGap(t)}</div></div><div class="due"><b class="${urgCls(t)}">${d}d</b><span>${t.e}</span></div></button>`; }).join('') + `<div class="hint" style="margin-top:8px">未來 ${S.set.days} 天內，最多顯示 ${S.set.limit} 件（共 ${up.length} 件）· 可在 Settings 調整</div>`
      : `<div class="empty">${cl('nimbus', 64, { fb: 'none' })}<b>接下來 ${S.set.days} 天沒有到期的任務</b>沒有符合篩選的到期項目</div>`}</section>
-   <section class="blk" aria-labelledby="h-st"><div class="hd2" style="margin-bottom:8px"><h3 class="ttl" id="h-st"><span class="tbar" style="--c:var(--accent)"></span>${S.ovView === 'status' ? 'Status Distribution' : '專案天氣預報'}</h3>${seg([['status', '狀態'], ['weather', '專案天氣']], S.ovView, 'ov', '狀態分布檢視')}</div>
+   <section class="blk" aria-labelledby="h-st"><div class="hd2" style="margin-bottom:8px"><h3 class="ttl" id="h-st"><span class="tbar" style="--c:var(--accent)"></span>${S.ovView === 'status' ? 'Status Distribution' : '專案狀況'}</h3>${seg([['status', '狀態'], ['weather', '專案狀況']], S.ovView, 'ov', '狀態分布檢視')}</div>
    ${S.ovView === 'status' ? donut() : weatherView()}</section>
   </div>`, { fbar: true, top: strip });
 };
@@ -1151,8 +1219,7 @@ function tChart(list, mode) {
 
 /* ---------- Timeline 畫面 ---------- */
 const WX_ORDER = ['storm', 'fly', 'sunny', 'mist', 'brew'];
-const WX_SHORT = { storm: '雷雨', fly: '順風飛行', sunny: '晴時多雲', mist: '起霧', brew: '醞釀' };
-const WX_LEGEND = [['dark', '烏雲', '有逾期的任務，快處理'], ['nimbus', '筋斗雲', '進度 ≥85% 或遠遠領先時程'], ['white', '白雲', '進行中，一切順利'], ['pink', '粉紅雲', '醞釀中（提案／待確認）'], ['purple', '淡紫雲', '暫緩，起霧休息']];
+const WX_LEGEND = [['dark', '有逾期', '專案內有任務已過期，快處理', 'red'], ['nimbus', '進度領先', '進度 ≥85% 或明顯領先時程', 'green'], ['white', '進行順利', '進行中，沒有逾期', 'accent'], ['purple', '暫緩中', '專案內任務全部暫緩', 'text-dim'], ['pink', '提案／待確認', '還在提案或待確認，尚未開工', 'pink']];
 const STL = [['ok', '正常'], ['behind', '落後'], ['over', '逾期'], ['hold', '暫緩'], ['prop', '提案／待確認']];
 const tlPass = m => (!S.fp.length || S.fp.includes(m.id)) && (!S.tl.fst.length || S.tl.fst.includes(m.status))
   && (!S.tl.frisk.length || (S.tl.frisk.includes('逾期') && m.od > 0) || (S.tl.frisk.includes('落後') && m.gap <= -5 && !m.hold && !m.prop));
@@ -1190,12 +1257,12 @@ function tBoard(list) {
 }
 function tlDetail(list) {
   const m = list.find(x => x.id === S.tl.sel);
-  if (!m) return '<span class="hint">點選任一列，這裡會顯示該專案的期間、進度、對時間與成員。</span>';
+  if (!m) return '';
   const gi = gapInfo(m);
-  return `<div><span class="k">專案</span><b>${esc(m.name)}</b> ${stp(m.status)}</div><div><span class="k">期間</span><b class="mono">${m.s} → ${m.e}</b></div><div><span class="k">進度／時間</span><b class="mono">${m.prog}% ／ ${m.el}%</b></div><div><span class="k">對時間</span><b class="${gi.c}">${gi.t}${gi.sub ? ` <small>${gi.sub}</small>` : ''}</b></div><div><span class="k">逾期</span><b class="${m.od ? 'c-red' : 'c-sec'}">${m.od ? `${m.od} 件（最久 ${m.odDays} 天：${esc(m.odName)}）` : '無'}</b></div><div><span class="k">成員</span><b>${m.owners.map(esc).join('、')}</b></div><div><span class="k">天氣</span><b>${WX[m.wk][0]}</b></div><button type="button" class="btn sec sm" data-act="open" data-a="${m.id}">開啟專案 ›</button>`;
+  return `<div><span class="k">專案</span><b>${esc(m.name)}</b> ${stp(m.status)}</div><div><span class="k">期間</span><b class="mono">${m.s} → ${m.e}</b></div><div><span class="k">進度／時間</span><b class="mono">${m.prog}% ／ ${m.el}%</b></div><div><span class="k">對時間</span><b class="${gi.c}">${gi.t}${gi.sub ? ` <small>${gi.sub}</small>` : ''}</b></div><div><span class="k">逾期</span><b class="${m.od ? 'c-red' : 'c-sec'}">${m.od ? `${m.od} 件（最久 ${m.odDays} 天：${esc(m.odName)}）` : '無'}</b></div><div><span class="k">成員</span><b>${m.owners.map(esc).join('、')}</b></div><div><span class="k">狀況</span><b>${WX[m.wk][0]}</b></div><button type="button" class="btn sec sm" data-act="open" data-a="${m.id}">開啟專案 ›</button>`;
 }
 function tlLegend(card) {
-  const wl = `<div class="wlg" style="margin-top:0" aria-label="雲寶寶圖例">${WX_LEGEND.map(([c, n, d]) => `<div>${cl(c, 28, { fc: CC[c] })}<span><b>${n}</b> · ${d}</span></div>`).join('')}</div>`;
+  const wl = `<div class="wlg" style="margin-top:0" aria-label="專案狀況圖例">${WX_LEGEND.map(([c, n, d, v]) => `<div><span class="sqc" style="background:var(--${v})"></span>${slot(cl(c, 28, { fb: 'none' }), 28, ' fx')}<span><b>${n}</b> · ${d}</span></div>`).join('')}</div>`;
   if (card) return `<section class="blk" style="margin-top:16px;padding:12px 16px" aria-label="圖例"><p class="hint" style="margin:0 0 8px">環＝進度；時間 vs 進度小條＝灰色是今天已過的時間、彩色是實際進度；「落後約 N 天」＝進度比今天應有的少約 N 天的工作量（括號內為百分點）。</p>${wl}</section>`;
   const demo = { kind: 'p', id: 'demo', name: '示範專案', c: 'amber', s: '2026/09/01', e: '2026/11/20', prog: 27, tot: 80, od: 0, odDays: 0, hold: false, prop: false, status: '進行中' };
   demo.el = elapsedPct(demo.s, demo.e); demo.gap = demo.prog - demo.el; demo.state = stateOf(demo);
@@ -1237,15 +1304,15 @@ V.timeline = () => {
    ${card ? '<span class="hint">依「下個里程碑」到期日分組</span>' : scaleSeg()}
    <span class="sp"></span><button type="button" class="btn sec" data-act="tlall">${allCol ? '全部展開' : '全部收折'}</button></div>`;
   const wcount = k => list.filter(m => m.wk === k).length;
-  const tb2 = `<div class="tl2 wxrow" role="group" aria-label="專案天氣統計（點選可在圖上標出）"><span class="lab hint">專案天氣</span>${WX_ORDER.map(k => `<button type="button" class="wxc" style="--c:var(--${CC[WX[k][1]]})" data-act="tlhl" data-a="${k}" aria-pressed="${hl === k}">${cl(WX[k][1], 26, { fc: CC[WX[k][1]] })}<span>${WX_SHORT[k]}</span><b>${wcount(k)}</b></button>`).join('')}${hl ? `<button type="button" class="btn sec sm" data-act="tlhl" data-a="${hl}">取消標出</button>` : ''}
+  const tb2 = `<div class="tl2 wxrow" role="group" aria-label="專案狀況統計（點選可在圖上標出）"><span class="lab hint">專案狀況</span>${WX_ORDER.map(k => `<button type="button" class="wxc" style="--c:var(--${WX[k][3]})" data-act="tlhl" data-a="${k}" aria-pressed="${hl === k}"><span class="sqc" style="background:var(--${WX[k][3]})"></span>${slot(cl(WX[k][1], 28, { fb: 'none' }), 28, ' fx')}<span>${WX[k][0]}</span><b>${wcount(k)}</b></button>`).join('')}${hl ? `<button type="button" class="btn sec sm" data-act="tlhl" data-a="${hl}">取消標出</button>` : ''}
    ${card ? '' : '<span class="vsep"></span><span class="ex"><span class="cell"><i></i><i></i><i></i><i class="e"></i><i class="e"></i></span>每格＝工期 10%</span><span class="ex"><i class="kk"></i>今天應有進度</span><span class="ex"><i class="hh"></i>落後差距</span>'}</div>`;
   const sky = `<div class="sky fx" aria-hidden="true">${[['white', 56, 8, 6], ['nimbus', 44, 34, -4], ['pink', 60, 58, 2], ['purple', 40, 86, -2]].map(([c, s, x, y]) => cl(c, s, { fb: 'none', style: `left:${x}%;top:${y}px` })).join('')}</div>`;
   const hidden = PROJECTS.filter(p => p.arch).length, eye = PROJECTS.filter(p => p.hide).length;
   const body = !list.length ? `<div class="empty">${cl('purple', 64, { fb: 'none' })}<b>沒有可顯示的專案</b>調整上方的篩選條件</div>` : card ? tBoard(list) : tChart(list, 'f');
   return shell('timeline', `<div class="tlx">${tb1}${tb2}
   <section class="blk" style="padding:12px 16px 16px" aria-label="Timeline">${sky}${body}</section>
-  <div class="tdet" aria-live="polite">${tlDetail(list)}</div>
-  <p class="hint" style="margin:8px 0 0">不顯示：已封存 ${hidden} 個${eye ? `、已隱藏 ${eye} 個` : ''}（可在 Projects 的眼睛切換）。${nf ? `篩選中：顯示 ${list.length} / ${all.length} 個專案。` : ''}</p>
+  <div class="tdet" aria-live="polite"${S.tl.sel && list.some(x => x.id === S.tl.sel) ? '' : ' hidden'}>${tlDetail(list)}</div>
+  <p class="hint" style="margin:8px 0 0">點選專案列查看詳情。不顯示：已封存 ${hidden} 個${eye ? `、已隱藏 ${eye} 個` : ''}（可在 Projects 的眼睛切換）。${nf ? `篩選中：顯示 ${list.length} / ${all.length} 個專案。` : ''}</p>
   ${tlLegend(card)}</div>`);
 };
 
@@ -1304,18 +1371,72 @@ V.data = () => {
 };
 
 /* ---- Settings ---- */
-V.settings = () => {
+function setGeneral() {
   const owners = PEOPLE, w = [['Overview', [20, 50, 50, 100]], ['Project Detail', [20, 50, 50, 100]], ['Timeline', [20, 50, 50, 100]]];
-  return shell('settings', `<div class="sgrid">
+  return `<div class="sgrid">
   <section class="blk"><h3 class="ttl" style="margin-bottom:12px"><span class="tbar"></span>Categories</h3>${CATS.map((c, i) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="pdot" style="--c:var(--${PN[i % 7]})"></span><span style="flex:1">${c}</span><button type="button" class="iconx" aria-label="移除類別 ${c}" data-act="toastset" data-a="Category removed">${ic('x', 14)}</button></div>`).join('')}
    <div style="display:flex;gap:8px;margin-top:8px"><input class="fld" placeholder="New category" aria-label="新類別" style="flex:1"><button type="button" class="btn" data-act="toastset" data-a="Category added" aria-label="新增類別">${ic('plus', 14)}</button></div></section>
   <section class="blk"><h3 class="ttl" style="margin-bottom:12px"><span class="tbar" style="--c:var(--purple)"></span>Owners</h3>${owners.map((o, i) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="pdot" style="--c:var(--${PN[i % 7]})"></span>${esc(o)}</div>`).join('')}<div class="hint" style="margin-top:8px">Owner 由帳號管理頁面自動同步</div></section>
   <section class="blk"><h3 class="ttl" style="margin-bottom:8px"><span class="tbar" style="--c:var(--amber)"></span>Timeline Width (px per unit)</h3>${w.map(([n, v]) => `<h4>${n}</h4><div class="g4">${['日', '週', '月', '季'].map((k, i) => `<div><label class="l" for="w-${n}-${k}">${k}</label><input id="w-${n}-${k}" class="fld" type="number" min="1" max="200" value="${v[i]}" style="width:100%"></div>`).join('')}</div>`).join('')}<div style="display:flex;justify-content:flex-end"><button type="button" class="btn" data-act="toastset" data-a="Timeline widths saved">Save Widths</button></div></section>
   <section class="blk"><h3 class="ttl" style="margin-bottom:4px"><span class="tbar" style="--c:var(--green)"></span>Display Settings</h3>
-   <div class="setrow"><div><b id="sl-cloud">顯示雲寶寶</b><small>在總覽、我的任務、專案、空狀態與提示條顯示雲寶寶。關閉後換回原本的色點與文字；資料表與設定頁本來就沒有雲。（個人設定，預設開）</small></div><button type="button" class="sw" role="switch" aria-checked="${S.clouds}" aria-labelledby="sl-cloud" data-act="clouds"></button></div>
+   <div class="setrow"><div><b id="sl-cloud">顯示雲朵</b><small>在總覽、我的任務、專案、空狀態與提示條顯示雲朵。關閉後換回原本的色點與文字；資料表與一般設定頁本來就沒有雲。（個人設定，預設開）</small><button type="button" class="btn ghost sm" style="margin-top:4px" data-act="setab" data-a="cloud">更多雲朵設定</button></div><button type="button" class="sw" role="switch" aria-checked="${S.clouds}" aria-labelledby="sl-cloud" data-act="clouds"></button></div>
    <div class="setrow"><div><b>全站放大 <span class="mono" id="zv">${S.set.zoom}%</span></b><small>正式環境預設 150%；拉到 150 可看 1280 畫布在放大後的版面（實際排版寬約 853px）。</small></div><div style="display:flex;align-items:center;gap:8px"><span class="hint">50%</span><input type="range" min="50" max="200" step="10" value="${S.set.zoom}" data-chg="zoom" aria-label="全站放大" style="width:160px;accent-color:var(--acc-solid)"><span class="hint">200%</span></div></div>
    <div class="setrow"><div><b>Timeline Height (vh)</b><small>10~200</small></div><div style="display:flex;gap:8px"><input class="fld num" type="number" value="${S.set.th}" aria-label="Timeline 高度"><button type="button" class="btn" data-act="toastset" data-a="Timeline height saved">Save</button></div></div>
-   <div class="setrow"><div><b>Upcoming Deadlines</b><small>往後看幾天、最多列幾件</small></div><div style="display:flex;gap:8px;align-items:center"><input class="fld num" type="number" value="${S.set.days}" data-chg="days" aria-label="Days ahead"><span class="hint">天</span><input class="fld num" type="number" value="${S.set.limit}" data-chg="limit" aria-label="Max items" style="width:64px"><span class="hint">件</span><button type="button" class="btn" data-act="toastset" data-a="Upcoming settings saved">Save</button></div></div></section></div>`);
+   <div class="setrow"><div><b>Upcoming Deadlines</b><small>往後看幾天、最多列幾件</small></div><div style="display:flex;gap:8px;align-items:center"><input class="fld num" type="number" value="${S.set.days}" data-chg="days" aria-label="Days ahead"><span class="hint">天</span><input class="fld num" type="number" value="${S.set.limit}" data-chg="limit" aria-label="Max items" style="width:64px"><span class="hint">件</span><button type="button" class="btn" data-act="toastset" data-a="Upcoming settings saved">Save</button></div></div></section></div>`;
+}
+
+/* ---- Settings › 雲朵專區（唯一放雲的設定頁）---- */
+const CGUIDE = [ // id、名稱、它代表、個性、出現在哪（專案狀況用白話，不用氣象比喻）
+  ['white', '白雲', '日常、進行中、品牌', '預設、最親切', '頁首 Logo、載入中、「進行中」數字、一般提示'],
+  ['pink', '粉紅雲', '提醒、說明、學習、提案', '好奇愛提問', '7 天內到期的提醒、新手引導與說明氣泡、「提案中」狀態'],
+  ['purple', '淡紫雲', '暫緩、之後、休息、空空的', '溫柔放鬆', '「之後」分組、「暫緩」狀態、篩選後沒有結果的空狀態'],
+  ['dark', '烏雲', '警示、逾期、需要處理', '可愛不可怕', '逾期任務、衝突或錯誤提示、專案狀況為『有逾期』'],
+  ['nimbus', '筋斗雲', '完成、衝刺、進度', '一個筋斗翻十萬八千里', '完成任務的慶祝、進度條上跑的小雲、「本月完成」、沒有待辦的空狀態']
+];
+const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* 每朵雲出現在哪：3 個縮圖，全用真元件（KPI 卡／分組標題／狀況 chip／提示條／空狀態／toast／領先 badge） */
+function cpreview(id) {
+  const k = myData(true).kpi, later = TASKS.filter(t => ownerAll(t).includes(ME) && t.st !== '已完成' && dayDiff(t.e, TODAY) > 7).length;
+  const kpi = (l, n, c, tc) => `<div class="card kpi"><div><div class="kpi-n mono ${tc}">${n}</div><small>${l}</small></div>${cl(c, 44, { fb: 'none' })}</div>`;
+  const grp = (l, c, tc, n) => `<section class="mgrp"><h3>${cl(c, 24, { fb: 'none' })}<span class="${tc}">${l}</span><span class="cnt">${n}</span></h3></section>`;
+  const chip = key => { const n = PROJECTS.filter(p => !p.arch && !p.hide && weather(p.id)[0] === key).length; return `<span class="wxc" style="--c:var(--${WX[key][3]})"><span class="sqc" style="background:var(--${WX[key][3]})"></span>${slot(cl(WX[key][1], 28, { fb: 'none' }), 28)}<span>${WX[key][0]}</span><b>${n}</b></span>`; };
+  const stat = s => `${stCl(s, 24)}${stp(s)}`;
+  const ex = {
+    white: [['頁首 Logo', `<div class="brand">${cl('white', 34, { fb: 'none' })}<span>大雲文創專案管理系統</span></div>`], ['My Tasks · 進行中 KPI', kpi('進行中', k.prog, 'white', '')], ['載入中', EMP.load()]],
+    pink: [['My Tasks · 7 天內到期 KPI', kpi('7 天內到期', k.soon, 'pink', 'c-pink')], ['說明氣泡（小提示）', `<div class="tip" role="note">${cl('pink', 24, { fb: 'none' })}<span><b>小提示</b>　在子任務加上負責人，執行人就會自動帶出。</span></div>`], ['任務狀態「提案中」', stat('提案中')]],
+    purple: [['My Tasks · 之後 分組', grp('之後', 'purple', 'c-purple', later)], ['任務狀態「暫緩」', stat('暫緩')], ['篩選後沒有結果', EMP.filt()]],
+    dark: [['My Tasks · 已逾期 KPI', kpi('已逾期', k.overdue, 'dark', 'c-red')], ['逾期 分組標題', grp('逾期', 'dark', 'c-red', k.overdue)], ['專案狀況 chip「有逾期」', chip('storm')]],
+    nimbus: [['My Tasks · 本月完成 KPI', kpi('本月已完成', k.done, 'nimbus', 'c-green')], ['完成任務的提示條', toastEl('ok', '完成了！', '「票務展務相關」已標示完成')], ['Timeline · 進度領先 badge', `<span class="tlx" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="lb ahead">${cl('nimbus', 14, { fb: 'none' })}領先約 9 天</span>${chip('fly')}</span>`]]
+  }[id];
+  return ex.map(([cap, h]) => `<figure class="cex"><figcaption>${cap}</figcaption><div class="box">${h}</div></figure>`).join('');
+}
+function setCloud() {
+  const reduce = reduceMotion(), motionOn = S.motion && !reduce, lvl = S.clouds ? S.lvl : 'off', bd = '<span class="badge">個人設定</span>';
+  const rows = CGUIDE.map(([id, name, role, pers, where]) => {
+    const on = S.csel === id;
+    return `<tr class="cr${on ? ' on' : ''}" data-row="${id}"><td style="width:250px"><button type="button" class="rb" data-act="cloudsel" data-a="${id}" aria-expanded="${on}"${on ? ` aria-controls="cpv-${id}"` : ''}>${cl(id, 64, { fb: 'none' })}<span>${name}</span></button></td><td><b>${role}</b><span class="pr">（${pers}）</span></td><td>${where}</td></tr>` +
+      (on ? `<tr class="pvr"><td colspan="3" class="pv"><div id="cpv-${id}" class="cprev" role="region" aria-label="${name}出現在哪的預覽">${cpreview(id)}</div></td></tr>` : '');
+  }).join('');
+  return `<div class="cpage">
+  <section class="blk force-on chd" aria-labelledby="cp-h">${cl('white', 96, { fb: 'none' })}<div><h2 id="cp-h">雲朵</h2><p>雲朵是系統的表情，幫你一眼看出狀態；這些都是個人設定，只影響你自己的畫面，換裝置也跟著你的帳號。</p></div></section>
+  <section class="blk" aria-labelledby="cp-t1"><h3 class="ttl" id="cp-t1" style="margin-bottom:4px"><span class="tbar" style="--c:var(--green)"></span>顯示與動態</h3>
+   <div class="setrow"><div><b><span id="cp-l1">顯示雲朵</span>${bd}</b><small>總開關，和畫面上方工具列的「顯示雲朵」是同一個。關閉後全部換回原本的色點與文字。</small></div><button type="button" class="sw" role="switch" aria-checked="${S.clouds}" aria-labelledby="cp-l1" data-act="cpshow"></button></div>
+   <div class="setrow"><div><b><span id="cp-l2">顯示程度</span>${bd}</b><small>完整＝依規則顯示在各處；精簡＝只留頁首 Logo、空狀態與載入中；關閉＝全部不顯示。</small></div>${seg([['full', '完整'], ['lite', '精簡'], ['off', '關閉']], lvl, 'cplvl', '顯示程度')}</div>
+   <div class="setrow"><div><b><span id="cp-l3">動態效果</span>${bd}</b><small>載入時上下飄、完成時筋斗雲飛過。預設跟隨系統「減少動態」${reduce ? '；偵測到你的系統已開啟「減少動態」，所以這裡固定停用。' : '。'}</small></div>
+    <div class="ctl"><div class="mprev force-on" role="img" aria-label="動態預覽：白雲上下飄、筋斗雲飛過"><span class="m">${cl('white', 44, { cls: 'bob', fb: 'none' })}載入中</span><span class="m">${cl('nimbus', 44, { cls: 'fly', fb: 'none' })}完成時</span>${motionOn ? '' : '<span class="m hint">（目前靜止）</span>'}</div>
+    <button type="button" class="sw" role="switch" aria-checked="${motionOn}" aria-labelledby="cp-l3" data-act="cpmotion"${reduce ? ' disabled' : ''}></button></div></div>
+   <div class="setrow"><div><b>預覽</b><small>播一次「完成了！」提示條，看看你目前的設定長什麼樣子。</small></div><button type="button" class="btn sec" data-act="cppreview">預覽</button></div>
+   <div class="setrow cdis"><div><b>專案頭像 <span class="phase">第 5 期・需新增資料庫欄位</span></b><small>之後可以替每個專案挑一朵雲當頭像；現在先預留位置，還不能選。</small></div><div class="cpick force-on" role="group" aria-label="專案頭像（尚未開放）">${CGUIDE.map(([id, name]) => `<button type="button" disabled aria-label="${name}（尚未開放）">${cl(id, 36, { fb: 'none' })}</button>`).join('')}</div></div></section>
+  <section class="blk" aria-labelledby="cp-t2"><div class="hd2" style="margin-bottom:8px"><h3 class="ttl" id="cp-t2"><span class="tbar"></span>雲朵圖鑑 · 每朵雲的職責</h3><span class="hint">點一列，看這朵雲出現在畫面的哪裡</span></div>
+   <div class="force-on"><table class="ctab"><thead><tr><th scope="col">雲</th><th scope="col">它代表</th><th scope="col">出現在哪</th></tr></thead><tbody>${rows}</tbody></table></div></section>
+  <section class="blk" aria-labelledby="cp-t3"><h3 class="ttl" id="cp-t3"><span class="tbar" style="--c:var(--amber)"></span>使用規則</h3>
+   <ul class="crules"><li>每個畫面最多 5 種雲</li><li>雲只是輔助，旁邊一定有文字</li><li>資料表、設定、帳號管理不放雲（除了這一頁）</li><li>只有兩種動態：載入時上下飄、完成時筋斗雲飛過</li><li>尊重系統的「減少動態」設定</li></ul></section>
+  <p class="hint" style="margin:0">雲朵目前是向量草稿，正式上線前會請插畫師精修。</p></div>`;
+}
+V.settings = () => {
+  const cloud = S.setTab === 'cloud';
+  return shell('settings', `<div class="setlay"><nav class="snav" aria-label="設定分頁">${[['general', '一般'], ['cloud', '雲朵']].map(([k, l]) => `<button type="button" data-act="setab" data-a="${k}"${S.setTab === k ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav><div>${cloud ? setCloud() : setGeneral()}</div></div>`,
+    cloud ? { crumbs: [{ l: '首頁', go: 'overview' }, { l: 'Settings', go: 'settings' }, { l: '雲朵' }] } : {});
 };
 
 /* ---- 狀態集 ---- */
@@ -1333,18 +1454,24 @@ const EMP = {
   proj: () => `<div class="emp">${cl('white', 64, { fb: 'none' })}<b>這個專案還沒有任務</b>建立第一個任務開始吧<button type="button" class="btn sm" data-act="noop">+ Create</button></div>`
 };
 V.states = () => {
-  const pair = (inner) => `<div class="pair"><div class="pane force-on"><i>有雲寶寶</i>${inner}</div><div class="pane force-off"><i>無雲寶寶（fallback）</i>${inner}</div></div>`;
+  const pair = (inner) => `<div class="pair"><div class="pane force-on"><i>有雲朵</i>${inner}</div><div class="pane force-off"><i>無雲朵（fallback）</i>${inner}</div></div>`;
   const o = od1()[0];
   return `<div class="wrap"><div class="hd2"><h2 style="font-size:20px">狀態集 · 載入／錯誤／空狀態／提示條</h2><span class="hint">每格左右並排「有雲 ／ 無雲」，不受上方開關影響</span></div>
   <div class="sgal">${[['載入中（白雲上下飄；減少動態時靜止）', 'load'], ['載入失敗（烏雲，帶文字與重試）', 'err'], ['空狀態：沒有待辦（筋斗雲）', 'none'], ['篩選後沒結果（淡紫雲）', 'filt'], ['專案內尚無任務（白雲）', 'proj']].map(([t, k]) => `<section class="scard"><h3>${t}</h3>${pair(EMP[k]())}</section>`).join('')}
-  <section class="scard"><h3>提示條 toast（成功／逾期／小提示）</h3><div style="display:flex;flex-direction:column;gap:12px">${[toastEl('ok', '完成了！', '「票務展務相關」已標示完成，本專案已完成 3 / 8'), toastEl('warn', `有 ${od1().length} 件任務逾期`, `先處理最久的：${o.name}（${-dayDiff(o.e, TODAY)} 天）`), toastEl('tip', '小提示', '在子任務加上負責人，任務的執行人會自動帶出喔')].map(t => `<div class="pair"><div class="pane force-on"><i>有雲寶寶</i>${t}</div><div class="pane force-off"><i>無雲寶寶（fallback）</i>${t}</div></div>`).join('')}</div>
+  <section class="scard"><h3>提示條 toast（成功／逾期／小提示）</h3><div style="display:flex;flex-direction:column;gap:12px">${[toastEl('ok', '完成了！', '「票務展務相關」已標示完成，本專案已完成 3 / 8'), toastEl('warn', `有 ${od1().length} 件任務逾期`, `先處理最久的：${o.name}（${-dayDiff(o.e, TODAY)} 天）`), toastEl('tip', '小提示', '在子任務加上負責人，任務的執行人會自動帶出喔')].map(t => `<div class="pair"><div class="pane force-on"><i>有雲朵</i>${t}</div><div class="pane force-off"><i>無雲朵（fallback）</i>${t}</div></div>`).join('')}</div>
   <div style="margin-top:12px;display:flex;gap:8px"><button type="button" class="btn" data-act="toast" data-a="ok">播放完成慶祝</button><button type="button" class="btn sec" data-act="toast" data-a="warn">逾期提醒</button><button type="button" class="btn sec" data-act="toast" data-a="tip">小提示</button></div></section></div></div>`;
 };
 
 /* ================= 渲染 ================= */
-function mountAll(root) {
+function mountAll(root, keep) {
   window.Clouds.mount(root); // clouds.js 掛載時已把 svg 內的 id／url(#) 加唯一尾碼
   if (!S.clouds) $$('[data-cloud]', root || document).forEach(el => { el.style.display = 'none'; }); // 與 CSS 規則雙保險（.force-on 的 !important 仍可蓋過行內樣式）
+  /* 精簡：只留頁首 Logo、空狀態、載入中（登入頁在建立帳號偏好之前，一律完整；雲朵專區與狀態集的 .force-on 對照格不隱藏）；其餘雲與裝飾標記隱藏，相鄰的 fallback 標記顯示 */
+  if (S.clouds && S.lvl === 'lite' && !keep) $$('[data-cloud],.fx', root || document).forEach(el => {
+    if (el.closest('.brand,.emp,.empty,.login,.cpage,.force-on')) return;
+    el.dataset.lite = 'hide';
+    [el.previousElementSibling, el.nextElementSibling].forEach(n => { if (n && /\bfbt?\b/.test(n.className)) n.dataset.lite = 'show'; });
+  });
 }
 function sig(el) { return el && el.dataset && el.dataset.act ? el.dataset.act + '|' + (el.dataset.a || '') + '|' + (el.dataset.grip || '') : null; }
 function render() {
@@ -1380,11 +1507,14 @@ function show(k) {
 function setV2(on) { S.v2 = on; $('#v2p').hidden = !on; $('#v2Btn').setAttribute('aria-expanded', String(on)); }
 function setTheme(t) { S.theme = t; document.documentElement.setAttribute('data-theme', t); render(); }
 function setClouds(on) { S.clouds = on; document.documentElement.setAttribute('data-clouds', on ? 'on' : 'off'); render(); }
+function setLvl(l) { S.lvl = l; document.documentElement.setAttribute('data-lvl', l); }
+function setMotion(on) { S.motion = on; document.documentElement.setAttribute('data-motion', on ? 'on' : 'off'); }
+const saved = () => toast('plain', '已儲存', '雲朵設定已更新（個人設定，只影響你自己的畫面）', { c: 'green' });
 let tmr = null;
 function toast(k, t, s, o) {
   const plain = ['data', 'settings'].includes(S.screen) && !(o && o.force);
   const host = $('#toastHost'); host.innerHTML = plain || k === 'plain' ? toastEl('plain', t, s, o) : toastEl(k, t, s, o);
-  mountAll(host); clearTimeout(tmr); tmr = setTimeout(() => { host.innerHTML = ''; }, o && o.btn ? 12000 : 4500);
+  mountAll(host, o && o.force); clearTimeout(tmr); tmr = setTimeout(() => { host.innerHTML = ''; }, o && o.btn ? 12000 : 4500);
 }
 const allDone = t => t.subs.length > 0 && t.subs.every(x => x.d) && t.st !== '已完成';
 function tickSub(t, sid) {
@@ -1398,7 +1528,13 @@ function celebrate(t) { const p = projTasks(t.p), d = p.filter(x => x.st === '�
 /* ================= 事件 ================= */
 const A = {
   noop() {},
-  go(k) { show(k); },
+  go(k) { if (k === 'settings') S.setTab = 'general'; show(k); },
+  setab(k) { S.setTab = k; S.csel = null; render(); },
+  cloudsel(id) { S.csel = S.csel === id ? null : id; render(); },
+  cpshow() { setClouds(!S.clouds); saved(); },
+  cplvl(v) { if (v === 'off') setClouds(false); else { setLvl(v); setClouds(true); } saved(); },
+  cpmotion() { if (reduceMotion()) return; setMotion(!S.motion); render(); saved(); },
+  cppreview() { toast('ok', '完成了！', '「票務展務相關」已標示完成（這是預覽）', { force: true }); },
   theme() { setTheme(S.theme === 'dark' ? 'light' : 'dark'); },
   clouds() { setClouds(!S.clouds); },
   fs(s) { S.fs = s === '全部' ? [] : toggle(S.fs, s); render(); },
@@ -1497,6 +1633,7 @@ function init() {
       if (w === 'd') { S.d.demo = v; S.d.status = v === 'filtered' ? ['暫緩'] : []; S.d.owner = v === 'filtered' ? ['Oliver'] : []; S.d.pri = []; }
       if (w === 'av') S.pj.avatar = v;
       render(); return; }
+    const rw = e.target.closest('tr[data-row]'); if (rw && !e.target.closest('button,a,input,select')) { A.cloudsel(rw.dataset.row); return; } // 圖鑑整列可點
     const t = e.target.closest('[data-act]');
     if (S.tl.fo && !e.target.closest('.pw')) { S.tl.fo = false; if (!t || !A[t.dataset.act]) render(); }
     if (S.d.open && !e.target.closest('.pop') && !(t && t.dataset.act === 'stopen')) { S.d.open = null; if (!t) render(); }
@@ -1520,9 +1657,15 @@ function init() {
   const q = new URLSearchParams(location.search); // 深連結：?theme=dark&clouds=off#mytasks
   if (q.get('theme') === 'dark') { S.theme = 'dark'; document.documentElement.setAttribute('data-theme', 'dark'); }
   if (q.get('clouds') === 'off') { S.clouds = false; document.documentElement.setAttribute('data-clouds', 'off'); }
+  if (q.get('lvl') === 'lite') setLvl('lite');
+  if (q.get('motion') === 'off') setMotion(false);
+  if (q.get('set') === 'cloud') S.setTab = 'cloud';
+  if (CGUIDE.some(c => c[0] === q.get('csel'))) S.csel = q.get('csel');
   if (q.get('tl') === 'card') S.tl.view = 'card';
   if (q.get('tl') === 'lane') { S.tl.view = 'card'; S.tl.lane = true; }
   if (q.get('expand') === '1') S.tl.collapsed = [];
+  if (q.get('ov') === 'weather') S.ovView = 'weather';
+  if (q.get('sel')) S.tl.sel = q.get('sel');
   if (q.get('v2') === '1') setV2(true);
   const h = (location.hash || '').slice(1);
   show(SCREENS.some(s => s[0] === h) ? h : 'login');

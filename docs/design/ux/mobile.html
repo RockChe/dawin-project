@@ -14,7 +14,7 @@ html[data-theme]{color-scheme:light}html[data-theme="dark"]{color-scheme:dark}
 button{font-family:inherit}
 .hide{display:none!important}
 
-/* 雲寶寶關閉：所有 [data-cloud] 隱藏，改顯示 .fb（色點）；大尺寸插圖沒有色點，只剩文字 */
+/* 雲朵關閉：所有 [data-cloud] 隱藏，改顯示 .fb（色點）；大尺寸插圖沒有色點，只剩文字 */
 .fb{display:none;width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
 html[data-clouds="off"] [data-cloud]{display:none!important}
 html[data-clouds="off"] .fb{display:inline-block}
@@ -269,7 +269,7 @@ html[data-clouds="off"] .bub::before{display:none}
   <h1>手機版 UI/UX 設計 · 390×844 · 大雲文創專案管理系統</h1>
   <div class="grp">模式 <span class="seg2" id="modeSeg"><button type="button" data-mode="proto" aria-pressed="true">互動</button><button type="button" data-mode="gallery" aria-pressed="false">全部畫面</button></span></div>
   <div class="grp">主題 <span class="seg2" id="themeSeg"><button type="button" data-theme-set="light" aria-pressed="true">淺色</button><button type="button" data-theme-set="dark" aria-pressed="false">深色</button></span></div>
-  <label class="swl"><input type="checkbox" id="cloudSw" role="switch" checked> 顯示雲寶寶</label>
+  <label class="swl"><input type="checkbox" id="cloudSw" role="switch" checked> 顯示雲朵</label>
 </div>
 
 <main id="proto">
@@ -285,9 +285,9 @@ html[data-clouds="off"] .bub::before{display:none}
       <li>展開子任務、勾選；勾完最後一個只提示「可以改成已完成了」，按「改成已完成」才改狀態並播放筋斗雲</li>
       <li>總覽：點播報卡的三個計數跳到我的任務分組；切「專案天氣」看每個專案的天氣雲</li>
       <li>時程：點最上面的天氣 chip，對應橫條反白；點橫條進專案</li>
-      <li>更多 → 顯示雲寶寶開關／登出</li>
+      <li>更多 → 顯示雲朵開關／登出</li>
     </ol>
-    <h2>雲寶寶職責</h2>
+    <h2>雲朵職責</h2>
     <div class="legend" id="legend"></div>
     <div class="rule">雲只是輔助：每個畫面最多 5 種；同一小塊（KPI 列、標題列）不重複同一種；列表裡 24–34px 的小圖示不算重複；旁邊一定有文字；關閉後換成色點／純文字。</div>
   </aside>
@@ -308,7 +308,7 @@ const PJ = ["--accent", "--purple", "--amber", "--green", "--pink", "--cyan"];
 const PROJ = [["p1","TTXC 虎姑婆 駁二"],["p2","科教館公益展廳"],["p3","虎姑婆和他的朋友"],["p4","發行事務"],["p5","兒少內容有限合夥"],["p6","非非和他的小本子"],["p7","27年衛武營"],["p8","Design Ah 展覽"],["p9","大雲Youtube Channel"],["p10","2027新年禮盒"],["p11","臨時動議"]]
   .map(([id, name], i) => ({ id, name, col: PJ[i % PJ.length], arch: id === "p11" }));
 const CF = { white: "--accent", pink: "--pink", purple: "--purple", dark: "--red", nimbus: "--green" };
-const CNAME = { white: "白雲寶寶", pink: "粉紅雲書僮", purple: "淡紫說故事雲", dark: "烏雲雷寶寶", nimbus: "齊天筋斗雲" };
+const CNAME = { white: "白雲", pink: "粉紅雲", purple: "淡紫雲", dark: "烏雲", nimbus: "筋斗雲" };
 
 let sid = 0;
 const T = (id, p, t, st, s, e, pr, ex, w, subs = []) => ({ id, p, t, st, s, e, pr, ex, w, subs: subs.map(([n, o, d]) => ({ id: "s" + (++sid), n, o, d: !!d })) });
@@ -446,7 +446,7 @@ function vOverview(s) {
   const grad = ents.map(x => { const a = acc / tot * 100; acc += cnt[x]; return `var(${STV[x]}) ${a}% ${acc / tot * 100}%`; }).join(",");
   const rows = projs().map(p => ({ p, w: weather(p), u: psum(p) })).sort((a, b) => (b.w.k === "dark") - (a.w.k === "dark"));
   const k = kpis(), urg = d => d <= 2 ? ["dark", "--red"] : d <= 7 ? ["pink", "--pink"] : ["white", "--text-sec"];   // 期限急迫度：≤2 天烏雲、3–7 天粉紅、>7 天白雲
-  const bc = `<section class="bc" aria-label="雲寶寶播報"><div class="bct">${C("white", 56, "nofb")}<div class="bub"><div class="bl">雲寶寶播報 · ${fm(TODAY)}</div><p>${k.od ? `先處理 <b>${k.od} 件逾期</b>` : "沒有逾期任務"}，<b>${k.soon} 件</b>在 7 天內到期；本月已完成 <b>${k.done} 件</b>，繼續保持。</p></div></div>
+  const bc = `<section class="bc" aria-label="雲朵播報"><div class="bct">${C("white", 56, "nofb")}<div class="bub"><div class="bl">雲朵播報 · ${fm(TODAY)}</div><p>${k.od ? `先處理 <b>${k.od} 件逾期</b>` : "沒有逾期任務"}，<b>${k.soon} 件</b>在 7 天內到期；本月已完成 <b>${k.done} 件</b>，繼續保持。</p></div></div>
     <div class="cnt">${[["overdue","dark","--red",k.od,"逾期"],["soon","pink","--pink",k.soon,"7 天內"],["done","nimbus","--green",k.done,"本月完成"]].map(([g, c, v, n, l]) => `<button type="button" class="cn" data-act="jumpg" data-v="${g}" aria-label="${l} ${n} 件，前往我的任務"><span class="r">${C(c, 24)}<b class="mono tc" style="--c:var(${v})">${n}</b></span><span class="ll">${l}</span></button>`).join("")}</div></section>`;
   const panel = s.ovseg === "status"
     ? `<div class="donut" role="img" aria-label="狀態分佈甜甜圈，共 ${tot} 個任務" style="background:conic-gradient(${grad})"><div>${C("white", 28, "nofb")}${tot}<small>個任務</small></div></div>` +
@@ -505,7 +505,7 @@ function vTimeline(s) {
   <div class="tl">${spans.map(x => { const l = dd(x.s, mn) / tot * 100, w = Math.max(1, (dd(x.e, x.s) + 1) / tot * 100), tip = l + w * x.u.avg / 100, hl = s.twx === x.w.k, dim = s.twx && !hl;
     return `<button type="button" class="tlr${x.u.od ? " od" : ""}${hl ? " hl" : ""}${dim ? " dim" : ""}" data-act="tproj" data-id="${x.p.id}" style="--c:var(${x.p.col})"><div class="hd">${C(x.w.k, 28)}<span class="nm">${esc(x.p.name)}</span><span class="wl tc" style="--c:var(${x.w.c})">${x.w.w}${x.u.od ? ` · 逾期 ${x.u.od}` : ""}</span></div>
     <div class="tr"><div class="trk"><span class="rg" style="left:${l}%;width:${w}%"></span><span class="pg2" style="left:${l}%;width:${w * x.u.avg / 100}%;min-width:${x.u.avg ? 4 : 0}px"></span><span class="tdl" style="left:${td}%"></span>${x.u.od ? `<span class="ovend" style="left:clamp(12px,${l + w}%,calc(100% - 12px))">${C("dark", 22)}<span class="rain" aria-hidden="true"><i></i><i></i><i></i></span></span>` : ""}<span class="tlrun" style="left:clamp(12px,${tip}%,calc(100% - 12px))">${C("nimbus", 22)}</span></div><span class="sp">${x.u.avg}%</span></div></button>`; }).join("")}</div>
-  <div class="tlg" aria-label="雲寶寶圖例">${TLG.map(([k, nm, w, r]) => `<div>${C(k, 24)}<span><b>${nm}</b> ${w}　<span class="sub">${r}</span></span></div>`).join("")}</div>
+  <div class="tlg" aria-label="雲朵圖例">${TLG.map(([k, nm, w, r]) => `<div>${C(k, 24)}<span><b>${nm}</b> ${w}　<span class="sub">${r}</span></span></div>`).join("")}</div>
   <p class="note" style="text-align:center;margin-top:10px">完整甘特圖請用平板或桌機</p></div>`;
 }
 
@@ -516,7 +516,7 @@ function vMore(s) {
   <div class="acct">${C("white", 44)}<div><b style="font-size:16px">${ME}</b><div class="sub">大雲文創專案管理系統</div></div></div>
   <button type="button" class="row" data-act="dev" data-v="desktop"><span>切到桌機版</span><span class="d">›</span></button>
   <button type="button" class="row" data-act="dev" data-v="tablet"><span>切到平板版</span><span class="d">›</span></button>
-  <button type="button" class="row" role="switch" aria-checked="${on}" data-act="clouds"><span class="col"><span>顯示雲寶寶</span><span class="d">關閉後改用色點與純文字</span></span><span class="swt"></span></button>
+  <button type="button" class="row" role="switch" aria-checked="${on}" data-act="clouds"><span class="col"><span>顯示雲朵</span><span class="d">關閉後改用色點與純文字</span></span><span class="swt"></span></button>
   <button type="button" class="row out" data-act="logout"><span>登出</span></button>
   <p class="note">資料表、設定、帳號管理請使用桌機版</p></div>`;
 }
@@ -571,7 +571,7 @@ function phone(s) {
 /* ============ 狀態圖庫（9） ============ */
 const sc = (cl, title, p, btn) => `<div class="card2 h">${cl}<div><b>${title}</b><p>${p}</p>${btn || ""}</div></div>`;
 const gStates = () => `<div class="thead" style="padding-top:12px"><div><h2 class="h1">狀態圖庫</h2><div class="sub">載入／錯誤／空／篩選無結果</div></div></div>
-  ${sc(C("white", 64, "bob"), "載入中…", "白雲寶寶輕輕上下飄（減少動態時靜止）")}
+  ${sc(C("white", 64, "bob"), "載入中…", "白雲輕輕上下飄（減少動態時靜止）")}
   ${sc(C("dark", 64), "載入失敗", "請檢查網路後重試", '<button type="button" class="btn-pri" style="margin-top:8px;min-height:44px">重新載入</button>')}
   ${sc(C("nimbus", 96), "沒有指派給你的任務", "今天可以喘口氣了")}
   ${sc(C("purple", 64), "沒有符合篩選的任務", "換個狀態試試", '<button type="button" class="btn-2" style="margin-top:8px;min-height:44px">清除篩選</button>')}`;
@@ -581,7 +581,7 @@ const gToasts = () => `<div class="thead" style="padding-top:12px"><div><h2 clas
   <div class="lab">小提示</div>${vToast("hint", "小提示", "在子任務加上負責人，任務的執行人會自動帶出", 1)}
   <div class="lab">勾完最後一個子任務：只提示，按了才改狀態</div>${vToast("hint", "子任務全部完成！", "「虎姑婆娃娃」可以改成已完成了", 1, { act: "markdone", id: "t3", l: "改成已完成" })}
   <div class="lab">儲存失敗</div>${vToast("err", "儲存失敗", "網路不穩，請稍後再試", 1)}
-  <p class="note">可關閉的「顯示雲寶寶」關掉後，提示條只留文字與色邊框。</p>`;
+  <p class="note">可關閉的「顯示雲朵」關掉後，提示條只留文字與色邊框。</p>`;
 
 /* ============ 全部畫面 ============ */
 const S0 = () => ({ tab: "mytasks", pid: null, ret: null, sheet: null, sel: [], psel: [], hideDone: false, exp: {}, ovsel: [], ovseg: "weather", twx: null, toast: null, draft: null, kb: false, login: false, none: false });
@@ -591,7 +591,7 @@ const GAL = [
   ["2b　我的任務 · 選「已完成」", "多選 chips；已完成分組出現（本月完成 ✓ 在 KPI）。", { sel: ["已完成"] }],
   ["2c　篩選後沒結果", "選「暫緩」且你名下沒有該狀態：淡紫雲＋清除篩選；篩選中 KPI 退成純數字。", { sel: ["暫緩"] }],
   ["2d　沒有任何任務", "筋斗雲（完成／沒有待辦）。", { none: true }],
-  ["3a　總覽 · 雲寶寶播報", "播報卡：白雲＋對話框＋三個計數 chip（點了跳到我的任務對應分組）；即將到期每張帶急迫度雲（烏／粉／白）。", { tab: "overview", ovseg: "weather" }],
+  ["3a　總覽 · 雲朵播報", "播報卡：白雲＋對話框＋三個計數 chip（點了跳到我的任務對應分組）；即將到期每張帶急迫度雲（烏／粉／白）。", { tab: "overview", ovseg: "weather" }],
   ["3b　總覽 · 專案天氣", "每個專案一朵天氣雲（40px）＋進度條上的筋斗雲跑者；有逾期的排最前面。", { tab: "overview", ovseg: "weather", scr: 640 }],
   ["3c　總覽 · 狀態", "甜甜圈中央白雲＋總數；圖例每列有色塊、狀態雲、文字、數字（不靠顏色單獨傳達）。", { tab: "overview", ovseg: "status", scr: 560 }],
   ["4　專案清單", "筋斗雲跑在進度條上；已封存專案不列出。", { tab: "projects" }],
@@ -605,7 +605,7 @@ const GAL = [
   ["7a　時程", "天氣摘要 chips（可橫向捲動）＋淡淡的天空帶＋今天旗；每條橫條有天氣雲頭像、進度尖端的筋斗雲、逾期橫條尾端的烏雲與雨滴。", { tab: "timeline" }],
   ["7b　時程 · 點「雷雨」反白", "點摘要 chip 只反白同天氣的橫條，其他變淡；再點一次取消。", { tab: "timeline", twx: "dark" }],
   ["7c　時程 · 下方圖例", "底部一雲一行的圖例；點橫條仍進專案、麵包屑「時程」可返回。", { tab: "timeline", scr: 900 }],
-  ["8　更多", "切換版本、顯示雲寶寶開關、登出；重編輯功能請用桌機版。", { tab: "more" }],
+  ["8　更多", "切換版本、顯示雲朵開關、登出；重編輯功能請用桌機版。", { tab: "more" }],
   ["9a　狀態圖庫", "載入（白雲 bob）、錯誤（烏雲）、空（筋斗雲）、篩選無結果（淡紫雲）。", { raw: { id: "gallery-states", html: gStates() } }],
   ["9b　提示條", "勾完最後一個子任務只提示（粉紅雲＋「改成已完成」）；按了才改狀態並播放筋斗雲 .fly；錯誤用烏雲＋重試。", { raw: { id: "gallery-toasts", html: gToasts() } }],
 ];

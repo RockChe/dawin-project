@@ -66,7 +66,7 @@ D:[
  {id:'d1',t:'重開本機儀表板（手機也要看時）',why:'目前關閉（它吃約 2 GB 記憶體）。開了之後 iPhone 用 Tailscale 連。',cmds:[{l:'終端機（在專案資料夾）',c:'cd full-stack && npm run dev'}],steps:['電腦：http://localhost:3000','iPhone（開 Tailscale）：http://100.121.248.10:3000/m','注意：本機連的是正式資料庫，操作是真的']},
  {id:'d2',t:'停掉設計稿網頁伺服器（8080）',why:'目前還開著，只綁在 Tailscale 網路。',cmds:[{l:'PowerShell',c:'Stop-Process -Id 121040 -Force'},{l:'Git Bash',c:'taskkill //PID 121040 //F'}]},
  {id:'d3',t:'刪 MCP spike 的隔離副本（確定不用時）',why:'裡面有一份完整的 node_modules，佔磁碟；分支本身保留。MCP 正式開工前先不要刪。',cmds:[{l:'終端機',c:'git worktree remove .claude/worktrees/agent-a854bc9326c6d93d1 --force'}]},
- {id:'d4',t:'吉祥物（雲寶寶）三款',why:'Codex 畫好後我會做成預覽頁給你，不用操作。'}
+ {id:'d4',t:'吉祥物（雲朵）三款',why:'Codex 畫好後我會做成預覽頁給你，不用操作。'}
 ],
 E:[
  {id:'e1',t:'Vercel Hobby 方案屬「非商業個人使用」，公司業務可能不符',why:'官方文件原文限非商業、個人使用。要不要升級 Pro（開發者座位約 $20／月，檢視者免費）請你評估；這與 MCP 無關，現有部署就在 Hobby。'},

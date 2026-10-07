@@ -63,7 +63,7 @@ h1,h2,h3{margin:0;letter-spacing:-.01em}
 .kpi-n{font:700 26px "JetBrains Mono",ui-monospace,monospace;line-height:1}
 .dim{color:var(--text-dim)}.sec{color:var(--text-sec)}.red{color:var(--ink-red)}.amber{color:var(--ink-amber)}.green{color:var(--ink-green)}.pink{color:var(--ink-pink)}.purple{color:var(--ink-purple)}
 
-/* 雲寶寶尺寸級距（職責見 clouds.js 的 role） */
+/* 雲朵尺寸級距（職責見 clouds.js 的 role） */
 .cl{display:inline-block;flex:none;line-height:0}
 .cl svg{width:100%;height:100%;display:block}
 /* 動態只有兩種，並尊重「減少動態」 */
