@@ -297,6 +297,7 @@
   .v2 .tlx .cells .k { position:absolute; top:-4px; bottom:-4px; width:2px; margin-left:-1px; background:var(--text); border-radius:1px; box-shadow:0 0 0 1px var(--surface); z-index:3; overflow:visible; }
   .v2 .tlx .dl { position:absolute; top:calc(50% - 8px); font:14px/16px var(--mono); color:var(--text-sec); background:var(--surface); padding:0 3px; z-index:2; white-space:nowrap; }
   .v2 .tlx .dl.ls { transform:translateX(-100%); }
+  .v2 .tlx .dl.ls.in-bar { transform:none; background:color-mix(in srgb,var(--surface) 88%,transparent); border-radius:3px; z-index:3; }
   .v2 .tlx .rc { display:grid; gap:8px; align-items:center; font:14px/1.2 var(--mono); padding:0 12px 0 0; color:var(--text-sec); }
   .v2 .tlx .rc.s { grid-template-columns:40px minmax(0,1fr); gap:6px; }
   .v2 .tlx .rc b { font-weight:700; color:var(--text); }

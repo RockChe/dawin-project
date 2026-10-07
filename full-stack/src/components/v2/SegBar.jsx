@@ -31,7 +31,8 @@ export default function SegBar({ row, ax, today, ends = false, badge = false }) 
   return (
     <>
       {ends && <>
-        <span className="dl ls" style={{ left: `calc(${g.l}% - 8px)` }}>{g.cl0 ? "◂ " : ""}{formatShortDate(row.s, today)}</span>
+        {/* 條左端被軸裁切（cl0）：標籤不能放條外（左側只有 56–72px 內縮，放不下跨年日期，會被切或蓋住名稱）→ 放進條內左端 */}
+        <span className={`dl ls${g.cl0 ? " in-bar" : ""}`} style={{ left: g.cl0 ? `calc(${g.l}% + 6px)` : `calc(${g.l}% - 8px)` }}>{g.cl0 ? "◂ " : ""}{formatShortDate(row.s, today)}</span>
         <span className="dl le" style={{ left: `calc(${g.r}% + 8px)` }}>{formatShortDate(row.e, today)}{g.cr0 ? " ▸" : ""}</span>
       </>}
       <span className={`hb s-${row.state}${g.cl0 ? " cl0" : ""}${g.cr0 ? " cr0" : ""}`} role="img" aria-label={aria} title={aria}
