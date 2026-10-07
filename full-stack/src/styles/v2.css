@@ -72,11 +72,13 @@
   .v2 .ov span { display:block; font-size:14px; color:var(--text-sec); }
   .v2 .ov b { font:700 20px var(--font-jetbrains-mono),"JetBrains Mono",ui-monospace,monospace; color:var(--t-accent); }
 
-  /* 主題開關：金黃（淺色）／深藍灰（深色）pill＋白色旋鈕 */
-  .v2 .theme-tgl { width:56px; height:28px; border-radius:14px; border:0; padding:0; position:relative; flex-shrink:0; cursor:pointer; background:#3B4256; transition:background .3s; }
-  .v2 .theme-tgl[aria-pressed="false"] { background:#F2C75C; }
-  .v2 .theme-tgl i { position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:11px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; font-size:15px; font-style:normal; line-height:1; transition:left .3s; }
-  .v2 .theme-tgl[aria-pressed="false"] i { left:31px; }
+  /* 主題開關：白天＝藍天白雲太陽蛋、夜晚＝月亮星空（兩層 SVG 以 opacity 切換） */
+  .v2 .theme-tgl { width:64px; height:32px; border-radius:16px; border:0; padding:0; position:relative; flex-shrink:0; cursor:pointer; overflow:hidden; background:transparent; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12); }
+  .v2 .theme-tgl svg { display:block; }
+  .v2 .theme-tgl .tg-day, .v2 .theme-tgl .tg-night { transition:opacity .35s; }
+  .v2 .theme-tgl[aria-pressed="false"] .tg-night { opacity:0; }
+  .v2 .theme-tgl[aria-pressed="true"] .tg-day { opacity:0; }
+  .v2 .theme-tgl:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
   /* ---- 內容區、分頁列、麵包屑 ---- */
   .v2 .wrap { padding:16px 24px 56px; }
