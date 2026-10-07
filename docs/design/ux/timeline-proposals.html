@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light" data-clouds="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<title>Timeline 改版提案（三案比較）· 大雲文創專案管理系統</title>
+<link rel="stylesheet" href="ux.css">
+<style>
+/* 設計稿（僅設計、不動產品程式碼）。共用 token 在 ux.css；文字色一律用 --ink-*（AA），--text-dim 只做裝飾 */
+:root,[data-theme="light"]{--frame:#E4E0D8;--focus:#1F7AA6;--darken:24%}
+[data-theme="dark"]{--frame:#0F1218;--focus:#7CCBE6;--darken:0%;--text-sec:#9CA7B6}
+/* 填色用「狀態色」：淺色主題加深 24% 讓條形對白底 ≥3:1；深色主題直接用原色 */
+:root{--green-f:color-mix(in srgb,var(--green),#000 var(--darken));--amber-f:color-mix(in srgb,var(--amber),#000 var(--darken));--red-f:color-mix(in srgb,var(--red),#000 var(--darken));--pink-f:color-mix(in srgb,var(--pink),#000 var(--darken))}
+.s-ok{--c:var(--green);--cf:var(--green-f);--ink:var(--ink-green)}
+.s-behind{--c:var(--amber);--cf:var(--amber-f);--ink:var(--ink-amber)}
+.s-over{--c:var(--red);--cf:var(--red-f);--ink:var(--ink-red)}
+.s-hold{--c:var(--text-dim);--cf:var(--text-dim);--ink:var(--text-sec)}
+.s-prop{--c:var(--pink);--cf:var(--pink-f);--ink:var(--ink-pink)}
+body{background:var(--frame);min-width:1100px}
+button{font:inherit;color:inherit;cursor:pointer}
+select{font:inherit;color:var(--text)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.mono{font-variant-numeric:tabular-nums}
+.hint{font-size:12px;color:var(--text-sec)}
+.page{max-width:1360px;margin:0 auto;padding:0 16px 64px}
+section.blk,.blk{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 24px;box-shadow:var(--shadow)}
+h1{font-size:24px;line-height:1.3}
+h2{font-size:18px;line-height:1.4}
+h3{font-size:14px}
+
+/* ---------- 雲寶寶開關：關閉時雲全藏、改顯示 fallback ---------- */
+.fb{display:none}
+[data-clouds="off"] [data-cloud]{display:none!important}
+[data-clouds="off"] .fb{display:inline-block}
+[data-clouds="off"] .fx{display:none!important}
+.fb.dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.fb.tbar{width:3px;height:16px;border-radius:2px;background:var(--c);flex:none}
+.fbt{display:none;font-size:10px}
+[data-clouds="off"] .fbt{display:inline}
+.ci{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:28px;height:28px}
+
+/* ---------- 頁首／現況問題 ---------- */
+.top{padding:32px 0 16px}
+.top .sub{color:var(--text-sec);margin:4px 0 0}
+.quote{margin:16px 0 0;padding:8px 16px;border-left:4px solid var(--accent-fill);background:var(--surface);border-radius:0 8px 8px 0}
+.quote small{display:block;color:var(--text-sec);font-size:12px}
+.prob{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px;align-items:start}
+.prob ol{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.prob li{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:start}
+.prob li .n,.fixes .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--ink-red);color:var(--surface);font:700 12px/1 ui-monospace,monospace}
+[data-theme="dark"] .prob li .n{color:#1A1E26}
+.prob li b{display:block}
+.prob li span.d{font-size:13px;color:var(--text-sec)}
+.cur{border:1px dashed var(--border);border-radius:12px;padding:12px;background:var(--surface-light)}
+.cur .tbx{display:flex;align-items:center;height:24px;margin-bottom:4px;padding:0 8px;border-radius:6px;background:color-mix(in srgb,var(--red) var(--tint),var(--surface));color:var(--ink-red);font-size:12px;font-weight:600}
+.cur .ch{height:104px;border-radius:6px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--text-sec);font-size:12px;text-align:center;padding:0 8px}
+.cur p{margin:8px 0 0;font-size:12px;color:var(--text-sec)}
+
+/* ---------- 頁面工具列（畫布外，固定深色） ---------- */
+.tb{position:sticky;top:0;z-index:300;margin:16px -16px 16px;padding:0 16px;background:#18202B;color:#E8EDF3;font:13px/1.4 "Noto Sans TC",system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-radius:0}
+.tb b{color:#fff}
+.tb [role="tablist"]{display:flex;gap:4px;padding:8px 0}
+.tb [role="tab"]{border:1px solid #3C4A5E;background:transparent;color:#E8EDF3;border-radius:8px;padding:4px 16px;font-size:14px}
+.tb [role="tab"]:hover{background:#263243}
+.tb [role="tab"][aria-selected="true"]{background:#7CCBE6;border-color:#7CCBE6;color:#0E1620;font-weight:700}
+.tb :focus-visible{outline-color:#B5E4F3}
+.tb .sp{flex:1}
+.tb .grp{display:flex;align-items:center;gap:8px}
+.tb .grp button.t{border:1px solid #3C4A5E;background:transparent;color:#E8EDF3;border-radius:99px;padding:2px 12px;font-size:13px}
+.tb .grp button.t[aria-pressed="true"]{background:#7CCBE6;border-color:#7CCBE6;color:#0E1620;font-weight:700}
+.tb .lab{color:#B8C4D3}
+.sw{position:relative;width:40px;height:22px;border-radius:99px;border:1px solid #3C4A5E;background:#3C4A5E;padding:0;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.35);transition:left .15s}
+.sw[aria-checked="true"]{background:#7CCBE6;border-color:#7CCBE6}
+.sw[aria-checked="true"]::after{left:20px}
+.rec-banner{margin:0 0 16px;padding:8px 16px;border-radius:8px;background:color-mix(in srgb,var(--amber) var(--tint),var(--surface));border:1px solid color-mix(in srgb,var(--amber) 55%,transparent);color:var(--text);font-size:13px}
+.rec-banner a{color:var(--ink-accent);font-weight:700}
+
+/* ---------- 面板 ---------- */
+.panel[hidden]{display:none}
+.ph{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin:0 0 12px}
+.ph .best{color:var(--ink-accent);font-weight:600}
+.ph .badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-fill);color:var(--on-accent);font-weight:700;font-size:16px;align-self:center}
+.sec2{margin-top:24px}
+.sec2>h3{margin:0 0 8px;font-size:15px}
+.fixes{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 24px}
+.fixes li{display:grid;grid-template-columns:48px 1fr;gap:8px;font-size:13px}
+.fixes .n{width:auto;height:20px;border-radius:6px;background:color-mix(in srgb,var(--green) var(--tint),var(--surface));color:var(--ink-green);font-size:11px;padding:0 4px;align-self:start;margin-top:2px;white-space:nowrap}
+.pc{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pc ul{margin:4px 0 0;padding-left:20px;font-size:13px;display:grid;gap:4px}
+.pc h4{margin:0;font-size:13px}
+.pc .pro h4{color:var(--ink-green)}.pc .con h4{color:var(--ink-red)}
+.cf4{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cf4 .blk{padding:12px 16px}
+.cf4 ul{margin:4px 0 0;padding-left:20px;font-size:13px;display:grid;gap:4px}
+.cf4 h4{margin:0;font-size:13px}
+
+/* ---------- 產品畫布 ---------- */
+.app{background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-lg)}
+.appbar{display:flex;align-items:center;gap:16px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+.appbar .brand{display:flex;align-items:center;gap:8px;font-weight:700}
+.appbar .lg0{width:28px;height:28px;border-radius:50%;background:var(--accent-fill);color:var(--on-accent);font-weight:700;text-align:center;line-height:28px}
+.appbar .pt{display:flex;gap:0;margin-left:16px}
+.appbar .pt span{padding:4px 12px;color:var(--text-sec);border-bottom:2px solid transparent}
+.appbar .pt span.on{color:var(--ink-accent);font-weight:700;border-bottom-color:var(--accent-fill)}
+.appbody{padding:12px 16px 16px}
+.tb1,.tb2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+.tb1 .sp{flex:1}
+.chip{min-height:32px;font-size:13px;color:var(--text-sec)}
+.chip:hover{background:var(--surface-hover)}
+.chip[aria-pressed="true"],.chip[aria-expanded="true"]{background:color-mix(in srgb,var(--accent) var(--tint),var(--surface));border-color:var(--accent-fill);color:var(--ink-accent);font-weight:700}
+.chip .cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:var(--accent-fill);color:var(--on-accent);font-size:11px;font-weight:700;padding:0 4px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:99px;overflow:hidden;background:var(--surface-light)}
+.seg button{border:0;background:transparent;padding:4px 12px;font-size:13px;color:var(--text-sec);min-height:30px}
+.seg button:hover{background:var(--surface-hover)}
+.seg button[aria-pressed="true"]{background:var(--accent-fill);color:var(--on-accent);font-weight:700}
+.sel{background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:13px;min-height:32px}
+.btn2{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-sec);border-radius:99px;padding:4px 16px;min-height:32px;font-size:13px}
+.btn2:hover{background:var(--surface-hover)}
+.btn2.pri{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent);font-weight:700}
+.pw{position:relative}
+.pop{position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:320px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:12px 16px;display:grid;gap:12px}
+.pop fieldset{border:0;margin:0;padding:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pop legend{font-size:12px;color:var(--text-sec);padding:0;margin-bottom:4px;float:left;width:100%}
+.pop .pf{display:flex;justify-content:space-between;gap:8px}
+.lg{display:inline-flex;align-items:center;gap:8px;min-height:28px;padding:0 12px 0 8px;border-radius:99px;border:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text)}
+.lg:hover{background:var(--surface-hover)}
+.lg[aria-pressed="true"]{background:color-mix(in srgb,var(--c) 18%,var(--surface));border-color:var(--cf);font-weight:700}
+.lg .sq{width:12px;height:12px;border-radius:3px;background:var(--cf);flex:none}
+.lg b{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
+.vsep{width:1px;height:20px;background:var(--border)}
+.ex{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sec)}
+.ex .kk{width:2px;height:14px;background:var(--text);border-radius:1px}
+.ex .hh{width:20px;height:10px;border:1px solid var(--amber-f);border-radius:2px;background:repeating-linear-gradient(135deg,var(--amber-f) 0 2px,transparent 2px 5px)}
+.ex .cell{display:inline-flex;gap:1px}.ex .cell i{width:6px;height:8px;border-radius:1px;background:var(--green-f)}.ex .cell i.e{background:color-mix(in srgb,var(--green) 18%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--green-f) 45%,transparent)}
+.ex .dsh{width:0;height:14px;border-left:1.5px dashed var(--text-sec)}
+.ex .rg{width:14px;height:14px;border-radius:50%;border:3px solid var(--green-f);border-right-color:var(--border)}
+.chartwrap{margin-top:8px;padding:8px 0 4px}
+.foot{margin:8px 0 0;font-size:12px;color:var(--text-sec)}
+.detail{margin-top:8px;padding:8px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);display:flex;gap:24px;flex-wrap:wrap;align-items:center;min-height:56px}
+.detail .k{display:block;font-size:11px;color:var(--text-sec)}
+.detail b{font-weight:600}
+.detail .c-amber{color:var(--ink-amber)}.detail .c-green{color:var(--ink-green)}.detail .c-red{color:var(--ink-red)}.detail .c-pink{color:var(--ink-pink)}.detail .c-sec{color:var(--text-sec)}
+
+.pill{display:inline-flex;align-items:center;border-radius:8px;padding:0 8px;font-size:12px;font-weight:600;white-space:nowrap;line-height:18px}
+.pill.doing{border:1px solid var(--border);color:var(--text-sec);background:var(--surface)}   /* 進行中：中性（避免與「落後」琥珀撞色） */
+.pill.conf{color:var(--ink-purple);background:color-mix(in srgb,var(--purple) var(--tint),transparent)}
+.pill.prop{color:var(--ink-pink);background:color-mix(in srgb,var(--pink) var(--tint),transparent)}
+.pill.hold{color:var(--text-sec);background:color-mix(in srgb,var(--text-dim) var(--tint),transparent)}
+.pill.od{color:var(--ink-red);background:color-mix(in srgb,var(--red) var(--tint),transparent)}
+.avs{display:inline-flex;align-items:center}
+.av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);margin-left:-6px;font:700 10px/1 "Noto Sans TC",sans-serif;font-style:normal;flex:none}
+.avs .av:first-child{margin-left:0}
+.av.a{color:var(--ink-purple);background:color-mix(in srgb,var(--purple) var(--tint),var(--surface))}
+.av.b{color:var(--ink-red);background:color-mix(in srgb,var(--red) var(--tint),var(--surface))}
+.av.c{color:var(--ink-accent);background:color-mix(in srgb,var(--accent) var(--tint),var(--surface))}
+.av.d{color:var(--ink-amber);background:color-mix(in srgb,var(--amber) var(--tint),var(--surface))}
+.av.e{color:var(--ink-green);background:color-mix(in srgb,var(--green) var(--tint),var(--surface))}
+.av.f{color:var(--ink-cyan);background:color-mix(in srgb,var(--cyan) var(--tint),var(--surface))}
+.av.more{color:var(--text-sec);background:var(--surface-light);font-weight:600}
+
+/* ---------- 時間軸（A／B 共用） ---------- */
+.scroll{overflow-x:auto}
+.chart{--lc:280px;--rc:332px;--g:0px;--gr:0px;font-size:13px;min-width:1000px;position:relative}
+.hd,.row{display:grid;grid-template-columns:var(--lc) minmax(0,1fr) var(--rc);column-gap:12px;align-items:center}
+.hd{align-items:end;border-bottom:1px solid var(--border);background:var(--surface)}
+.hc{font-size:12px;color:var(--text-sec);padding-bottom:4px}
+.hc.l{padding-left:12px}
+.ht{position:relative;height:58px}
+.ht .in{position:absolute;left:var(--g);right:var(--gr);top:0;bottom:0}
+.ht .r1,.ht .r2{position:relative;height:18px}
+.ht .r3{position:relative;height:22px}
+.ht .r1>span,.ht .r2>span,.ht .r3>span{position:absolute;top:0;white-space:nowrap;padding-left:4px;line-height:18px;font-size:12px;color:var(--text-sec)}
+.ht .r1>span{font-weight:700;color:var(--text)}
+.ht .r1>span.yr{background:var(--text);color:var(--surface);border-radius:4px;padding:0 6px;margin-left:4px;line-height:16px;top:1px}
+.ht .r2>span{border-left:1px solid var(--border)}
+.ht .r2>span.yl{border-left:2px solid var(--text-sec)}
+.ht .r3>span.tf{transform:translateX(-50%);display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:10px;background:var(--surface-light);border:1px solid var(--border);color:var(--text);font:600 11px/18px "Noto Sans TC",sans-serif;top:1px}
+.body{position:relative;background:var(--surface)}
+.ov{position:absolute;top:0;bottom:0;left:calc(var(--lc) + 12px);right:calc(var(--rc) + 12px);pointer-events:none;z-index:0}
+.ov .in{position:absolute;left:var(--g);right:var(--gr);top:0;bottom:0}
+.gl{position:absolute;top:0;bottom:0;width:1px;background:color-mix(in srgb,var(--border) 75%,transparent)}
+.gl.yl{width:2px;margin-left:-1px;background:var(--text-sec);opacity:.55}
+.today{position:absolute;top:0;bottom:0;border-left:1px solid color-mix(in srgb,var(--text-sec) 70%,transparent)}
+.chart.b .today{border-left:1.5px dashed color-mix(in srgb,var(--text-sec) 60%,transparent)}
+.row{position:relative;z-index:1;height:56px;border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent);cursor:pointer}
+.row.tk{height:40px}
+.row:hover{outline:1px solid var(--border);outline-offset:-1px}
+.row[aria-current="true"]::after{content:"";position:absolute;inset:0;border:2px solid var(--focus);z-index:6;pointer-events:none;border-radius:2px}
+.row.dim,.cd.dim{opacity:.32}
+.swl{position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:0 2px 2px 0;z-index:4}
+.lc{display:flex;align-items:center;gap:8px;min-width:0;padding-left:12px}
+.lc .nm{min-width:0;display:flex;flex-direction:column;justify-content:center;line-height:1.3}
+.lc .nm .l1{display:flex;align-items:center;gap:8px;min-width:0}
+.lc .nm b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc .nm .dt{font:12px/1.3 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--text-sec);white-space:nowrap}
+.row.tk .lc{padding-left:44px}
+.row.tk .lc .nm b{font-weight:500}
+.tg{width:24px;height:24px;flex:none;border:0;background:transparent;border-radius:6px;color:var(--text-sec);padding:0;display:inline-flex;align-items:center;justify-content:center}
+.tg:hover{background:var(--surface-hover)}
+.tg i{width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);display:block;transition:none}
+.tg[aria-expanded="true"] i{transform:rotate(45deg)}
+.tr{position:relative;height:100%;min-width:0}
+.tr .in{position:absolute;left:var(--g);right:var(--gr);top:0;bottom:0}
+.none{position:absolute;left:0;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-sec);padding:0 var(--g)}
+/* A：子彈圖 */
+.bu{position:absolute;top:20px;height:16px;border:1px solid var(--cf);border-radius:4px;background:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.row.tk .bu{top:14px;height:12px}
+.bu .f{position:absolute;left:0;top:0;bottom:0;background:var(--cf);border-radius:3px 0 0 3px}
+.bu .f.full{border-radius:3px}
+.bu .g{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--amber-f) 0 2px,transparent 2px 5px)}
+.bu .k{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--text);border-radius:1px}
+.bu.cl0{border-left-style:dashed;border-top-left-radius:0;border-bottom-left-radius:0}
+.bu.cr0{border-right-style:dashed;border-top-right-radius:0;border-bottom-right-radius:0}
+.lb{position:absolute;top:0;transform:translateX(-50%);display:inline-flex;align-items:center;gap:4px;height:16px;padding:0 6px;border-radius:8px;border:1px solid var(--ink);background:var(--surface);color:var(--ink);font:600 11px/14px "Noto Sans TC",sans-serif;white-space:nowrap;z-index:2}
+.lb.behind{--ink:var(--ink-amber)}.lb.ahead{--ink:var(--ink-green)}
+.rc{display:grid;grid-template-columns:40px 100px 74px 94px;gap:8px;align-items:center;font:12px/1.2 "JetBrains Mono",ui-monospace,Consolas,monospace;padding-right:12px;color:var(--text-sec)}
+.rc b{font-weight:700;color:var(--text)}
+.rc .gp{font-family:"Noto Sans TC",sans-serif;font-weight:600;white-space:nowrap}
+.rc .c-amber{color:var(--ink-amber)}.rc .c-green{color:var(--ink-green)}.rc .c-pink{color:var(--ink-pink)}.rc .c-sec{color:var(--text-sec)}.rc .c-red{color:var(--ink-red)}
+.rc .od{display:flex;align-items:center;gap:4px;color:var(--ink-red);font-family:"Noto Sans TC",sans-serif;font-weight:600;white-space:nowrap}
+.hd .rc{font:12px "Noto Sans TC",sans-serif;padding-bottom:4px}
+.hd .rc span{color:var(--text-sec)}
+/* B：日期泳道 */
+.chart.b{--lc:340px;--rc:148px;--g:48px;--gr:80px}
+.row.b{height:64px}.row.b.tk{height:44px}
+.chart.b .rc{grid-template-columns:40px 1fr;gap:8px}
+.chart.b .hd .rc{grid-template-columns:40px 1fr}
+.lc.b{display:grid;grid-template-columns:minmax(0,1fr) 64px 84px;gap:8px;align-items:center;position:sticky;left:0;z-index:3;background:var(--surface);height:100%}
+.hd .lc.b{height:auto;align-self:end}
+.hd .lc.b>span:first-child{padding-left:28px}
+.lc.b .n{display:flex;align-items:center;gap:4px;min-width:0}
+.lc.b .n .nm{min-width:0}
+.row.b.tk .lc.b{padding-left:44px}
+.sgb{position:absolute;top:28px;height:8px;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:2px}
+.row.b.tk .sgb{top:18px}
+.sgb i{position:relative;display:block;border-radius:2px;background:color-mix(in srgb,var(--c) 18%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cf) 45%,transparent);overflow:hidden}
+.sgb b{position:absolute;left:0;top:0;bottom:0;background:var(--cf)}
+.dl{position:absolute;top:24px;font:11px/16px "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--text-sec);background:var(--surface);padding:0 4px;z-index:2;white-space:nowrap}
+.row.b.tk .dl{top:14px}
+.dl.ls{transform:translateX(-100%)}
+.wx{display:inline-flex;align-items:center;gap:4px;font:600 12px "Noto Sans TC",sans-serif;white-space:nowrap}
+.wx.c-red{color:var(--ink-red)}.wx.c-green{color:var(--ink-green)}.wx.c-accent{color:var(--ink-accent)}.wx.c-pink{color:var(--ink-pink)}.wx.c-purple{color:var(--ink-purple)}
+
+/* C：卡片看板 */
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:start}
+.board.col{grid-template-columns:208px repeat(4,minmax(0,1fr))}
+.lane{background:var(--surface-light);border:1px solid var(--border);border-radius:12px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.lane>.lh{display:flex;align-items:center;gap:8px;padding:4px;min-height:32px}
+.lane>.lh b{font-size:14px}
+.lane>.lh .sub{font-size:12px;color:var(--text-sec)}
+.lane>.lh .n{margin-left:auto;font:700 12px "JetBrains Mono",ui-monospace,monospace;color:var(--text-sec)}
+.lane.over{background:color-mix(in srgb,var(--red) 8%,var(--surface-light));border-color:color-mix(in srgb,var(--red) 55%,transparent)}
+.lane.over>.lh b{color:var(--ink-red)}
+.lane .empty{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 8px;font-size:12px;color:var(--text-sec);text-align:center}
+.lane .cm{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 8px;font-size:12px;position:relative;padding-left:12px;min-height:40px}
+.lane .cm .swl{top:6px;bottom:6px}
+.lane .cm b{display:block;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lane .cm span.d{color:var(--ink-red);font-weight:600}
+.lane .cm span.dd{font:11px "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--text-sec);white-space:nowrap}
+.lane .tgl{border:1px solid var(--border);background:var(--surface);border-radius:99px;font-size:12px;padding:2px 12px;min-height:28px}
+.cd{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 12px 12px 16px;display:grid;gap:8px;box-shadow:var(--shadow);cursor:pointer}
+.cd .swl{top:12px;bottom:12px}
+.cd:hover{border-color:var(--text-sec)}
+.cd[aria-current="true"]{box-shadow:0 0 0 2px var(--focus)}
+.cd .t1{display:flex;align-items:center;gap:8px;min-width:0}
+.cd .t1 .nm{min-width:0}
+.cd .t1 .nm b{display:block;line-height:1.3;font-weight:700}
+.cd .t1 .nm .dt{font:12px "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--text-sec)}
+.cd .ms{margin:0;font-size:12px;color:var(--text-sec);line-height:1.4}
+.cd.s-over .ms{color:var(--ink-red);font-weight:600}
+.cd .vz{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:center}
+.ring{position:relative;width:52px;height:52px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:6}
+.ring .bgc{stroke:var(--border)}
+.ring .fgc{stroke:var(--cf);stroke-linecap:round}
+.ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 12px "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--text)}
+.tvb{display:grid;grid-template-columns:28px minmax(0,1fr) 34px;gap:4px 8px;align-items:center;font-size:11px;color:var(--text-sec)}
+.tvb .mb{height:6px;border-radius:3px;background:var(--surface-light);box-shadow:inset 0 0 0 1px var(--border);position:relative;overflow:hidden}
+.tvb .mb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.tvb .mb.t i{background:var(--text-sec)}
+.tvb .mb.p i{background:var(--cf)}
+.tvb .v{font:600 11px "JetBrains Mono",ui-monospace,monospace;text-align:right;color:var(--text)}
+.cd .ft{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cd .gx{font-size:12px;font-weight:600;white-space:nowrap}
+.cd .gx.c-amber{color:var(--ink-amber)}.cd .gx.c-green{color:var(--ink-green)}.cd .gx.c-pink{color:var(--ink-pink)}.cd .gx.c-sec{color:var(--text-sec)}.cd .gx.c-red{color:var(--ink-red)}
+.cd ul.tl{margin:0;padding:8px 0 0 16px;border-top:1px dashed var(--border);font-size:12px;display:grid;gap:2px}
+
+/* ---------- 響應式縮圖（真實 DOM 縮小，非互動） ---------- */
+.adapt{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.thm{margin:0;display:flex;flex-direction:column;gap:8px}
+.thm figcaption{font-size:12px;color:var(--text-sec);max-width:310px}
+.thm figcaption b{color:var(--text);display:block;font-size:13px}
+.dvf{position:relative;border:2px solid var(--text-sec);border-radius:12px;overflow:hidden;background:var(--bg)}
+.dvi{transform-origin:0 0;position:absolute;left:0;top:0;pointer-events:none;overflow:hidden;background:var(--bg)}
+.dvi .appbody{padding:12px}
+.dv-tl .chart{--lc:220px;--rc:150px;min-width:0}
+.dv-tl .chart.b{--lc:280px;--rc:130px}
+.dv-tl .rc{grid-template-columns:40px 100px}
+.dv-tl .rc .gp,.dv-tl .rc .od{display:none}
+.dv-tl .hd .rc span:nth-child(n+3){display:none}
+.dv-tl .chart.b .rc{grid-template-columns:40px 1fr}
+.dv-tl .chart.b .hd .rc span:nth-child(n+3){display:none}
+.dv-tl .chart.b .rc .wx{font-size:11px}
+.dv-tp .chart.a,.dv-ph .chart.a{--lc:1fr;min-width:0}
+.dv-tp .chart.a .hd,.dv-tp .chart.a .ov,.dv-ph .chart.a .hd,.dv-ph .chart.a .ov{display:none}
+.dv-tp .chart.a .row,.dv-ph .chart.a .row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"lc rc" "tr tr";height:84px;row-gap:0}
+.dv-tp .chart.a .row .lc,.dv-ph .chart.a .row .lc{grid-area:lc}
+.dv-tp .chart.a .row .rc,.dv-ph .chart.a .row .rc{grid-area:rc;grid-template-columns:40px 100px}
+.dv-tp .chart.a .row .rc .gp,.dv-tp .chart.a .row .rc .od{display:none}
+.dv-tp .chart.a .row .tr{grid-area:tr;height:40px}
+.dv-tp .chart.a .row .bu{top:12px}
+.dv-ph .chart.a .row{height:96px}
+.dv-ph .chart.a .row .rc{grid-template-columns:auto;grid-template-rows:auto;justify-items:end}
+.dv-ph .chart.a .row .rc>span:nth-child(2),.dv-ph .chart.a .row .rc .od{display:none}
+.dv-ph .chart.a .row .tr{height:40px}
+.dv-ph .chart.a .nbw{display:block}
+.nbw{display:none}
+.dv-tp .chart.b,.dv-ph .chart.b{min-width:900px}
+.dv-ph .chart.b{--lc:200px}
+.dv-ph .lc.b,.dv-tp .lc.b{grid-template-columns:minmax(0,1fr)}
+.dv-ph .lc.b .sp,.dv-ph .lc.b .ow{display:none}
+.dv-tp .board,.dv-tp .board.col{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dv-ph .board,.dv-ph .board.col{grid-template-columns:minmax(0,1fr)}
+.dv-tl .board.col{grid-template-columns:150px repeat(4,minmax(0,1fr));gap:8px}
+.dv-tl .cd .vz{grid-template-columns:44px minmax(0,1fr)}
+.dv-tl .cd .t1 .ci{display:none}
+.dv-ph .app,.dv-tp .app,.dv-tl .app{border:0;border-radius:0;box-shadow:none}
+.dv-ph .tb1,.dv-ph .tb2{display:none}
+.dv-ph .appbar .pt{display:none}
+.scrollbar-fake{height:12px;margin:8px 0 0;border-radius:6px;background:var(--surface-light);position:relative}
+.scrollbar-fake i{position:absolute;left:0;top:2px;bottom:2px;width:40%;border-radius:4px;background:var(--text-sec)}
+
+/* ---------- 比較頁 ---------- */
+.cmp{margin:0 0 16px}
+.cmp h3{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.cmp h3 .badge{width:24px;height:24px;font-size:13px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:var(--accent-fill);color:var(--on-accent)}
+.cmp .blk{padding:12px 16px}
+table.tbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tbl th,.tbl td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.tbl thead th{background:var(--surface-light);font-size:13px}
+.tbl tbody th,.tbl thead th:first-child{font-weight:600;width:15%}
+.tbl td .m{font-family:ui-monospace,Consolas,monospace;color:var(--ink-accent);letter-spacing:2px;font-size:15px;display:block;margin-bottom:2px}
+.tbl tr:last-child th,.tbl tr:last-child td{border-bottom:0}
+.recbox{margin-top:24px;border:2px solid var(--accent-fill);border-radius:12px;background:var(--surface);padding:16px 24px;box-shadow:var(--shadow)}
+.recbox h2{display:flex;align-items:center;gap:8px;color:var(--ink-accent)}
+.recbox ol,.recbox ul{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+.recbox .warn{margin-top:12px;padding:8px 12px;border-radius:8px;background:color-mix(in srgb,var(--amber) var(--tint),var(--surface));color:var(--text);font-size:13px}
+.tag{display:inline-block;padding:0 8px;border-radius:6px;background:var(--accent-fill);color:var(--on-accent);font-size:12px;font-weight:700;margin-right:4px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="top">
+  <h1>Timeline 改版提案：三種畫法</h1>
+  <p class="sub">設計稿 · 2026-10-07 · 資料與 <a href="desktop.html" style="color:var(--ink-accent)">desktop.html</a> 的 Timeline 一致（10 個進行中專案＋1 個已封存）· 本頁只做設計比較，未動任何產品程式碼</p>
+  <blockquote class="quote"><small>使用者原話（L1）</small>「Timeline 的Uiux 不太好閱讀 進度條我也希望換個設計 請給我三種提案」</blockquote>
+</header>
+
+<section class="blk" aria-labelledby="h-prob">
+  <h2 id="h-prob" style="margin-bottom:8px">現況問題</h2>
+  <div class="prob">
+    <ol>
+      <li><span class="n" aria-hidden="true">1</span><div><b>四排工具列把圖擠到下半頁</b><span class="d">跨專案篩選、排序／展開、天氣 chip、日週月季四排疊在圖表上方。</span></div></li>
+      <li><span class="n" aria-hidden="true">2</span><div><b>顏色語意打架</b><span class="d">條色用「專案色」，但紅色同時代表逾期：發行事務的專案色是紅，科教館公益展廳逾期卻是紫色條，看不出誰才是逾期。</span></div></li>
+      <li><span class="n" aria-hidden="true">3</span><div><b>看不到日期</b><span class="d">起訖日只能從位置去猜，沒有任何一處印出日期。</span></div></li>
+      <li><span class="n" aria-hidden="true">4</span><div><b>進度只有同色深淺兩半</b><span class="d">看不出進度有沒有跟上時間。</span></div></li>
+      <li><span class="n" aria-hidden="true">5</span><div><b>元素擠在同一個 x 上</b><span class="d">筋斗雲跑者、虛線「今天」、% 標籤疊在一起；逾期烏雲＋雨滴蓋住條尾的 % 文字。</span></div></li>
+      <li><span class="n" aria-hidden="true">6</span><div><b>月份標籤沒對齊格線、跨年沒有分隔</b><span class="d">2027 的交界沒有明確的分隔線或年份標示。</span></div></li>
+    </ol>
+    <div class="cur" aria-label="現況版面示意">
+      <div class="tbx">① 跨專案篩選（狀態・優先度・專案）</div>
+      <div class="tbx">② 排序／全部收折／封存說明</div>
+      <div class="tbx">③ 專案天氣 chip ×5</div>
+      <div class="tbx">④ 日｜週｜月｜季</div>
+      <div class="ch">圖表（被擠到畫面下半）</div>
+      <p>現況示意：圖表之前有 4 排控制列。三案都先收斂成最多 2 排。</p>
+    </div>
+  </div>
+</section>
+
+<nav class="tb" aria-label="提案切換與顯示選項">
+  <div role="tablist" aria-label="提案">
+    <button type="button" role="tab" id="tab-a" aria-controls="panel-a" aria-selected="true" data-k="a">A 進度對時間</button>
+    <button type="button" role="tab" id="tab-b" aria-controls="panel-b" aria-selected="false" data-k="b" tabindex="-1">B 日期優先泳道</button>
+    <button type="button" role="tab" id="tab-c" aria-controls="panel-c" aria-selected="false" data-k="c" tabindex="-1">C 卡片時間線</button>
+    <button type="button" role="tab" id="tab-cmp" aria-controls="panel-cmp" aria-selected="false" data-k="cmp" tabindex="-1">比較</button>
+  </div>
+  <span class="sp"></span>
+  <div class="grp" role="group" aria-label="主題"><span class="lab">主題</span>
+    <button type="button" class="t" data-act="theme" data-v="light" aria-pressed="true">淺色</button>
+    <button type="button" class="t" data-act="theme" data-v="dark" aria-pressed="false">深色</button>
+  </div>
+  <div class="grp"><span class="lab" id="lab-cl">顯示雲寶寶</span>
+    <button type="button" class="sw" role="switch" aria-checked="true" aria-labelledby="lab-cl" data-act="clouds"></button>
+  </div>
+</nav>
+
+<p class="rec-banner"><b>我的建議（設計建議，未經 confer／Codex 審查）：</b>A 當桌面／平板預設；C 當手機視圖＋可選「卡片」視圖；B 只在團隊要列印時程時才做。<a href="#cmp">看比較表</a></p>
+
+<main>
+<section class="panel" id="panel-a" role="tabpanel" aria-labelledby="tab-a"></section>
+<section class="panel" id="panel-b" role="tabpanel" aria-labelledby="tab-b" hidden></section>
+<section class="panel" id="panel-c" role="tabpanel" aria-labelledby="tab-c" hidden></section>
+<section class="panel" id="panel-cmp" role="tabpanel" aria-labelledby="tab-cmp" hidden></section>
+</main>
+</div>
+
+<script src="clouds.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ================= 資料（與 desktop.html 一致；今天 = 2026/10/07） ================= */
+const TODAY = '2026/10/07', DAY = 864e5;
+const D = s => { const [y, m, d] = s.split('/').map(Number); return new Date(y, m - 1, d); };
+const TD = D(TODAY);
+const dd = (a, b) => Math.round((D(a) - D(b)) / DAY);
+const fd = s => (s.startsWith('2026/') ? s.slice(5) : s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* id, 名稱, 專案色, 專案狀態, 成員, 已封存 */
+const PM = [
+  ['p1', 'TTXC 虎姑婆 駁二', 'accent', '進行中', ['Rock', 'Karen', 'Oliver', '幸真', 'Rae', 'Felien 車']],
+  ['p2', '科教館公益展廳', 'purple', '進行中', ['Rock', 'Rae', '幸真', 'Oliver', 'Karen']],
+  ['p3', '虎姑婆和他的朋友', 'amber', '進行中', ['Rock', 'Karen', 'Rae', 'Oliver']],
+  ['p4', '發行事務', 'red', '進行中', ['Felien 車', '幸真', 'Rock', 'Karen', 'Oliver']],
+  ['p5', '兒少內容有限合夥', 'green', '進行中', ['Rock', 'Felien 車', 'Karen', 'Oliver']],
+  ['p6', '非非和他的小本子', 'cyan', '進行中', ['Rae', 'Oliver']],
+  ['p7', '27年衛武營', 'pink', '待確認', ['Rock', 'Oliver', 'Felien 車']],
+  ['p8', 'Design Ah 展覽', 'accent', '提案中', ['Felien 車', 'Karen', 'Rock']],
+  ['p9', '大雲Youtube Channel', 'purple', '進行中', ['Rock', 'Oliver', 'Rae']],
+  ['p10', '臨時動議', 'amber', '已完成', ['Oliver', '幸真'], true],
+  ['p11', '2027新年禮盒', 'red', '暫緩', ['幸真', 'Rae']]
+];
+/* 專案, 任務, 狀態, 起, 迄, 進度%（進度已依 desktop.html 的 prog() 算好） */
+const TK = [
+  ['p1', '票務展務相關', '進行中', '2026/08/20', '2026/09/25', 60], ['p1', '商品合作', '進行中', '2026/08/15', '2026/10/09', 50],
+  ['p1', '駁二場地動線規劃', '待辦', '2026/09/10', '2026/10/31', 53], ['p1', '展覽文宣與視覺設計', '進行中', '2026/09/01', '2026/10/18', 67],
+  ['p1', '開幕記者會', '待確認', '2026/10/20', '2026/11/20', 0], ['p1', '虎姑婆周邊打樣確認', '已完成', '2026/09/20', '2026/10/02', 100],
+  ['p1', '新聞稿發送', '已完成', '2026/09/28', '2026/10/03', 100], ['p1', '兒童工作坊加場', '暫緩', '2026/11/01', '2026/11/30', 0],
+  ['p2', '文化部結案報告', '待辦', '2026/08/01', '2026/10/05', 33], ['p2', '展廳佈展', '已完成', '2026/06/15', '2026/08/30', 100],
+  ['p2', '公益導覽員培訓', '進行中', '2026/09/15', '2026/11/30', 33],
+  ['p3', "Yaya's Band 芽芽樂團", '進行中', '2026/09/20', '2026/10/14', 33], ['p3', '角色插畫第二批', '進行中', '2026/09/01', '2026/11/15', 48],
+  ['p3', '繪本印前檢查', '待辦', '2026/11/01', '2026/11/20', 0],
+  ['p4', '整理發行資料-片單', '待確認', '2026/09/01', '2026/09/30', 50], ['p4', '連連玩境影視展', '待辦', '2026/10/01', '2026/10/13', 50],
+  ['p4', '通路合約續約', '進行中', '2026/09/10', '2026/11/30', 33],
+  ['p5', '合夥合約簽署', '已完成', '2026/09/15', '2026/10/01', 100], ['p5', '合夥人月會', '進行中', '2026/10/01', '2026/10/31', 75],
+  ['p5', '9 月帳務結算', '已完成', '2026/09/20', '2026/09/28', 100],
+  ['p6', '週邊貼紙打樣', '進行中', '2026/09/25', '2026/10/20', 48], ['p6', '小本子印刷報價', '提案中', '2026/10/10', '2026/10/30', 0],
+  ['p7', '衛武營場地勘查', '待確認', '2026/10/10', '2026/10/31', 0], ['p7', '節目企劃書', '提案中', '2026/11/01', '2026/12/15', 0],
+  ['p8', '展覽提案簡報', '提案中', '2026/10/05', '2026/11/15', 0], ['p8', '授權洽談', '待辦', '2026/10/20', '2026/12/10', 0],
+  ['p9', 'Q4 內容企劃', '進行中', '2026/10/01', '2026/12/31', 33], ['p9', '剪輯排程', '進行中', '2026/09/20', '2026/11/10', 33],
+  ['p9', '縮圖範本更新', '已完成', '2026/09/15', '2026/09/28', 100],
+  ['p10', '臨時採購雜項', '已完成', '2026/07/01', '2026/07/10', 100], ['p10', '場地臨時調整', '已完成', '2026/07/05', '2026/07/20', 100],
+  ['p11', '包材報價', '暫緩', '2026/11/01', '2026/12/20', 0], ['p11', '禮盒概念設計', '暫緩', '2026/11/15', '2027/01/31', 0]
+];
+const AV = { 'Felien 車': ['Fe', 'a'], Karen: ['Ka', 'c'], Rae: ['Ra', 'd'], Oliver: ['Ol', 'e'], '幸真': ['幸', 'b'], Rock: ['Ro', 'f'] };
+const WXL = { dark: '雷雨', nimbus: '順風飛行', white: '晴時多雲', pink: '醞釀中', purple: '起霧休息' };
+const WXC = { dark: 'red', nimbus: 'green', white: 'accent', pink: 'pink', purple: 'purple' };
+const CC = { white: 'accent', pink: 'pink', purple: 'purple', dark: 'red', nimbus: 'green' };
+const STL = { over: '逾期', behind: '落後', ok: '正常', hold: '暫緩', prop: '提案' };
+const PILL = { '進行中': 'doing', '待確認': 'conf', '提案中': 'prop', '暫緩': 'hold', '已完成': 'doing' };
+
+/* ---------- 衍生：狀態／天氣／里程碑 ---------- */
+const elapsedPct = (s, e) => { const t = D(e) - D(s); return t > 0 ? clamp(Math.round((TD - D(s)) / t * 100), 0, 100) : 0; };
+const stateOf = x => (x.od ? 'over' : x.hold ? 'hold' : x.prop ? 'prop' : x.gap <= -5 ? 'behind' : 'ok');
+function mkTask(t, proj) {
+  const [pid, name, st, s, e, prog] = t, el = elapsedPct(s, e), done = st === '已完成';
+  const od = !done && dd(e, TODAY) < 0, gap = done ? 0 : prog - el;
+  const o = { kind: 't', id: 't:' + pid + ':' + name, pid, name, st, status: st, s, e, prog, el, gap, done, od, odDays: od ? -dd(e, TODAY) : 0, hold: st === '暫緩', prop: st === '提案中' || st === '待確認', c: proj.c, proj };
+  o.state = stateOf(o); return o;
+}
+const PROJ = PM.map(([id, name, c, status, owners, arch]) => {
+  const ts = TK.filter(t => t[0] === id), s = ts.map(t => t[3]).sort()[0], e = ts.map(t => t[4]).sort().slice(-1)[0];
+  const prog = Math.round(ts.reduce((a, t) => a + t[5], 0) / ts.length), el = elapsedPct(s, e), gap = prog - el;
+  const m = { kind: 'p', id, name, c, status, owners, arch: !!arch, s, e, prog, el, gap, n: ts.length };
+  const odT = ts.filter(t => t[2] !== '已完成' && dd(t[4], TODAY) < 0).sort((a, b) => D(a[4]) - D(b[4]));
+  m.od = odT.length; m.odDays = odT.length ? -dd(odT[0][4], TODAY) : 0; m.odName = odT.length ? odT[0][1] : '';
+  m.hold = ts.every(t => t[2] === '暫緩');
+  m.prop = !m.hold && !ts.some(t => t[2] === '進行中' || t[2] === '已完成');
+  m.state = stateOf(m);
+  m.cloud = m.od ? 'dark' : (m.prog >= 85 || m.gap >= 25) ? 'nimbus' : m.hold ? 'purple' : m.prop ? 'pink' : 'white';
+  m.tasks = ts.map(t => mkTask(t, m)).sort((a, b) => D(a.s) - D(b.s));
+  const next = ts.filter(t => t[2] !== '已完成' && dd(t[4], TODAY) >= 0).sort((a, b) => D(a[4]) - D(b[4]))[0];
+  m.ms = m.od ? { over: true, name: m.odName, e: odT[0][4], days: m.odDays } : next ? { name: next[1], e: next[4], days: dd(next[4], TODAY) } : null;
+  const mi = m.ms ? D(m.ms.e).getFullYear() * 12 + D(m.ms.e).getMonth() : 9e9, ti = TD.getFullYear() * 12 + TD.getMonth();
+  m.hz = m.od ? 'over' : !m.ms ? 'lt' : m.ms.days <= 7 ? 'wk' : mi === ti ? 'mo' : mi === ti + 1 ? 'nx' : 'lt';
+  return m;
+});
+const ACTIVE = PROJ.filter(p => !p.arch), ARCH = PROJ.filter(p => p.arch);
+const byId = id => PROJ.find(p => p.id === id);
+function gapInfo(m) {
+  if (m.state === 'hold') return { t: '暫緩', c: 'c-sec', k: 'hold' };
+  if (m.state === 'prop') return { t: m.status === '待確認' || m.st === '待確認' ? '待確認' : '提案中', c: 'c-pink', k: 'prop' };
+  if (m.done) return { t: '已完成', c: 'c-green', k: 'done' };
+  if (m.gap <= -5) return { t: `落後 ${-m.gap} 點`, c: 'c-amber', k: 'behind' };
+  if (m.gap >= 5) return { t: `領先 ${m.gap} 點`, c: 'c-green', k: 'ahead' };
+  return { t: '進度同步', c: 'c-sec', k: 'sync' };
+}
+
+/* ---------- 時間軸（日／週／月／季） ---------- */
+const SC = { '日': ['2026/09/28', '2026/10/26', 'day'], '週': ['2026/09/14', '2026/12/14', 'week'], '月': ['2026/06/01', '2027/02/01', 'month'], '季': ['2026/04/01', '2027/04/01', 'quarter'] };
+function axis(sc) {
+  const [s, e, kind] = SC[sc], a = D(s), b = D(e), tot = b - a, P = d => (d - a) / tot * 100;
+  const ticks = [], groups = [], lines = [];
+  const addLine = (p, strong) => { const x = lines.find(l => Math.abs(l.p - p) < .01); if (x) x.strong = x.strong || strong; else lines.push({ p, strong }); };
+  if (kind === 'month' || kind === 'quarter') {
+    for (let d = new Date(a); d < b; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+      const m = d.getMonth(); if (kind === 'quarter' && m % 3) continue;
+      ticks.push({ p: P(d), l: kind === 'quarter' ? `Q${m / 3 + 1}` : `${m + 1}月`, strong: m === 0 }); addLine(P(d), m === 0);
+    }
+    groups.push({ p: 0, l: String(a.getFullYear()), y: 1 });
+    const j = new Date(2027, 0, 1); if (j > a && j < b) groups.push({ p: P(j), l: '2027', y: 1 });
+  } else {
+    const step = kind === 'week' ? 7 : 1;
+    for (let d = new Date(a); d < b; d = new Date(d.getTime() + step * DAY)) { ticks.push({ p: P(d), l: kind === 'week' ? `${d.getMonth() + 1}/${d.getDate()}` : String(d.getDate()) }); addLine(P(d), false); }
+    groups.push({ p: 0, l: `${a.getFullYear()} · ${a.getMonth() + 1}月` });
+    for (let d = new Date(a.getFullYear(), a.getMonth() + 1, 1); d < b; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) { groups.push({ p: P(d), l: `${d.getMonth() + 1}月` }); addLine(P(d), true); }
+  }
+  return { P, ticks, groups, lines, kind };
+}
+function geo(ax, s, e) {
+  const L = ax.P(D(s)), R = ax.P(D(e)), out = R < 0 || L > 100, l = clamp(L, 0, 100), r = clamp(R, 0, 100);
+  return { l, w: Math.max(r - l, .6), out, cl: L < 0, cr: R > 100, R: l + Math.max(r - l, .6) };
+}
+
+/* ================= 狀態 ================= */
+const S = { tab: 'a', theme: 'light', clouds: true, scale: '月', ex: new Set(), sel: 'p1', hl: null, sort: 'manual', f: { st: new Set(), risk: new Set() }, fo: null, lane: false };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* ================= 小元件 ================= */
+const cl = (id, size, o = {}) => `<span class="cl" data-cloud="${id}" data-size="${size}" aria-hidden="true"></span>` + (o.nofb ? '' : `<span class="fb dot" aria-hidden="true" style="--c:var(--${CC[id]})"></span>`);
+const ci = (id, size) => `<span class="ci" style="width:${size + 4}px;height:${size + 4}px;min-width:0">${cl(id, size)}</span>`;
+const avs = (arr, n = 3) => `<span class="avs">${arr.slice(0, n).map(x => `<i class="av ${AV[x][1]}" title="${x}">${AV[x][0]}</i>`).join('')}${arr.length > n ? `<i class="av more" title="${arr.slice(n).join('、')}">+${arr.length - n}</i>` : ''}</span>`;
+const pill = s => `<span class="pill ${PILL[s] || 'doing'}">${s}</span>`;
+const rng = m => `${fd(m.s)} → ${fd(m.e)}`;
+
+/* ---------- 篩選／排序／攤平 ---------- */
+function pass(p) {
+  const f = S.f;
+  if (f.st.size && !f.st.has(p.status)) return false;
+  if (f.risk.size && !((f.risk.has('逾期') && p.od) || (f.risk.has('落後') && p.gap <= -5 && !p.hold && !p.prop))) return false;
+  return true;
+}
+function visible() {
+  let l = ACTIVE.filter(pass);
+  if (S.sort === 'name') l = [...l].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+  else if (S.sort === 'progress') l = [...l].sort((a, b) => b.prog - a.prog);
+  else if (S.sort === 'due') l = [...l].sort((a, b) => D(a.e) - D(b.e));
+  return l;
+}
+const dimmed = m => S.hl && (m.kind === 'p' ? m : m.proj).state !== S.hl;
+const flat = (list, o = {}) => list.flatMap(m => (!o.noExp && S.ex.has(m.id) ? [m, ...m.tasks] : [m]));
+
+/* ---------- 共用：表頭／格線 ---------- */
+function head(ax, k, left, right) {
+  const flag = k === 'b' ? `${cl('white', 20, { nofb: true })}今天 ${fd(TODAY)}` : `今天 ${fd(TODAY)}`;
+  return `<div class="hd"><div class="hc l">${left}</div><div class="ht"><div class="in">
+    <div class="r1">${ax.groups.map(g => `<span class="${g.y ? 'yr' : ''}" style="left:${g.p}%">${g.l}</span>`).join('')}</div>
+    <div class="r2">${ax.ticks.map(t => `<span class="${t.strong ? 'yl' : ''}" style="left:${t.p}%">${t.l}</span>`).join('')}</div>
+    <div class="r3"><span class="tf" style="left:${ax.P(TD)}%">${flag}</span></div></div></div><div class="hc rc">${right}</div></div>`;
+}
+const overlay = ax => `<div class="ov"><div class="in">${ax.lines.map(l => `<i class="gl${l.strong ? ' yl' : ''}" style="left:${l.p}%"></i>`).join('')}<i class="today" style="left:${ax.P(TD)}%"></i></div></div>`;
+
+/* ================= A：子彈圖 ================= */
+function bullet(m, ax, norm) {
+  const g = norm ? { l: 0, w: 100, R: 100, out: false } : geo(ax, m.s, m.e);
+  if (g.out) return '<span class="none">此時間範圍沒有排程</span>';
+  const t0 = D(m.s).getTime(), span = D(m.e).getTime() - t0;
+  const rel = pct => clamp((pct - g.l) / (g.R - g.l) * 100, 0, 100);
+  const fillRel = norm ? m.prog : rel(ax.P(new Date(t0 + span * m.prog / 100))), tickRel = norm ? m.el : rel(ax.P(TD));
+  const showTick = !m.done && TD >= D(m.s) && TD <= D(m.e) && m.state !== 'hold';
+  const gi = gapInfo(m);
+  let inner = `<i class="f${fillRel >= 99.5 ? ' full' : ''}" style="width:${fillRel}%"></i>`;
+  let lab = '';
+  if (showTick && gi.k === 'behind') {
+    inner += `<i class="g" style="left:${fillRel}%;width:${Math.max(tickRel - fillRel, 0)}%"></i>`;
+    if (m.kind === 'p') lab = `<span class="lb behind" style="left:clamp(40px,${g.l + g.w * (fillRel + tickRel) / 200}%,calc(100% - 40px))">落後 ${-m.gap} 點</span>`;
+  }
+  if (showTick && gi.k === 'ahead' && m.kind === 'p') lab = `<span class="lb ahead" style="left:clamp(40px,${g.l + g.w * (fillRel + tickRel) / 200}%,calc(100% - 40px))"><span class="fx">${cl('nimbus', 14, { nofb: true })}</span><span class="fbt" aria-hidden="true">▲</span>領先 ${m.gap} 點</span>`;
+  if (showTick) inner += `<i class="k" style="left:${tickRel}%"></i>`;
+  return `<span class="bu s-${m.state}${g.cl ? ' cl0' : ''}${g.cr ? ' cr0' : ''}" style="left:${g.l}%;width:${g.w}%" title="${esc(m.name)} ${rng(m)}　進度 ${m.prog}%　時間 ${m.el}%">${inner}</span>${lab}`;
+}
+function rightA(m) {
+  const gi = gapInfo(m);
+  const od = m.kind === 'p' ? (m.od ? `<span class="od"><span class="fx">${cl('dark', 18, { nofb: true })}</span><span class="fbt" aria-hidden="true">●</span>逾期 ${m.odDays} 天</span>` : '<span></span>')
+    : (m.od ? `<span class="od">逾期 ${m.odDays} 天</span>` : '<span></span>');
+  return `<div class="rc mono"><b>${m.prog}%</b><span>到期 ${fd(m.e)}</span><span class="gp ${gi.c}">${gi.t}</span>${od}</div>`;
+}
+function rowA(m, ax, o) {
+  const t = m.kind === 't', ex = S.ex.has(m.id);
+  const left = t
+    ? `<div class="lc"><span class="nm"><span class="l1"><b title="${esc(m.name)}">${esc(m.name)}</b>${pill(m.st)}</span><span class="dt">${rng(m)}</span></span></div>`
+    : `<div class="lc"><button type="button" class="tg" data-act="tg" data-id="${m.id}" data-fk="tg-${m.id}" aria-expanded="${ex}" aria-label="${ex ? '收折' : '展開'}「${esc(m.name)}」的任務"><i></i></button>
+       <span class="ci">${cl(m.cloud, 28)}</span><span class="nm"><span class="l1"><b>${esc(m.name)}</b>${m.od ? `<span class="pill od">${m.od} 逾期</span>` : ''}<span class="sr">（${WXL[m.cloud]}）</span></span><span class="dt">${rng(m)}</span></span></div>`;
+  return `<div class="row a ${t ? 'tk' : 'pj'} s-${m.state}${dimmed(m) ? ' dim' : ''}" role="listitem" tabindex="0" data-act="sel" data-id="${t ? m.pid : m.id}" data-fk="r-${m.id}"${!o.nosel && !t && S.sel === m.id ? ' aria-current="true"' : ''}>
+    ${t ? '' : `<i class="swl" style="background:var(--${m.c})" title="專案色"></i>`}${left}<div class="tr"><div class="in">${bullet(m, ax, o.norm)}</div></div>${rightA(m)}</div>`;
+}
+function chartA(list, o = {}) {
+  const ax = axis(o.scale || S.scale);
+  return `<div class="scroll"><div class="chart a">${head(ax, 'a', '專案（起 → 迄）', '<span>進度</span><span>到期</span><span>對時間</span><span>狀態</span>')}
+  <div class="body" role="list" aria-label="專案時程">${overlay(ax)}${flat(list, o).map(m => rowA(m, ax, o)).join('') || '<p class="hint" style="padding:24px">沒有符合篩選的專案</p>'}</div></div></div>`;
+}
+
+/* ================= B：日期優先泳道 ================= */
+function segBar(m, ax) {
+  const g = geo(ax, m.s, m.e);
+  if (g.out) return '<span class="none">此時間範圍沒有排程</span>';
+  const cells = Array.from({ length: 10 }, (_, i) => `<i><b style="width:${clamp(m.prog - i * 10, 0, 10) * 10}%"></b></i>`).join('');
+  const ls = g.cl ? `<span class="dl" style="left:0">◂ ${fd(m.s)}</span>` : `<span class="dl ls" style="left:calc(${g.l}% - 4px)">${fd(m.s)}</span>`;
+  const le = g.cr ? `<span class="dl" style="right:0">${fd(m.e)} ▸</span>` : `<span class="dl" style="left:calc(${g.R}% + 4px)">${fd(m.e)}</span>`;
+  return `${ls}<span class="sgb s-${m.state}" style="left:${g.l}%;width:${g.w}%" title="${esc(m.name)} ${rng(m)}　進度 ${m.prog}%">${cells}</span>${le}`;
+}
+function rowB(m, ax, o) {
+  const t = m.kind === 't', ex = S.ex.has(m.id), gi = gapInfo(m);
+  const left = t
+    ? `<div class="lc b"><span class="n"><span class="nm"><b style="font-weight:500">${esc(m.name)}</b></span></span><span class="sp">${pill(m.st)}</span><span class="ow"></span></div>`
+    : `<div class="lc b"><span class="n"><button type="button" class="tg" data-act="tg" data-id="${m.id}" data-fk="tg-${m.id}" aria-expanded="${ex}" aria-label="${ex ? '收折' : '展開'}「${esc(m.name)}」的任務"><i></i></button>
+       <span class="nm" style="display:flex;flex-direction:column;line-height:1.3"><b style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name)}</b>${m.od ? `<span class="hint" style="color:var(--ink-red);font-weight:600">逾期 ${m.odDays} 天</span>` : `<span class="hint">${m.n} 項任務</span>`}</span></span>
+       <span class="sp">${pill(m.status)}</span><span class="ow">${avs(m.owners)}</span></div>`;
+  const right = t
+    ? `<div class="rc mono"><b>${m.prog}%</b><span class="${gi.c}" style="font-family:'Noto Sans TC',sans-serif;font-weight:600">${m.od ? '逾期 ' + m.odDays + ' 天' : gi.k === 'sync' ? '' : gi.t}</span></div>`
+    : `<div class="rc mono"><b>${m.prog}%</b><span class="wx c-${WXC[m.cloud]}"><span class="fx">${cl(m.cloud, 24, { nofb: true })}</span><span class="fb dot" aria-hidden="true" style="--c:var(--${CC[m.cloud]})"></span>${WXL[m.cloud]}</span></div>`;
+  return `<div class="row b ${t ? 'tk' : 'pj'} s-${m.state}${dimmed(m) ? ' dim' : ''}" role="listitem" tabindex="0" data-act="sel" data-id="${t ? m.pid : m.id}" data-fk="r-${m.id}"${!o.nosel && !t && S.sel === m.id ? ' aria-current="true"' : ''}>
+    ${t ? '' : `<i class="swl" style="background:var(--${m.c})" title="專案色"></i>`}${left}<div class="tr"><div class="in">${segBar(m, ax)}</div></div>${right}</div>`;
+}
+function chartB(list, o = {}) {
+  const ax = axis(o.scale || S.scale);
+  return `<div class="scroll"><div class="chart b">${head(ax, 'b', '', '<span>進度</span><span>天氣</span>').replace('<div class="hc l"></div>', '<div class="hc l"><div class="lc b" style="padding-bottom:4px"><span>專案</span><span>狀態</span><span>成員</span></div></div>')}
+  <div class="body" role="list" aria-label="專案時程">${overlay(ax)}${flat(list, o).map(m => rowB(m, ax, o)).join('') || '<p class="hint" style="padding:24px">沒有符合篩選的專案</p>'}</div></div></div>`;
+}
+
+/* ================= C：卡片時間線（依下個里程碑到期分組） ================= */
+const LANES = [['over', '已逾期', 'dark', '專案內有任務已過期'], ['wk', '這週', 'pink', '10/07 – 10/14（7 天內）'], ['mo', '本月', 'white', '10/15 – 10/31'], ['nx', '下月', 'white', '11 月'], ['lt', '之後', 'purple', '12 月以後']];
+const ring = pct => { const r = 21, c = 2 * Math.PI * r; return `<span class="ring" role="img" aria-label="進度 ${pct}%"><svg viewBox="0 0 52 52" aria-hidden="true"><circle class="bgc" cx="26" cy="26" r="${r}"/>${pct > 0 ? `<circle class="fgc" cx="26" cy="26" r="${r}" stroke-dasharray="${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}"/>` : ''}</svg><b>${pct}%</b></span>`; };
+function card(m, o) {
+  const gi = gapInfo(m), ex = S.ex.has(m.id) || o.allExp;
+  const ms = m.ms ? (m.ms.over ? `逾期：${esc(m.ms.name)} · ${fd(m.ms.e)}（${m.ms.days} 天）` : `下個里程碑：${esc(m.ms.name)} · ${fd(m.ms.e)}（${m.ms.days === 0 ? '今天' : m.ms.days + ' 天後'}）`) : '沒有待辦里程碑';
+  const tasks = ex ? `<ul class="tl">${m.tasks.filter(t => !t.done).map(t => `<li>${esc(t.name)} <span class="mono">${fd(t.e)}</span></li>`).join('')}</ul>` : '';
+  return `<article class="cd s-${m.state}${dimmed(m) ? ' dim' : ''}" tabindex="0" data-act="sel" data-id="${m.id}" data-fk="r-${m.id}"${!o.nosel && S.sel === m.id ? ' aria-current="true"' : ''}>
+   <i class="swl" style="background:var(--${m.c})" title="專案色"></i>
+   <div class="t1"><span class="fx ci" style="width:52px;height:52px">${cl(m.cloud, 48, { nofb: true })}</span><div class="nm"><b>${esc(m.name)}</b><span class="dt">${rng(m)}</span><span class="sr">（${WXL[m.cloud]}）</span></div></div>
+   <p class="ms">${ms}</p>
+   <div class="vz">${ring(m.prog)}<div class="tvb"><span>時間</span><span class="mb t"><i style="width:${m.el}%"></i></span><span class="v">${m.el}%</span><span>進度</span><span class="mb p"><i style="width:${m.prog}%"></i></span><span class="v">${m.prog}%</span></div></div>
+   <div class="ft">${avs(m.owners)}<span class="gx ${gi.c}">${gi.t}</span></div>${tasks}</article>`;
+}
+function boardC(list, o = {}) {
+  const open = o.lane !== undefined ? o.lane : S.lane;
+  const lanes = LANES.map(([k, label, cloud, sub]) => {
+    const items = list.filter(m => m.hz === k).sort((a, b) => D(a.ms ? a.ms.e : a.e) - D(b.ms ? b.ms.e : b.e));
+    const head = `<div class="lh"><span class="fx">${cl(cloud, 24, { nofb: true })}</span><span class="fb tbar" aria-hidden="true" style="--c:var(--${CC[cloud]})"></span><div><b>${label}</b><div class="sub">${sub}</div></div><span class="n">${items.length}</span></div>`;
+    if (k === 'over' && !open) {
+      return `<section class="lane over" aria-label="已逾期（已收折）">${head}<button type="button" class="tgl" data-act="lane" data-fk="lane" aria-expanded="false">展開 ▸</button>${items.map(m => `<button type="button" class="cm" data-act="lane" aria-label="展開已逾期分組：${esc(m.name)}"><i class="swl" style="background:var(--${m.c})"></i><span style="min-width:0"><b>${esc(m.name)}</b><span class="d">逾期 ${m.odDays} 天</span> <span class="dd">${rng(m)}</span></span></button>`).join('') || '<div class="empty">沒有逾期專案</div>'}</section>`;
+    }
+    return `<section class="lane ${k}" aria-label="${label}">${head}${k === 'over' ? '<button type="button" class="tgl" data-act="lane" data-fk="lane" aria-expanded="true">◂ 收折</button>' : ''}${items.map(m => card(m, o)).join('') || `<div class="empty"><span class="fx">${cl('purple', 40, { nofb: true })}</span>這段時間沒有專案</div>`}</section>`;
+  }).join('');
+  return `<div class="board${open ? '' : ' col'}">${lanes}</div>`;
+}
+
+/* ================= 外框（工具列＋圖例＋圖＋明細） ================= */
+const PTABS = ['Overview', 'My Tasks', 'Projects', 'Timeline', 'Data', 'Settings'];
+function appbar() { return `<div class="appbar"><div class="brand"><span class="fx">${cl('white', 28, { nofb: true })}</span><span class="fb lg0" aria-hidden="true">P</span>大雲文創專案管理系統</div><div class="pt">${PTABS.map(t => `<span class="${t === 'Timeline' ? 'on' : ''}">${t}</span>`).join('')}</div></div>`; }
+function toolbar1(k) {
+  const n = S.f.st.size + S.f.risk.size, allEx = visible().length > 0 && visible().every(p => S.ex.has(p.id));
+  const views = k === 'c' ? [['gantt', '甘特', 0], ['card', '卡片', 1]] : [['gantt', k === 'a' ? '甘特' : '泳道', 1], ['card', '卡片', 0]];
+  const pop = S.fo === k ? `<div class="pop" role="dialog" aria-label="篩選條件">
+     <fieldset><legend>專案狀態</legend>${['進行中', '待確認', '提案中', '暫緩'].map(v => `<button type="button" class="chip" data-act="fst" data-v="${v}" aria-pressed="${S.f.st.has(v)}">${v}</button>`).join('')}</fieldset>
+     <fieldset><legend>風險</legend>${['逾期', '落後'].map(v => `<button type="button" class="chip" data-act="frisk" data-v="${v}" aria-pressed="${S.f.risk.has(v)}">有${v}</button>`).join('')}</fieldset>
+     <p class="hint" style="margin:0">優先度、專案多選也收進這裡（原型只示範狀態與風險）。</p>
+     <div class="pf"><button type="button" class="btn2" data-act="fclear">清除</button><button type="button" class="btn2 pri" data-act="fclose">完成</button></div></div>` : '';
+  return `<div class="tb1" role="toolbar" aria-label="Timeline 工具列">
+   <div class="seg" role="group" aria-label="視圖切換">${views.map(([v, l, on]) => `<button type="button" data-act="view" data-v="${v}" aria-pressed="${!!on}">${l}</button>`).join('')}</div>
+   <div class="pw"><button type="button" class="chip" data-act="fopen" data-fk="fbtn" aria-haspopup="dialog" aria-expanded="${S.fo === k}">篩選${n ? ` <span class="cnt" aria-label="${n} 個條件">${n}</span>` : ''}</button>${pop}</div>
+   <label class="sr" for="sort-${k}">排序方式</label><select id="sort-${k}" class="sel" data-chg="sort"><option value="manual"${S.sort === 'manual' ? ' selected' : ''}>排序：手動</option><option value="name"${S.sort === 'name' ? ' selected' : ''}>排序：名稱</option><option value="progress"${S.sort === 'progress' ? ' selected' : ''}>排序：進度</option><option value="due"${S.sort === 'due' ? ' selected' : ''}>排序：到期日</option></select>
+   ${k === 'c' ? '<span class="hint">依「下個里程碑」到期日分組</span><button type="button" class="btn2" data-act="back">切回甘特</button>'
+     : `<div class="seg" role="group" aria-label="時間尺度">${Object.keys(SC).map(v => `<button type="button" data-act="scale" data-v="${v}" aria-pressed="${S.scale === v}">${v}</button>`).join('')}</div>`}
+   <span class="sp"></span><button type="button" class="btn2" data-act="exp" data-fk="exp">${allEx ? '全部收折' : '全部展開'}</button></div>`;
+}
+function toolbar2(k, list) {
+  const cnt = s => list.filter(p => p.state === s).length;
+  const ex = { a: '<span class="ex"><i class="kk"></i>今天應有進度</span><span class="ex"><i class="hh"></i>落後差距</span>', b: '<span class="ex"><span class="cell"><i></i><i></i><i></i><i class="e"></i><i class="e"></i></span>每格 10%</span><span class="ex"><i class="dsh"></i>今天</span>', c: '<span class="ex"><i class="rg"></i>環＝進度</span><span class="ex">條：時間 vs 進度</span>' }[k];
+  return `<div class="tb2" role="group" aria-label="圖例與狀態統計（點選可標出）"><span class="hint">條色＝狀態</span>${Object.keys(STL).map(s => `<button type="button" class="lg s-${s}" data-act="hl" data-v="${s}" aria-pressed="${S.hl === s}"><i class="sq"></i>${STL[s]} <b>${cnt(s)}</b></button>`).join('')}<span class="vsep"></span>${ex}${S.hl ? '<button type="button" class="btn2" data-act="hl" data-v="' + S.hl + '">取消標出</button>' : ''}</div>`;
+}
+function detail() {
+  const m = byId(S.sel);
+  if (!m || !visible().includes(m)) return '<span class="hint">點選任一列（或卡片），這裡會顯示該專案的期間、進度、對時間與成員。</span>';
+  const gi = gapInfo(m);
+  return `<div><span class="k">專案</span><b>${esc(m.name)}</b> ${pill(m.status)}</div><div><span class="k">期間</span><b class="mono">${m.s} → ${m.e}</b></div><div><span class="k">進度／時間</span><b class="mono">${m.prog}% ／ ${m.el}%</b></div><div><span class="k">對時間</span><b class="${gi.c}">${gi.t}</b></div><div><span class="k">逾期</span><b class="${m.od ? 'c-red' : 'c-sec'}">${m.od ? `${m.od} 件（最久 ${m.odDays} 天：${esc(m.odName)}）` : '無'}</b></div><div><span class="k">成員</span><b>${m.owners.join('、')}</b></div><div><span class="k">天氣</span><b>${WXL[m.cloud]}</b></div>`;
+}
+function appHTML(k) {
+  const list = visible();
+  const chart = k === 'a' ? chartA(list) : k === 'b' ? chartB(list) : boardC(list, { allExp: false });
+  return `${appbar()}<div class="appbody">${toolbar1(k)}${toolbar2(k, list)}<div class="blk chartwrap" style="padding:8px 8px 4px">${chart}</div>
+  <div class="detail" aria-live="polite">${detail()}</div>
+  <p class="foot">不顯示：已封存 ${ARCH.length} 個（${ARCH.map(p => esc(p.name)).join('、')}）。可在 Projects 的眼睛圖示切換。${S.f.st.size + S.f.risk.size ? `　篩選中：顯示 ${list.length} / ${ACTIVE.length} 個專案。` : ''}</p></div>`;
+}
+
+/* ================= 每案說明文字 ================= */
+const COPY = {
+  a: {
+    badge: 'A', title: '進度對時間（子彈圖）', best: '最適合：決定「誰落後」',
+    desc: '一條外框條涵蓋專案起訖日；條內單色填色＝進度；細黑刻度＝「今天應有的進度」（時間已過比例）。填色沒追上刻度時，中間差距畫斜線並標「落後 N 點」；超前則顯示筋斗雲小徽章「領先 N 點」。',
+    fixes: [['1', '4 排工具列縮成 2 排：篩選收進「篩選 · n」popover；第 2 排＝圖例＋狀態計數。圖表上移到首屏。'], ['2', '專案色只剩列首 4px 色塊；條色＝狀態（綠正常／琥珀落後／紅逾期／灰暫緩／粉提案）。'], ['3', '左欄第二行印「起 → 迄」，右欄固定印「到期 MM/DD」，跨年顯示 2027/…'], ['4', '單色填色＋「今天應有進度」刻度＋斜線差距，落後或領先一眼可判並附點數。'], ['5', '% 與到期日移到右側固定欄，不再貼在條尾；跑者雲取消；今天＝細線，標籤在表頭；逾期烏雲只放右欄。'], ['6', '月份標籤貼齊格線（標籤左緣＝格線）；2027 分隔線加粗，表頭加「2027」年份標。']],
+    pros: ['一條上同時讀到日期、進度、時間，「誰落後」最快', '右欄數字等寬對齊，可直接掃讀與排序', '密度高（約 9 列／螢幕）', '可沿用現有 GanttTimeline 的時間軸分割、收折、篩選、排序 helper'],
+    cons: ['刻度＋斜線是新讀法，需要常駐圖例（第 2 排）', '短專案（約 35 天）的條只有 80 多 px，標籤較擠', '黑白列印靠斜線區分，但不如 B 清楚', '手機不適合長條，要退成列表'],
+    clouds: ['左欄：天氣雲頭像 28px（烏／筋斗／白／粉紅／淡紫，依專案健康度）', '右欄末：僅逾期列有小烏雲 18px＋「逾期 N 天」', '領先徽章內：小筋斗雲 14px（重複小圖示，不計種類數）', '表頭今天旗：純文字（不放雲）'],
+    off: ['左欄頭像退成 8px 色點（同健康度色），名稱後仍有「逾期」膠囊與（天氣）讀屏文字', '領先徽章退成「▲ 領先 N 點」', '右欄烏雲退成紅點＋「逾期 N 天」文字', '條、刻度、斜線、日期完全不受影響'],
+    adapt: [['tl', '平板橫', '與桌面同構，右欄縮成「54% · 到期日」，落後文字改由條上標籤承擔。'], ['tp', '平板直', '每列變兩行：上行名稱＋數字，下行整條時間軸。'], ['ph', '手機', '退成「子彈列表」：每項一條 0–100% 的條（不按日期），刻度與斜線保留，日期寫在文字裡。']]
+  },
+  b: {
+    badge: 'B', title: '日期優先泳道（分段進度）', best: '最適合：讀排程、列印',
+    desc: '行距寬、條較細（8px）。起日印在條左端、迄日印在條右端；進度為 10 格分段條（54% ＝ 5 格滿＋第 6 格 40%）。左欄固定三小欄：名稱｜狀態｜成員。今天＝淡色虛線，白雲小旗只在表頭。',
+    fixes: [['1', '同 A：2 排工具列，篩選收進 popover，圖表首屏可見。'], ['2', '專案色＝列首 4px 色塊；條色＝狀態。「進行中」狀態膠囊改中性色，避免與「落後」琥珀撞色。'], ['3', '日期直接印在條兩端（09/01 ━━ 12/20），不用猜；跨年顯示 2027/…'], ['4', '10 格分段可數格；對時間則看填色終點相對今天虛線（較間接，不顯示「落後 N 點」）。'], ['5', '% 與天氣移到列尾欄；今天虛線很淡且被日期標籤遮住不穿字；沒有跑者雲與雨滴。'], ['6', '月份標籤貼齊格線；2027 分隔線加粗＋年份標；週／日尺度改以月份當分組列。']],
+    pros: ['日期最直接，適合溝通排程與列印', '分段格可數：7 格＝70%，不必讀字', '行距寬、sticky 三欄好讀；橫捲時名稱欄不跑', '同 A，可沿用 GanttTimeline 的時間軸與收折邏輯'],
+    cons: ['看不出「進度有沒有跟上時間」，要自己對今天虛線', '短條（< 90px）每格只有 6px 左右', '密度最低的甘特型（約 8 列／螢幕）', '條兩端的日期標籤需要左右留白（軸內縮 48px）'],
+    clouds: ['列尾：天氣雲 24px＋文字「雷雨」（icon＋text，不蓋任何條）', '表頭：白雲小旗 20px 站在「今天」位置（只此一處）', '左欄（名稱／狀態／成員）：不放雲，保持乾淨'],
+    off: ['列尾退成色點＋同一段文字「雷雨」（文字本來就在）', '表頭旗退成純文字「今天 10/07」', '其餘（日期、分段、虛線）不變'],
+    adapt: [['tl', '平板橫', '與桌面同構，左欄略縮、右欄只留 % 與天氣。'], ['tp', '平板直', '整張圖橫向捲動，左欄（名稱）sticky，日期永遠看得到。'], ['ph', '手機', '同上：橫向可捲動，名稱欄釘在左側；底部有捲動條提示。']]
+  },
+  c: {
+    badge: 'C', title: '卡片時間線（以到期分組＋進度環）', best: '最適合：平板／手機、快速看「這週要顧什麼」',
+    desc: '放棄拉長的甘特，改成依「下個里程碑」到期分組的看板：這週（7 天內）／本月／下月／之後，最左側另有可收折的紅色「已逾期」分組。每張卡片：天氣雲 48px、專案名、起訖日、下個里程碑、進度環（中心 %）、時間 vs 進度迷你雙條、成員。',
+    fixes: [['1', '工具列同樣 2 排；沒有時間尺度，換成「切回甘特」按鈕。'], ['2', '專案色＝卡片左緣 4px；進度環與條色＝狀態。'], ['3', '卡片印「起 → 迄」，里程碑行印日期與「N 天後／逾期 N 天」。'], ['4', '進度環＋「時間 vs 進度」雙條：兩條長度差就是落後／領先，旁邊附文字。'], ['5', '沒有長條，也就沒有跑者／% 疊字問題；逾期整張卡紅字在「已逾期」分組。'], ['6', '月份軸消失，改用分組標題；跨年只出現在日期文字（2027/01/31）。']],
+    pros: ['依「何時要交」分組，最快回答「這週要顧什麼」', '平板／手機直接可用，不用橫向捲動', '卡片給天氣雲最大舞台（40–56px）', '完全沒有疊字問題'],
+    cons: ['看不到專案之間的時間重疊與先後（甘特的核心價值）', '專案多時要捲動，密度最低（約 6 張／螢幕）', '分組用「下個里程碑」而非專案到期日，需在畫面上講清楚', '全新元件，實作成本最高'],
+    clouds: ['卡片左上：天氣雲 48px（雲寶寶最大舞台）', '分組標題：已逾期＝烏雲、這週＝粉紅、本月／下月＝白雲、之後＝淡紫（24px）', '空分組：淡紫雲 40px＋「這段時間沒有專案」', '筋斗雲出現在進度 ≥85% 或領先 ≥25 點的卡片'],
+    off: ['卡片的雲整塊收掉，名稱靠左；進度環、條色、左緣色塊照舊', '分組標題退成 3px 色條', '空分組退成純文字', '資訊量完全不變（雲本來就只是輔助）'],
+    adapt: [['tl', '平板橫', '4 欄並列，已逾期收成窄欄。'], ['tp', '平板直', '2 欄格狀，分組標題照舊。'], ['ph', '手機', '單欄垂直卡片，分組標題變成段落標題，已逾期置頂。']]
+  }
+};
+
+function thumb(k, dev) {
+  const W = { tl: 1024, tp: 768, ph: 390 }[dev], H = { tl: 768, tp: 1024, ph: 844 }[dev], sc = { tl: .3, tp: .2, ph: .26 }[dev];
+  const list = ['p1', 'p3', 'p5', 'p2', 'p6', 'p9'].map(byId);
+  const ch = k === 'a' ? chartA(list, { scale: '月', nosel: true, noExp: true, norm: dev === 'ph' }) : k === 'b' ? chartB(list, { scale: '月', nosel: true, noExp: true }) : boardC(list, { nosel: true, lane: dev !== 'tl' ? false : false });
+  const fake = k === 'b' && dev !== 'tl' ? '<div class="scrollbar-fake"><i></i></div>' : '';
+  return `<div class="dvf" style="width:${Math.round(W * sc)}px;height:${Math.round(H * sc)}px"><div class="dvi dv-${dev}" inert aria-hidden="true" style="width:${W}px;height:${H}px;transform:scale(${sc})"><div class="app">${appbar()}<div class="appbody"><div class="chartwrap" style="padding:0">${ch}${fake}</div></div></div></div></div>`;
+}
+function panelHTML(k) {
+  const c = COPY[k];
+  return `<div class="ph"><span class="badge" aria-hidden="true">${c.badge}</span><h2>${c.title}</h2><span class="best">${c.best}</span></div>
+  <p style="margin:0 0 12px;max-width:1100px">${c.desc}</p>
+  <div class="app" id="app-${k}" data-k="${k}"></div>
+  <div class="sec2"><h3>如何修掉六項現況問題</h3><ul class="fixes">${c.fixes.map(([n, t]) => `<li><span class="n">問題 ${n}</span><span>${t}</span></li>`).join('')}</ul></div>
+  <div class="sec2"><h3>(a) 平板與手機怎麼適應</h3><div class="adapt">${c.adapt.map(([dev, name, note]) => `<figure class="thm">${thumb(k, dev)}<figcaption><b>${name}</b>${note}</figcaption></figure>`).join('')}</div></div>
+  <div class="sec2 pc"><div class="blk pro"><h4>(b) 優點</h4><ul>${c.pros.map(x => `<li>${x}</li>`).join('')}</ul></div><div class="blk con"><h4>缺點</h4><ul>${c.cons.map(x => `<li>${x}</li>`).join('')}</ul></div></div>
+  <div class="sec2 cf4"><div class="blk"><h4>(c) 雲寶寶出現在哪</h4><ul>${c.clouds.map(x => `<li>${x}</li>`).join('')}</ul></div><div class="blk"><h4>(d) 關閉「顯示雲寶寶」時的退路</h4><ul>${c.off.map(x => `<li>${x}</li>`).join('')}</ul></div></div>`;
+}
+
+/* ================= 比較頁 ================= */
+function compareHTML() {
+  const L = ['p2', 'p3', 'p5', 'p11'].map(byId);
+  const mini = (k, name, ch) => `<div class="cmp"><h3><span class="badge" aria-hidden="true">${k}</span>${name}</h3><div class="blk" style="padding:8px">${ch}</div></div>`;
+  const o = { scale: '月', nosel: true, noExp: true };
+  const dots = n => `<span class="m" aria-label="${n} / 5">${'●'.repeat(n)}${'○'.repeat(5 - n)}</span>`;
+  const rows = [
+    ['可讀性（掃出誰有問題）', [4, '條色＋刻度＋右欄數字，一眼掃完；需要學一次圖例'], [3, '日期與格子清楚，但「落後」要自己對今天線'], [4, '專案少時最直覺；多了要捲動']],
+    ['看「進度 vs 時間」', [5, '直接：刻度＋斜線＋「落後 N 點」'], [2, '間接：填色終點 vs 今天虛線，無數字'], [3, '迷你雙條＋差距文字，但不在同一條上']],
+    ['顯示日期', [4, '左欄起訖＋右欄到期'], [5, '條兩端直接印起訖日'], [4, '卡片起訖＋里程碑日期']],
+    ['資訊密度', [5, '56px/列，約 9 列／螢幕'], [3, '64px/列，約 8 列／螢幕'], [2, '每卡約 190px，約 6 張／螢幕']],
+    ['實作成本（真實產品）', [3, '中：沿用 GanttTimeline 的時間軸分割、收折、篩選、排序 helper，列與條元件重寫；刻度算法 ~30 行'], [3, '中：同 A，另加分段條與 sticky 三欄；日期標籤要處理軸內縮'], [1, '高：新元件（TimelineBoard）＋到期分組邏輯，只共用 computeProjectProgress／projectSpan 等資料 helper']],
+    ['平板／手機', [3, '平板佳；手機退成子彈列表（需另寫）'], [2, '平板可橫捲；手機要橫捲，體驗普通'], [5, '平板、手機最佳，單欄垂直直接可用']],
+    ['雲寶寶整合', [4, '左頭像＋右欄烏雲，不與條搶位'], [4, '列尾 icon＋文字、表頭一面旗，最乾淨'], [5, '卡片大雲 40–56px，舞台最大']],
+    ['列印', [3, '可，斜線在黑白下仍可辨'], [5, '最適合（日期、格數、虛線都清楚）'], [1, '不適合']]
+  ];
+  return `<div class="ph"><span class="badge" aria-hidden="true">≡</span><h2>三案並排比較</h2><span class="best">同一批專案（科教館、虎姑婆和他的朋友、兒少內容、2027 新年禮盒），三種畫法</span></div>
+  ${mini('A', '進度對時間（子彈圖）', chartA(L, o))}${mini('B', '日期優先泳道（分段進度）', chartB(L, o))}${mini('C', '卡片時間線（已逾期分組展開）', boardC(L, { nosel: true, lane: true }))}
+  <h2 style="margin:24px 0 8px">比較表</h2>
+  <table class="tbl"><thead><tr><th scope="col">面向</th><th scope="col">A 子彈圖</th><th scope="col">B 日期泳道</th><th scope="col">C 卡片時間線</th></tr></thead><tbody>
+  ${rows.map(([h, ...cs]) => `<tr><th scope="row">${h}</th>${cs.map(([n, t]) => `<td>${dots(n)}${t}</td>`).join('')}</tr>`).join('')}
+  </tbody></table>
+  <aside class="recbox" aria-labelledby="h-rec"><h2 id="h-rec"><span class="tag">我的建議</span>A 當預設，C 當手機與「卡片」視圖，B 看需求</h2>
+   <ol><li><b>桌面／平板（≥768px）預設用 A</b>：同時解掉問題 1–6，且最能回答「誰落後」；實作可沿用現有 GanttTimeline 的 helper，成本中等。</li>
+   <li><b>手機（&lt;768px）自動切 C 垂直卡片</b>，桌面也提供「甘特｜卡片」切換，讓 C 成為可選的「卡片」視圖。</li>
+   <li><b>B 只在團隊會列印時程時才做</b>（可做成「列印版型」而不是常駐視圖）。</li></ol>
+   <p style="margin:12px 0 0"><b>建議做的順序：</b>① 三案共通的修正（工具列收斂為 2 排、條色＝狀態、顯示日期、月份對齊格線＋年分隔）先上，風險最低；② A 的條元件；③ C 的卡片視圖。</p>
+   <p class="warn" role="note"><b>誠實說明：</b>這是我（lead）的設計建議，<b>未經 confer（雙G 討論）也未過 Codex 審查</b>；本頁沒有 Jev 分數。要拍板前建議先走 confer。</p></aside>`;
+}
+
+/* ================= 繪製 ================= */
+function focusKey(root) { const a = document.activeElement; return a && root.contains(a) ? a.getAttribute('data-fk') || (a.matches('.sel') ? 'sort' : a.matches('[data-act="hl"]') ? 'hl:' + a.dataset.v : a.matches('[data-act="scale"]') ? 'sc:' + a.dataset.v : null) : null; }
+function restore(root, key) {
+  if (!key) return;
+  let el = key === 'sort' ? $('.sel', root) : key.startsWith('hl:') ? $(`[data-act="hl"][data-v="${key.slice(3)}"]`, root) : key.startsWith('sc:') ? $(`[data-act="scale"][data-v="${key.slice(3)}"]`, root) : $(`[data-fk="${key}"]`, root);
+  if (el) el.focus({ preventScroll: true });
+}
+function render() {
+  ['a', 'b', 'c'].forEach(k => {
+    const el = $('#app-' + k), fk = focusKey(el);
+    el.innerHTML = appHTML(k); window.Clouds.mount(el); restore(el, fk);
+  });
+}
+function initStatic() {
+  ['a', 'b', 'c'].forEach(k => { $('#panel-' + k).innerHTML = panelHTML(k); });
+  $('#panel-cmp').innerHTML = compareHTML();
+  window.Clouds.mount();
+}
+function setTab(k, noHash) {
+  S.tab = k; S.fo = null;
+  $$('.tb [role="tab"]').forEach(t => { const on = t.dataset.k === k; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
+  $$('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + k; });
+  if (!noHash && location.hash.slice(1).split(',')[0] !== k) { try { history.replaceState(null, '', '#' + k); } catch (e) { /* file:// 預覽時略過 */ } }
+  render();
+}
+function setTheme(v) { S.theme = v; document.documentElement.dataset.theme = v; $$('[data-act="theme"]').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v)); }
+function setClouds(on) { S.clouds = on; document.documentElement.dataset.clouds = on ? 'on' : 'off'; $('[data-act="clouds"]').setAttribute('aria-checked', on); }
+
+function act(t) {
+  const a = t.dataset.act, k = (t.closest('[data-k]') || {}).dataset ? t.closest('[data-k]').dataset.k : null;
+  if (a === 'theme') return setTheme(t.dataset.v);
+  if (a === 'clouds') return setClouds(!S.clouds);
+  if (t.closest('.cmp')) return;
+  if (a === 'sel') S.sel = t.dataset.id;
+  else if (a === 'tg') { S.ex.has(t.dataset.id) ? S.ex.delete(t.dataset.id) : S.ex.add(t.dataset.id); }
+  else if (a === 'exp') { const v = visible(); const all = v.every(p => S.ex.has(p.id)); v.forEach(p => all ? S.ex.delete(p.id) : S.ex.add(p.id)); }
+  else if (a === 'scale') S.scale = t.dataset.v;
+  else if (a === 'view') { if (t.getAttribute('aria-pressed') === 'true') return; return setTab(t.dataset.v === 'card' ? 'c' : 'a'); }
+  else if (a === 'back') return setTab('a');
+  else if (a === 'fopen') S.fo = S.fo === k ? null : k;
+  else if (a === 'fst') { const s = S.f.st; s.has(t.dataset.v) ? s.delete(t.dataset.v) : s.add(t.dataset.v); }
+  else if (a === 'frisk') { const s = S.f.risk; s.has(t.dataset.v) ? s.delete(t.dataset.v) : s.add(t.dataset.v); }
+  else if (a === 'fclear') { S.f.st.clear(); S.f.risk.clear(); }
+  else if (a === 'fclose') S.fo = null;
+  else if (a === 'hl') S.hl = S.hl === t.dataset.v ? null : t.dataset.v;
+  else if (a === 'lane') S.lane = !S.lane;
+  else return;
+  render();
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (S.fo && !e.target.closest('.pw')) { S.fo = null; if (!t) render(); }
+  if (!t || t.closest('.dvi')) return;
+  act(t);
+});
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && t.matches('.row[data-act],.cd[data-act]')) { e.preventDefault(); act(t); }
+  if (e.key === 'Escape' && S.fo) { const k = S.fo; S.fo = null; render(); const b = $(`#app-${k} [data-fk="fbtn"]`); if (b) b.focus(); }
+  if (t.matches('.tb [role="tab"]') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+    const tabs = $$('.tb [role="tab"]'), i = tabs.indexOf(t), n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    n.focus(); setTab(n.dataset.k);
+  }
+});
+document.addEventListener('change', e => { if (e.target.matches('[data-chg="sort"]')) { S.sort = e.target.value; render(); } });
+$$('.tb [role="tab"]').forEach(t => t.addEventListener('click', () => setTab(t.dataset.k)));
+window.addEventListener('hashchange', () => { const k = location.hash.slice(1).split(',')[0]; if (['a', 'b', 'c', 'cmp'].includes(k) && k !== S.tab) setTab(k, true); });
+
+/* 進場：#a | #b | #c | #cmp，可加旗標：#a,dark,off,expand（截圖用） */
+initStatic();
+const toks = location.hash.slice(1).split(',').filter(Boolean);
+if (toks.includes('dark')) setTheme('dark');
+if (toks.includes('off')) setClouds(false);
+if (toks.includes('expand')) ACTIVE.forEach(p => S.ex.add(p.id));
+if (toks.includes('lane')) S.lane = true;
+const first = ['a', 'b', 'c', 'cmp'].includes(toks[0]) ? toks[0] : 'a';
+setTab(first, true);
+})();
+</script>
+</body>
+</html>
